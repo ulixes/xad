@@ -7,21 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
-.pnp
-.pnp.js
-
-# Build outputs
 .output
-.next
-dist
-build
-*.tsbuildinfo
 stats.html
 stats-*.json
-
-# WXT
 .wxt
 web-ext.config.ts
 
@@ -35,35 +24,9 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
-
-# Environment files
 .env
-.env.local
-.env.*.local
-*.env
-
-# Temporary files
 .tmp
-*.tmp
 
 # Playwright test artifacts
 playwright-report/
 test-results/
-
-# Turborepo
-.turbo
-
-# Cloudflare/Wrangler (API)
-.wrangler
-.dev.vars
-
-# OS files
-Thumbs.db
-
-# Package manager
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
