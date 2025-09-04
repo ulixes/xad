@@ -159,3 +159,52 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Neo Brutalism Shadow Utilities */
+  .shadow-brutalism {
+    box-shadow: 4px 4px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .shadow-brutalism:hover {
+    box-shadow: 2px 2px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .shadow-brutalism-xs {
+    box-shadow: 2px 2px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .shadow-brutalism-sm {
+    box-shadow: 3px 3px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .shadow-brutalism-lg {
+    box-shadow: 6px 6px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .shadow-brutalism-xl {
+    box-shadow: 8px 8px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  
+  /* Neo Brutalism Animation Utilities */
+  .neo-button-hover {
+    transition: all 0.15s ease;
+  }
+  .neo-button-hover:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0px 0px hsl(0 0% 0% / 1.00);
+  }
+  .neo-button-hover:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+  
+  /* Neo Brutalism Typography Utilities */
+  .neo-heading {
+    @apply font-black uppercase tracking-wide;
+  }
+  .neo-subheading {
+    @apply font-bold uppercase tracking-wide text-sm;
+  }
+  .neo-body {
+    @apply font-bold;
+  }
+  .neo-caption {
+    @apply font-bold text-xs uppercase tracking-wider;
+  }
+}

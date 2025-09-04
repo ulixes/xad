@@ -1,215 +1,176 @@
-export default defineBackground(() => {
-  console.log('Task Manager background script loaded');
+import { LikesResponse, NormalizedMedia, NormalizedUser, FlatTweet, VideoVariant } from "@/src/types";
 
-  // Handle action button click to open side panel
-  browser.action?.onClicked?.addListener((tab) => {
-    // For Chrome/Edge - open side panel when action is clicked
-    if (browser.sidePanel) {
-      // Use windowId for more reliable opening
-      browser.windows.getCurrent((window) => {
-        browser.sidePanel.open({ windowId: window.id }, () => {
-          if (browser.runtime.lastError) {
-            // Fallback: open without parameters
-            browser.sidePanel.open({}, () => {
-              if (browser.runtime.lastError) {
-                console.error('Failed to open side panel:', browser.runtime.lastError);
-              }
-            });
-          }
-        });
+export default defineBackground(() => {
+  const attachedTabs = new Set<number>();
+
+  // Keep the last seen liker
+  let currentLiker: NormalizedUser | null = null;
+
+  browser.action.onClicked.addListener((tab) => {
+    browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
+  });
+
+  const filter: Browser.webRequest.RequestFilter = {
+    urls: ["https://x.com/i/api/graphql/*"],
+    types: ["xmlhttprequest"]
+  };
+
+  browser.webRequest.onCompleted.addListener(
+    (details) => {
+      if (details.url.includes("Likes")) {
+        browser.runtime.sendMessage({ type: "user-opened-likes-view" });
+      }
+    },
+    filter
+  );
+
+  browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (
+      changeInfo.status === "complete" &&
+      tab.url?.match(/https:\/\/x\.com\/[^/]+\/likes/) &&
+      !attachedTabs.has(tabId)
+    ) {
+      browser.debugger.attach({ tabId }, "1.3", () => {
+        if (browser.runtime.lastError) {
+          console.error("Debugger attach failed:", browser.runtime.lastError.message);
+          return;
+        }
+        attachedTabs.add(tabId);
+        browser.debugger.sendCommand({ tabId }, "Network.enable");
       });
     }
   });
 
-  // Handle messages from external web apps (via chrome.runtime.sendMessage)
-  browser.runtime.onMessageExternal.addListener(
-    (request, sender, sendResponse) => {
-      console.log('Received external message:', request, 'from:', sender.origin);
-      
-      // Verify sender is from allowed origin
-      const allowedOrigins = ['http://localhost:5173', 'http://localhost'];
-      const senderOrigin = new URL(sender.origin || sender.url || '').origin;
-      
-      if (!allowedOrigins.some(origin => senderOrigin.startsWith(origin))) {
-        sendResponse({ 
-          success: false, 
-          error: 'Unauthorized origin',
-          origin: senderOrigin 
+  browser.debugger.onEvent.addListener((source, method, params: any) => {
+    if (method !== "Network.responseReceived") return;
+    const url = params.response.url;
+
+    // Step 1: Capture liker (ProfileSpotlightsQuery)
+    if (url.includes("ProfileSpotlightsQuery")) {
+      browser.debugger.sendCommand(
+        { tabId: source.tabId },
+        "Network.getResponseBody",
+        { requestId: params.requestId },
+        (response) => {
+          if (!response?.body) return;
+          try {
+            const data = JSON.parse(response.body);
+            currentLiker = parseLikerResponse(data);
+            browser.runtime.sendMessage({ type: "user-opened-x-profile", user: currentLiker });
+            console.log("Parsed liker:", currentLiker);
+          } catch (err) {
+            console.error("Error parsing liker response", err);
+          }
+        }
+      );
+    }
+
+    // Step 2: Capture liked tweets
+    if (url.includes("Likes")) {
+      browser.debugger.sendCommand(
+        { tabId: source.tabId },
+        "Network.getResponseBody",
+        { requestId: params.requestId },
+        (response) => {
+          if (!response?.body) return;
+          try {
+            const data = JSON.parse(response.body);
+            const tweets = parseTweetsResponse(data);
+            const processed: LikesResponse = {
+              liker: currentLiker!, // use the stored liker
+              tweets
+            };
+            console.log("Parsed LikesResponse:", processed);
+            browser.storage.local.set({ lastGraphQLResponse: processed });
+            browser.runtime.sendMessage({ type: "proof", proof: processed });
+          } catch (err) {
+            console.error("Error parsing likes response", err);
+          }
+        }
+      );
+    }
+  });
+
+  // --- Parsing functions ---
+
+  function parseLikerResponse(raw: any): NormalizedUser {
+    const user = raw?.data?.user_result_by_screen_name?.result;
+    return {
+      id: user?.rest_id,
+      name: user?.core?.name,
+      handle: user?.core?.screen_name,
+      avatar: user?.legacy?.profile_image_url_https,
+      verified: user?.is_blue_verified || user?.legacy?.verified,
+      followers: user?.legacy?.followers_count,
+      following: user?.legacy?.friends_count,
+      createdAt: user?.legacy?.created_at
+    };
+  }
+
+  function parseTweetsResponse(raw: any): FlatTweet[] {
+    const tweets: FlatTweet[] = [];
+    const instructions = raw?.data?.user?.result?.timeline?.timeline?.instructions ?? [];
+    for (const instruction of instructions) {
+      for (const entry of instruction.entries ?? []) {
+        const tweet = entry?.content?.itemContent?.tweet_results?.result;
+        if (!tweet || tweet.__typename !== "Tweet") continue;
+
+        const author = tweet.core?.user_results?.result;
+        if (!author) continue;
+
+        const normalizedAuthor: NormalizedUser = {
+          id: author.rest_id,
+          name: author.legacy?.name,
+          handle: author.legacy?.screen_name,
+          avatar: author.legacy?.profile_image_url_https,
+          verified: author.is_blue_verified || author.legacy?.verified,
+          followers: author.legacy?.followers_count,
+          following: author.legacy?.friends_count,
+          createdAt: author.legacy?.created_at
+        };
+
+        tweets.push({
+          id: tweet.rest_id,
+          text: tweet.legacy?.full_text,
+          createdAt: tweet.legacy?.created_at,
+          lang: tweet.legacy?.lang,
+          stats: {
+            likes: tweet.legacy?.favorite_count,
+            retweets: tweet.legacy?.retweet_count,
+            replies: tweet.legacy?.reply_count,
+            quotes: tweet.legacy?.quote_count,
+            bookmarks: tweet.legacy?.bookmark_count,
+            views: tweet.views?.count
+          },
+          media: extractMedia(tweet),
+          author: normalizedAuthor
         });
-        return;
-      }
-
-      // Handle different message types
-      switch (request.action) {
-        case 'openSidePanel':
-          // Open side panel when requested by web app
-          if (!browser.sidePanel) {
-            sendResponse({ 
-              success: false, 
-              error: 'Side panel API not available' 
-            });
-            return;
-          }
-
-          // Extract task data from the request (excluding the action field)
-          const taskData = { ...request };
-          delete taskData.action;
-          
-          // Store task data for the side panel
-          if (Object.keys(taskData).length > 0) {
-            browser.storage.local.set({ currentTask: taskData });
-          }
-
-          // Chrome's sidePanel.open uses callback, not Promise
-          browser.windows.getCurrent((window) => {
-            // Open side panel for the current window
-            browser.sidePanel.open({ windowId: window.id }, () => {
-              if (browser.runtime.lastError) {
-                // Fallback: Try without any parameters
-                browser.sidePanel.open({}, () => {
-                  if (browser.runtime.lastError) {
-                    sendResponse({ 
-                      success: false, 
-                      error: browser.runtime.lastError.message || 'Failed to open side panel' 
-                    });
-                  } else {
-                    // Send task data to side panel after it opens
-                    setTimeout(() => {
-                      browser.runtime.sendMessage({
-                        from: 'background',
-                        taskData: taskData
-                      });
-                    }, 100);
-                    
-                    sendResponse({ 
-                      success: true, 
-                      message: 'Side panel opened (default context)' 
-                    });
-                  }
-                });
-              } else {
-                // Send task data to side panel after it opens
-                setTimeout(() => {
-                  browser.runtime.sendMessage({
-                    from: 'background',
-                    taskData: taskData
-                  });
-                }, 100);
-                
-                sendResponse({ 
-                  success: true, 
-                  message: 'Side panel opened',
-                  windowId: window.id 
-                });
-              }
-            });
-          });
-          return true; // Keep channel open for async response
-          
-        case 'closeSidePanel':
-          // Close side panel if supported
-          if (browser.sidePanel?.close) {
-            browser.sidePanel.close()
-              .then(() => {
-                sendResponse({ 
-                  success: true, 
-                  message: 'Side panel closed' 
-                });
-              })
-              .catch((error) => {
-                sendResponse({ 
-                  success: false, 
-                  error: error.message 
-                });
-              });
-            return true;
-          } else {
-            sendResponse({ 
-              success: false, 
-              error: 'Close side panel not supported' 
-            });
-          }
-          break;
-
-        case 'isSidePanelOpen':
-          // Check if side panel is open (if API supports it)
-          if (browser.sidePanel?.isOpen) {
-            browser.sidePanel.isOpen()
-              .then((isOpen) => {
-                sendResponse({ 
-                  success: true, 
-                  isOpen 
-                });
-              })
-              .catch((error) => {
-                sendResponse({ 
-                  success: false, 
-                  error: error.message 
-                });
-              });
-            return true;
-          } else {
-            sendResponse({ 
-              success: false, 
-              error: 'Check panel status not supported' 
-            });
-          }
-          break;
-          
-        case 'sendToSidePanel':
-          // Forward data to side panel
-          browser.runtime.sendMessage({
-            from: 'external',
-            data: request.data
-          })
-          .then((response) => {
-            sendResponse({ 
-              success: true, 
-              response 
-            });
-          })
-          .catch((error) => {
-            sendResponse({ 
-              success: false, 
-              error: error.message 
-            });
-          });
-          return true;
-          
-        case 'ping':
-          // Simple connectivity check
-          sendResponse({ 
-            success: true, 
-            message: 'Extension is running',
-            extensionId: browser.runtime.id,
-            version: browser.runtime.getManifest().version,
-            sidePanelAvailable: !!browser.sidePanel
-          });
-          break;
-          
-        default:
-          sendResponse({ 
-            success: false, 
-            error: `Unknown action: ${request.action}` 
-          });
       }
     }
-  );
+    return tweets;
+  }
 
-  // Also listen for internal messages (from side panel to background)
-  browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Internal message received:', request);
-    
-    if (request.from === 'sidePanel') {
-      // Handle messages from side panel
-      switch (request.action) {
-        case 'getStatus':
-          sendResponse({ 
-            status: 'ready',
-            timestamp: Date.now()
-          });
-          break;
-      }
+  function extractMedia(tweet: any): NormalizedMedia[] {
+    const media = tweet.legacy?.extended_entities?.media ?? tweet.legacy?.entities?.media ?? [];
+    return media.map((m: any): NormalizedMedia => ({
+      id: m.id_str,
+      type: m.type,
+      url: m.media_url_https,
+      displayUrl: m.display_url,
+      expandedUrl: m.expanded_url,
+      videoVariants: m.video_info?.variants?.map((v: any): VideoVariant => ({
+        bitrate: v.bitrate,
+        contentType: v.content_type,
+        url: v.url
+      }))
+    }));
+  }
+
+  browser.tabs.onRemoved.addListener((tabId) => {
+    if (attachedTabs.has(tabId)) {
+      browser.debugger.detach({ tabId }, () => {
+        attachedTabs.delete(tabId);
+      });
     }
   });
 });

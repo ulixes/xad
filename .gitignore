@@ -24,3 +24,9 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
+.env
+.tmp
+
+# Playwright test artifacts
+playwright-report/
+test-results/
