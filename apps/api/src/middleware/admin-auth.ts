@@ -1,16 +1,17 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { logger } from '../utils/logger';
+import { getConfig } from '../config';
 import type { Env } from '../types';
 
-export async function verifyAdminToken(c: Context<{ Bindings: Env }>, next: Next) {
+export async function verifyAdminToken(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substr(2, 9);
   const endpoint = c.req.path;
   const method = c.req.method;
-  
+
   try {
     const authHeader = c.req.header('authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       logger.error('Admin auth failed - missing token', {
         requestId,
@@ -21,7 +22,8 @@ export async function verifyAdminToken(c: Context<{ Bindings: Env }>, next: Next
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const adminToken = c.env.ADMIN_AUTH_TOKEN;
+    const config = getConfig(c);
+    const adminToken = config.auth.admin.token;
 
     if (!adminToken) {
       logger.error('Admin auth failed - no admin token configured', {
@@ -48,18 +50,18 @@ export async function verifyAdminToken(c: Context<{ Bindings: Env }>, next: Next
       method,
       duration
     });
-    
+
     await next();
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    
+
     logger.error('Admin auth error', {
       requestId,
       endpoint,
       method,
       duration,
     }, error);
-    
+
     return c.json({ error: 'Authentication failed', requestId }, 401);
   }
 }

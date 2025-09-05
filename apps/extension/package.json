@@ -5,16 +5,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wxt",
-    "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
-    "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare",
-    "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "dev": "dotenvx run wxt",
+    "dev:firefox": "dotenvx run wxt -b firefox",
+    "build": "dotenvx run wxt build",
+    "build:firefox": "dotenvx run wxt build -b firefox",
+    "zip": "dotenvx run wxt zip",
+    "zip:firefox": "dotenvx run wxt zip -b firefox",
+    "compile": "dotenvx run tsc --noEmit",
+    "postinstall": "dotenvx run wxt prepare",
+    "e2e": "dotenvx run playwright test",
+    "e2e:ui": "dotenvx run playwright test --ui"
   },
   "dependencies": {
     "@privy-io/react-auth": "^2.24.0",

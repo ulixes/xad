@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "dotenvx run -f .env -- wrangler dev",
     "build": "echo 'No build step for API'",
     "start": "dotenvx run -- bun index.ts",
     "deploy": "wrangler deploy",
@@ -27,6 +27,7 @@
     "drizzle-orm": "^0.44.5",
     "hono": "^4.9.4",
     "jose": "^6.1.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "wrangler": "^4.33.2"
   }
 }

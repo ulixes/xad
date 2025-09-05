@@ -1,18 +1,21 @@
-import { Hono } from "hono";
+import { Hono, type ExecutionContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import userRoutes from "./src/routes/users";
 import taskRoutes from "./src/routes/tasks";
 import brandsROutes from "./src/routes/brands";
 import { initDB } from "./src/db/index";
+import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
 
 // Define the Hono app with typed bindings
 const app = new Hono<{ Bindings: Env }>();
 
-// Initialize DB with env middleware
+// Initialize config and DB middleware
 app.use("*", async (c, next) => {
-  const dbInstance = initDB(c.env, "xad-api", "production");
+  const config = ConfigManager.fromContext(c);
+  console.log("Config loaded:", config);
+  const dbInstance = initDB(config.database.url, config.app.serviceName, config.app.environment);
   c.set("db", dbInstance.db);
   await next();
 });
@@ -75,7 +78,7 @@ app.notFound((c) => {
 
 // Export for Cloudflare Workers
 export default {
-  fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    return app.fetch(request, env, ctx);
+  fetch(request: Request, ctx: ExecutionContext) {
+    return app.fetch(request, ctx);
   },
 };

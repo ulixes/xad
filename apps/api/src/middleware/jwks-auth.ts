@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { logger } from '../utils/logger';
 import type { Env } from '../types';
@@ -20,7 +20,7 @@ declare module 'hono' {
   }
 }
 
-export async function verifyPrivyTokenJWKS(c: Context<{ Bindings: Env }>, next: Next) {
+export async function verifyPrivyTokenJWKS(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substr(2, 9);
   const endpoint = c.req.path;
@@ -35,11 +35,14 @@ export async function verifyPrivyTokenJWKS(c: Context<{ Bindings: Env }>, next: 
 
     const token = authHeader.replace('Bearer ', '');
     
+    // Get config from context
+    const { getConfig } = await import('../config');
+    const config = getConfig(c);
+    const privyAppId = config.auth.privy.appId;
+
     console.log(`[AUTH] Verifying token with JWKS | req=${requestId} | ${method} ${endpoint}`);
 
-    // Get PRIVY_APP_ID from environment
-    const privyAppId = c.env.PRIVY_APP_ID;
-    const JWKS_URL = `https://auth.privy.io/api/v1/apps/${privyAppId}/jwks.json`;
+    const JWKS_URL = config.auth.privy.jwksUrl!;
     const jwks = createRemoteJWKSet(new URL(JWKS_URL));
 
     // Verify token using JWKS
@@ -70,7 +73,7 @@ export async function verifyPrivyTokenJWKS(c: Context<{ Bindings: Env }>, next: 
     await next();
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    
+
     logger.error('JWKS auth failed', {
       requestId,
       endpoint,
@@ -79,7 +82,7 @@ export async function verifyPrivyTokenJWKS(c: Context<{ Bindings: Env }>, next: 
     }, error);
 
     if (error.code === 'JWTAudienceMismatch') {
-      console.error(`[AUTH] App ID mismatch | token_aud=${error.claim} | server_aud=${c.env.PRIVY_APP_ID}`);
+      console.error(`[AUTH] App ID mismatch | token_aud=${error.claim} | server_aud=${config.auth.privy.appId}`);
       return c.json({ error: 'Token app ID mismatch', requestId }, 401);
     }
 

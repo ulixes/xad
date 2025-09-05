@@ -1,27 +1,8 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { PrivyClient } from '@privy-io/server-auth';
 import { logger } from '../utils/logger';
-
-// Initialize PrivyClient if environment variables are available
-let privyClient: PrivyClient | null = null;
-
-// Temporarily disable Privy for testing - set to true when you have valid credentials
-const DISABLE_PRIVY_FOR_TESTING = false;
-
-console.log("process.env.PRIVY_APP_ID", process.env.PRIVY_APP_ID)
-if (process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET && !DISABLE_PRIVY_FOR_TESTING) {
-  try {
-    privyClient = new PrivyClient({
-      appId: process.env.PRIVY_APP_ID,
-      appSecret: process.env.PRIVY_APP_SECRET,
-    });
-    console.log(`[INIT] Privy client initialized | app_id=${process.env.PRIVY_APP_ID}`);
-  } catch (error) {
-    console.error(`[INIT] Privy initialization failed | error=${error.message}`);
-  }
-} else {
-  console.log('[INIT] Using mock authentication for development');
-}
+import { getConfig } from '../config';
+import type { Env } from '../types';
 
 export interface PrivyUser {
   privyId: string;
@@ -40,7 +21,42 @@ declare module 'hono' {
   }
 }
 
-export async function verifyPrivyToken(c: Context, next: Next) {
+// Cache PrivyClient instances per app ID
+const privyClientCache = new Map<string, PrivyClient>();
+
+function getPrivyClient(c: Context<{ Bindings: Env }>): PrivyClient | null {
+  try {
+    const config = getConfig(c);
+    const appId = config.auth.privy.appId;
+    const appSecret = config.auth.privy.appSecret;
+
+    if (!appId || !appSecret) {
+      console.log('[INIT] Privy credentials not configured');
+      return null;
+    }
+
+    // Check cache first
+    if (privyClientCache.has(appId)) {
+      return privyClientCache.get(appId)!;
+    }
+
+    // Create new client and cache it
+    const client = new PrivyClient({
+      appId,
+      appSecret,
+    });
+
+    privyClientCache.set(appId, client);
+    console.log(`[INIT] Privy client initialized | app_id=${appId}`);
+    
+    return client;
+  } catch (error: any) {
+    console.error(`[INIT] Privy initialization failed | error=${error.message}`);
+    return null;
+  }
+}
+
+export async function verifyPrivyToken(c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substr(2, 9);
   const endpoint = c.req.path;
@@ -50,9 +66,11 @@ export async function verifyPrivyToken(c: Context, next: Next) {
   
   try {
     const authHeader = c.req.header('authorization');
+    const privyClient = getPrivyClient(c);
+    const config = getConfig(c);
     
-    // If no authorization header and no privy client, use mock auth
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !privyClient) {
+    // If in development mode without privy client, use mock auth
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !privyClient && config.app.environment === 'development') {
       c.set('user', {
         privyId: 'did:privy:cm123456789abcdef',
         email: 'dev@example.com',
@@ -79,7 +97,7 @@ export async function verifyPrivyToken(c: Context, next: Next) {
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
         const tokenAppId = payload.aud;
-        const serverAppId = process.env.PRIVY_APP_ID;
+        const serverAppId = config.auth.privy.appId;
         
         if (tokenAppId !== serverAppId) {
           logger.error('App ID mismatch detected', {
@@ -95,7 +113,7 @@ export async function verifyPrivyToken(c: Context, next: Next) {
       // Token decode failed, let Privy handle validation
     }
 
-    console.log('toke: ', authToken)
+    console.log('token: ', authToken);
     
     const claims = await privyClient.verifyAuthToken(authToken);
     
@@ -127,7 +145,7 @@ export async function verifyPrivyToken(c: Context, next: Next) {
     
     await next();
   } catch (error: any) {
-    console.log("error: ", error)
+    console.log("error: ", error);
     const duration = Date.now() - startTime;
     
     logger.error('Auth failed', {
@@ -146,8 +164,10 @@ export async function verifyPrivyToken(c: Context, next: Next) {
 }
 
 // Optional middleware - doesn't fail if no token
-export async function optionalAuth(c: Context, next: Next) {
+export async function optionalAuth(c: Context<{ Bindings: Env }>, next: Next): Promise<void> {
   try {
+    const privyClient = getPrivyClient(c);
+    
     if (!privyClient) {
       await next();
       return;
