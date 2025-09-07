@@ -1,0 +1,365 @@
+{
+  "version": 0.1,
+  "files": {
+    "components/EarningsCalculator.tsx": {
+      "scopes": {
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/alternate/1": {
+          "type": "element",
+          "hash": "5f0f5bee4081677e28db9e70f21a71be",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Followers: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/alternate/3/1": {
+          "type": "element",
+          "hash": "21332ae938dc075f53ceb580569b1884",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<100"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/alternate/3/5": {
+          "type": "element",
+          "hash": "e336cc511094b07517be09d116ce891a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "100k+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/1/1": {
+          "type": "element",
+          "hash": "f204824c61f81272f41e28627c03790d",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Followers: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/1/3/1": {
+          "type": "element",
+          "hash": "21332ae938dc075f53ceb580569b1884",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<100"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/1/3/5": {
+          "type": "element",
+          "hash": "e336cc511094b07517be09d116ce891a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "100k+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/3/1": {
+          "type": "element",
+          "hash": "2d714f20a3ab5a64c2f6cf6c237fa9cf",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Likes & Collects: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/3/3/1": {
+          "type": "element",
+          "hash": "26f3d28d6895c05ce86d6a60677809ff",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<1k"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/alternate/consequent/3/3/5": {
+          "type": "element",
+          "hash": "1495f5529f45f9c09838f9fe9545cc1b",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "1M+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/1/1": {
+          "type": "element",
+          "hash": "f204824c61f81272f41e28627c03790d",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Followers: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/1/3/1": {
+          "type": "element",
+          "hash": "21332ae938dc075f53ceb580569b1884",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<100"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/1/3/5": {
+          "type": "element",
+          "hash": "e336cc511094b07517be09d116ce891a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "100k+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/3/1": {
+          "type": "element",
+          "hash": "485d5eb483fa96a61e03b706b3f87db3",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Total Likes: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/3/3/1": {
+          "type": "element",
+          "hash": "26f3d28d6895c05ce86d6a60677809ff",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<1k"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/alternate/consequent/3/3/5": {
+          "type": "element",
+          "hash": "1495f5529f45f9c09838f9fe9545cc1b",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "1M+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/1/1": {
+          "type": "element",
+          "hash": "4a4bbae305d353ecd757c4c17f27e8a8",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Subscribers: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/1/3/1": {
+          "type": "element",
+          "hash": "21332ae938dc075f53ceb580569b1884",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<100"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/1/3/5": {
+          "type": "element",
+          "hash": "e336cc511094b07517be09d116ce891a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "100k+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/3/1": {
+          "type": "element",
+          "hash": "8c467c1440909dc0e778f16d5a8610b4",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Total Channel Views: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/3/3/1": {
+          "type": "element",
+          "hash": "26f3d28d6895c05ce86d6a60677809ff",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<1k"
+        },
+        "2/declaration/body/12/argument/1/13/expression/alternate/consequent/3/3/5": {
+          "type": "element",
+          "hash": "496313ae4e26f3c54815059e2b5cff1d",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "10M+"
+        },
+        "2/declaration/body/12/argument/1/13/expression/consequent/1": {
+          "type": "element",
+          "hash": "325500b8fca22d595cb0286997c77e09",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Karma: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/13/expression/consequent/3/1": {
+          "type": "element",
+          "hash": "21332ae938dc075f53ceb580569b1884",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<100"
+        },
+        "2/declaration/body/12/argument/1/13/expression/consequent/3/5": {
+          "type": "element",
+          "hash": "e336cc511094b07517be09d116ce891a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "100k+"
+        },
+        "2/declaration/body/12/argument/1/9/1": {
+          "type": "element",
+          "hash": "b5ff5f82c340938863156b2fba30b411",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "{t[language].accountAge}: <element:span><expression/></element:span>"
+        },
+        "2/declaration/body/12/argument/1/9/3/1": {
+          "type": "element",
+          "hash": "22009713977c4f57bfd3fc54bb9d2159",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<1"
+        },
+        "2/declaration/body/12/argument/1/9/3/5": {
+          "type": "element",
+          "hash": "be22599fc4cdf0ac9ab922ea0b23626e",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "10+"
+        },
+        "2/declaration/body/12/argument/5/3/1/1": {
+          "type": "element",
+          "hash": "0ad1d1590e78622ffb013a0e450b6b80",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<expression/>:"
+        },
+        "2/declaration/body/12/argument/5/3/1/3": {
+          "type": "element",
+          "hash": "1c76587f1c18c526c165fc2a84ce5909",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "${earnings.primaryMin} - ${earnings.primaryMax}"
+        },
+        "2/declaration/body/12/argument/5/3/3/1": {
+          "type": "element",
+          "hash": "0ad1d1590e78622ffb013a0e450b6b80",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "<expression/>:"
+        },
+        "2/declaration/body/12/argument/5/3/3/3": {
+          "type": "element",
+          "hash": "1c76587f1c18c526c165fc2a84ce5909",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "${earnings.secondaryMin} - ${earnings.secondaryMax}"
+        }
+      }
+    },
+    "components/Footer.tsx": {
+      "scopes": {
+        "1/declaration/body/2/argument/1/1/1": {
+          "type": "element",
+          "hash": "1933e45498dd3e9e3b1e7a50defacc3a",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Xadvo"
+        },
+        "1/declaration/body/2/argument/1/1/5/1-aria-label": {
+          "type": "attribute",
+          "hash": "6e1cf3c00fa6fbe24afcc78ea3b5f3e4",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "GitHub"
+        },
+        "1/declaration/body/2/argument/1/1/5/3-aria-label": {
+          "type": "attribute",
+          "hash": "ba3d4aed69a50759b53a0b7c319a3ad9",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Twitter"
+        },
+        "1/declaration/body/2/argument/1/1/5/5-aria-label": {
+          "type": "attribute",
+          "hash": "06ec7d95ab44931ed9d1925e4063d703",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Discord"
+        },
+        "1/declaration/body/2/argument/1/1/7/3": {
+          "type": "element",
+          "hash": "5f1c90d0fd46023ba1bfaaa2537f59fb",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "•"
+        }
+      }
+    },
+    "components/Hero.tsx": {
+      "scopes": {
+        "3/declaration/body/2/argument/1/1/3/3/1/expression/alternate": {
+          "type": "element",
+          "hash": "3d5f6b7b4a2695976eebf058048ccab0",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "在社交媒体上<element:b>点赞 ❤️</element:b> 和<element:b>评论 💬</element:b>，赚取<element:b>金钱 💰️</element:b>。"
+        },
+        "3/declaration/body/2/argument/1/1/3/3/1/expression/consequent": {
+          "type": "element",
+          "hash": "8beb2b6cf3f30804965c365c0da9e107",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Earn <element:b>money 💰️</element:b> when you <element:b>like ❤️</element:b> and <element:b>comment 💬</element:b> across social media."
+        }
+      }
+    },
+    "components/HowItWorks.tsx": {
+      "scopes": {
+        "1/declaration/body/0/argument/1/1/1": {
+          "type": "element",
+          "hash": "de489cfbefd5cf0c241953ca9daa875e",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "How It Works"
+        },
+        "1/declaration/body/0/argument/1/1/3": {
+          "type": "element",
+          "hash": "d0296fe7ee25d3caecaa5c0aff3526c6",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Start earning in three simple steps"
+        }
+      }
+    },
+    "components/LanguageSwitch.tsx": {
+      "scopes": {
+        "2/declaration/body/3/argument-title": {
+          "type": "attribute",
+          "hash": "ba81a6e047c6b83fb60b13529a56fc80",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Switch language"
+        }
+      }
+    },
+    "stories/LandingPage.stories.tsx": {
+      "scopes": {
+        "9/declaration/0/init/1/value/body/3": {
+          "type": "element",
+          "hash": "4faceeaf9b2bc55cc38069d1ae4e0d29",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "中文版即将推出 (Chinese version coming soon)"
+        }
+      }
+    }
+  }
+}
