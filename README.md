@@ -20,5 +20,11 @@ bunx turbo run dev --filter=@xad/extension
 ```
 
 Extension test user:
-email: 'test-2886@privy.io',
-otp: '613301'
+Email
+test-7829@privy.io
+
+Phone number
++1 555 555 9184
+
+OTP code
+394991

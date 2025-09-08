@@ -1,34 +1,41 @@
 import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
+import path from 'node:path';
 
+// See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
-  vite: () => ({
-    plugins: [tailwindcss()],
-  }),
   manifest: {
-    name: 'Task Manager',
-    description: 'A task management extension with side panel',
-    permissions: ['sidePanel', 'storage', 'identity', 'tabs', 'activeTab', 'webRequest', 'debugger'],
-    host_permissions: ['https://x.com/*', 'https://auth.privy.io/*'],
-    content_security_policy: {
-      extension_pages: "script-src 'self' http://localhost:3000; object-src 'self'; frame-ancestors 'none';",
-      sandbox: "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000; sandbox allow-scripts allow-forms allow-popups allow-modals; child-src 'self';"
-    },
-    externally_connectable: {
-      matches: ['http://localhost:5173/*'],
-    },
+    permissions: ['sidePanel', 'activeTab', 'storage'],
     action: {
-      default_title: 'Open Task Manager',
-      default_icon: {
-        '16': 'icon/16.png',
-        '32': 'icon/32.png',
-        '48': 'icon/48.png',
-        '128': 'icon/128.png',
+      default_title: 'Open Microtask Side Panel',
+    },
+    host_permissions: [
+      "https://auth.privy.io/*",
+      "https://www.googletagmanager.com/*",
+      "https://embed-wallet.privy.io/*"
+    ]
+  },
+  vite: () => ({
+    resolve: {
+      alias: {
+        '@/lib/utils': path.resolve(__dirname, '../../packages/ui/src/lib/utils.ts'),
+        '@/components': path.resolve(__dirname, '../../packages/ui/src/components'),
+        '@': path.resolve(__dirname, '../../packages/ui/src'),
+        buffer: 'buffer',
       },
     },
-    side_panel: {
-      default_path: 'sidepanel.html',
+    define: {
+      global: 'globalThis',
     },
-  },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'buffer'],
+    },
+    server: {
+      fs: {
+        allow: [
+          path.resolve(__dirname, '../..'),
+        ],
+      },
+    },
+  }),
 });
