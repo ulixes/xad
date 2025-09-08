@@ -24,10 +24,6 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
-.tmp
 
-.env.keys
-
-# Playwright test artifacts
-playwright-report/
-test-results/
+# Temporary folders
+temp/
