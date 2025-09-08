@@ -62,3 +62,6 @@ Thumbs.db
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*storybook.log
+storybook-static

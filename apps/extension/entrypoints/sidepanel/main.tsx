@@ -1,46 +1,34 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { PrivyProvider } from '@privy-io/react-auth';
-import { TaskProvider } from '@/lib/context/TaskProvider';
-import { SidePanelContent } from './SidePanelContent';
 import { Buffer } from 'buffer';
-import '@/src/styles/globals.css';
+import { PrivyProvider } from '@privy-io/react-auth';
+import { ThemeProvider } from '@xad/ui';
+import { SidePanelApp } from '../../src/components/SidePanelApp';
+import { AuthStateManager } from '../../src/components/AuthStateManager';
+import '../../src/styles/index.css';
 
-// Ensure Buffer is available for SDKs that expect Node globals
-(window as any).Buffer = (window as any).Buffer || Buffer;
+// Buffer polyfill for Privy compatibility
+if (typeof window !== 'undefined') {
+  (window as any).Buffer = (window as any).Buffer || Buffer;
+  (window as any).global = (window as any).global || window;
+}
 
-const SidePanelApp: React.FC = () => {
+const SidePanel = () => {
   return (
-    <PrivyProvider
-      appId={import.meta.env.VITE_PRIVY_APP_ID as string}
-      config={{
-        appearance: {
-          theme: 'dark',
-          accentColor: '#ff3333',
-          logo: browser.runtime.getURL('/icon/128.png'),
-        },
-        embeddedWallets: {
-          ethereum: {
-            createOnLogin: 'all-users'
-          }
-        },
-        legal: {
-          termsAndConditionsUrl: 'https://your-app.com/terms',
-          privacyPolicyUrl: 'https://your-app.com/privacy'
-        }
-      }}
-    >
-      <TaskProvider>
-        <SidePanelContent />
-      </TaskProvider>
-    </PrivyProvider>
+    <React.StrictMode>
+      <PrivyProvider appId={import.meta.env.VITE_PRIVY_APP_ID || 'cmf6izaj6006mld0brhfx9u7d'}>
+        <ThemeProvider defaultTheme="dark" storageKey="extension-theme">
+          <AuthStateManager>
+            <SidePanelApp />
+          </AuthStateManager>
+        </ThemeProvider>
+      </PrivyProvider>
+    </React.StrictMode>
   );
 };
 
-// Initialize React app
-const container = document.getElementById('app');
+const container = document.getElementById('root');
 if (container) {
   const root = createRoot(container);
-  root.render(<SidePanelApp />);
-} else {
+  root.render(<SidePanel />);
 }

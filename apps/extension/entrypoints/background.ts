@@ -1,176 +1,78 @@
-import { LikesResponse, NormalizedMedia, NormalizedUser, FlatTweet, VideoVariant } from "@/src/types";
+// src/background.ts
+
+// A list of URL patterns that should trigger network interception.
+const URL_PATTERNS_TO_WATCH = [
+    /https:\/\/x\.com\/[^/]+\/likes/,
+    /https:\/\/x\.com\/[^/]+\/(with_replies)?$/,
+    // Add other patterns for Farcaster, etc. here
+];
 
 export default defineBackground(() => {
-  const attachedTabs = new Set<number>();
+    const attachedTabs = new Set<number>();
 
-  // Keep the last seen liker
-  let currentLiker: NormalizedUser | null = null;
+    // main event
+    browser.action.onClicked.addListener((tab) => {
+        browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
+    });
 
-  browser.action.onClicked.addListener((tab) => {
-    browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
-  });
+    browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.status !== 'complete' || !tab.url) return;
 
-  const filter: Browser.webRequest.RequestFilter = {
-    urls: ["https://x.com/i/api/graphql/*"],
-    types: ["xmlhttprequest"]
-  };
+        const shouldAttach = URL_PATTERNS_TO_WATCH.some(pattern => pattern.test(tab.url!));
 
-  browser.webRequest.onCompleted.addListener(
-    (details) => {
-      if (details.url.includes("Likes")) {
-        browser.runtime.sendMessage({ type: "user-opened-likes-view" });
-      }
-    },
-    filter
-  );
-
-  browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (
-      changeInfo.status === "complete" &&
-      tab.url?.match(/https:\/\/x\.com\/[^/]+\/likes/) &&
-      !attachedTabs.has(tabId)
-    ) {
-      browser.debugger.attach({ tabId }, "1.3", () => {
-        if (browser.runtime.lastError) {
-          console.error("Debugger attach failed:", browser.runtime.lastError.message);
-          return;
+        if (shouldAttach && !attachedTabs.has(tabId)) {
+            browser.debugger.attach({ tabId }, "1.3", () => {
+                if (browser.runtime.lastError) {
+                    console.error("Debugger attach failed:", browser.runtime.lastError.message);
+                    return;
+                }
+                attachedTabs.add(tabId);
+                browser.debugger.sendCommand({ tabId }, "Network.enable");
+                console.log(`Debugger attached to tab ${tabId} for URL: ${tab.url}`);
+            });
         }
-        attachedTabs.add(tabId);
-        browser.debugger.sendCommand({ tabId }, "Network.enable");
-      });
-    }
-  });
+    });
 
-  browser.debugger.onEvent.addListener((source, method, params: any) => {
-    if (method !== "Network.responseReceived") return;
-    const url = params.response.url;
+    browser.debugger.onEvent.addListener((source, method, params: any) => {
+        if (method !== "Network.responseReceived" || !source.tabId) return;
 
-    // Step 1: Capture liker (ProfileSpotlightsQuery)
-    if (url.includes("ProfileSpotlightsQuery")) {
-      browser.debugger.sendCommand(
-        { tabId: source.tabId },
-        "Network.getResponseBody",
-        { requestId: params.requestId },
-        (response) => {
-          if (!response?.body) return;
-          try {
-            const data = JSON.parse(response.body);
-            currentLiker = parseLikerResponse(data);
-            browser.runtime.sendMessage({ type: "user-opened-x-profile", user: currentLiker });
-            console.log("Parsed liker:", currentLiker);
-          } catch (err) {
-            console.error("Error parsing liker response", err);
-          }
+        browser.debugger.sendCommand(
+            { tabId: source.tabId },
+            "Network.getResponseBody",
+            { requestId: params.requestId },
+            (response) => {
+                if (response?.body) {
+                    // Send the raw data via an internal command.
+                    sendEventUpTheChain({
+                        sourceUrl: params.response.url,
+                        responseBody: response.body,
+                    });
+                }
+            }
+        );
+    });
+    
+    browser.tabs.onRemoved.addListener((tabId) => {
+        if (attachedTabs.has(tabId)) {
+            browser.debugger.detach({ tabId });
+            attachedTabs.delete(tabId);
         }
-      );
-    }
-
-    // Step 2: Capture liked tweets
-    if (url.includes("Likes")) {
-      browser.debugger.sendCommand(
-        { tabId: source.tabId },
-        "Network.getResponseBody",
-        { requestId: params.requestId },
-        (response) => {
-          if (!response?.body) return;
-          try {
-            const data = JSON.parse(response.body);
-            const tweets = parseTweetsResponse(data);
-            const processed: LikesResponse = {
-              liker: currentLiker!, // use the stored liker
-              tweets
-            };
-            console.log("Parsed LikesResponse:", processed);
-            browser.storage.local.set({ lastGraphQLResponse: processed });
-            browser.runtime.sendMessage({ type: "proof", proof: processed });
-          } catch (err) {
-            console.error("Error parsing likes response", err);
-          }
-        }
-      );
-    }
-  });
-
-  // --- Parsing functions ---
-
-  function parseLikerResponse(raw: any): NormalizedUser {
-    const user = raw?.data?.user_result_by_screen_name?.result;
-    return {
-      id: user?.rest_id,
-      name: user?.core?.name,
-      handle: user?.core?.screen_name,
-      avatar: user?.legacy?.profile_image_url_https,
-      verified: user?.is_blue_verified || user?.legacy?.verified,
-      followers: user?.legacy?.followers_count,
-      following: user?.legacy?.friends_count,
-      createdAt: user?.legacy?.created_at
-    };
-  }
-
-  function parseTweetsResponse(raw: any): FlatTweet[] {
-    const tweets: FlatTweet[] = [];
-    const instructions = raw?.data?.user?.result?.timeline?.timeline?.instructions ?? [];
-    for (const instruction of instructions) {
-      for (const entry of instruction.entries ?? []) {
-        const tweet = entry?.content?.itemContent?.tweet_results?.result;
-        if (!tweet || tweet.__typename !== "Tweet") continue;
-
-        const author = tweet.core?.user_results?.result;
-        if (!author) continue;
-
-        const normalizedAuthor: NormalizedUser = {
-          id: author.rest_id,
-          name: author.legacy?.name,
-          handle: author.legacy?.screen_name,
-          avatar: author.legacy?.profile_image_url_https,
-          verified: author.is_blue_verified || author.legacy?.verified,
-          followers: author.legacy?.followers_count,
-          following: author.legacy?.friends_count,
-          createdAt: author.legacy?.created_at
-        };
-
-        tweets.push({
-          id: tweet.rest_id,
-          text: tweet.legacy?.full_text,
-          createdAt: tweet.legacy?.created_at,
-          lang: tweet.legacy?.lang,
-          stats: {
-            likes: tweet.legacy?.favorite_count,
-            retweets: tweet.legacy?.retweet_count,
-            replies: tweet.legacy?.reply_count,
-            quotes: tweet.legacy?.quote_count,
-            bookmarks: tweet.legacy?.bookmark_count,
-            views: tweet.views?.count
-          },
-          media: extractMedia(tweet),
-          author: normalizedAuthor
-        });
-      }
-    }
-    return tweets;
-  }
-
-  function extractMedia(tweet: any): NormalizedMedia[] {
-    const media = tweet.legacy?.extended_entities?.media ?? tweet.legacy?.entities?.media ?? [];
-    return media.map((m: any): NormalizedMedia => ({
-      id: m.id_str,
-      type: m.type,
-      url: m.media_url_https,
-      displayUrl: m.display_url,
-      expandedUrl: m.expanded_url,
-      videoVariants: m.video_info?.variants?.map((v: any): VideoVariant => ({
-        bitrate: v.bitrate,
-        contentType: v.content_type,
-        url: v.url
-      }))
-    }));
-  }
-
-  browser.tabs.onRemoved.addListener((tabId) => {
-    if (attachedTabs.has(tabId)) {
-      browser.debugger.detach({ tabId }, () => {
-        attachedTabs.delete(tabId);
-      });
-    }
-  });
+    });
 });
+
+/**
+ * Sends the captured network event to other parts of the extension 
+ * (like the side panel or popup) using an internal command.
+ */
+function sendEventUpTheChain(payload: { sourceUrl: string; responseBody: string; }) {
+    console.log(`Sending command up the chain for: ${payload.sourceUrl}`);
+    
+    // This sends a message that your app's UI layer can listen for.
+    browser.runtime.sendMessage({
+        type: "RAW_NETWORK_EVENT",
+        payload: payload
+    }).catch(error => {
+        // This error is common and usually just means the side panel isn't open to receive the message.
+        console.warn("Could not send message command. Is the side panel open?", error);
+    });
+}
