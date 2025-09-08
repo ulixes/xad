@@ -12,10 +12,10 @@ export interface SchemaParam {
 
 export interface ZKSchema {
   id: string;
+  service: string; // The actual service/platform (e.g., "Spotify", "Duolingo", etc.)
   category: string;
   provider: 'zkpass' | 'camp';
-  schemaName: string;
-  displayName: string;
+  displayName: string; // What shows in the dropdown (e.g., "Listening History", "Learning Streak")
   description: string;
   attribute: string;
   type: AttributeType;
@@ -28,10 +28,10 @@ export interface ZKSchema {
 export interface ConditionBlock {
   id: string;
   schemaId: string;
-  operator: OperatorType;
-  value: any;
+  operator?: OperatorType;
+  value?: any;
   params?: Record<string, any>;
-  logicalOperator?: LogicalOperator; // AND/OR to connect to next condition
+  logicalOperator?: LogicalOperator;
 }
 
 export interface ConditionGroup {
@@ -50,45 +50,67 @@ export interface TargetingRule {
   status: 'draft' | 'active' | 'paused';
 }
 
-// Mock schemas based on ZKPass and Camp Network capabilities
+// Comprehensive schema list based on ZKPass and Camp Network capabilities
 export const availableSchemas: ZKSchema[] = [
-  // Demographics (ZKPass)
+  // ========== IDENTITY & KYC ==========
   {
-    id: 'zkp-age',
-    category: 'Demographics',
+    id: 'zkp-mygov-age',
+    service: 'MyGovID',
+    category: 'Identity',
     provider: 'zkpass',
-    schemaName: 'OKX KYC',
     displayName: 'Age Verification',
-    description: 'Verify user age through KYC',
+    description: 'Verify age through government ID',
     attribute: 'age',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
     verified: true
   },
   {
-    id: 'zkp-country',
-    category: 'Demographics',
+    id: 'zkp-mygov-country',
+    service: 'MyGovID',
+    category: 'Identity',
     provider: 'zkpass',
-    schemaName: 'MyGovID',
-    displayName: 'Country Verification',
-    description: 'Verify user country of residence',
+    displayName: 'Country of Residence',
+    description: 'Verified country from government ID',
     attribute: 'country',
     type: 'string',
     operators: ['=', '!=', 'in'],
-    icon: '',
     verified: true
   },
-  
-  // Social Media (Camp Network + Custom)
   {
-    id: 'camp-spotify-listens',
+    id: 'zkp-okx-kyc-status',
+    service: 'OKX',
+    category: 'Identity',
+    provider: 'zkpass',
+    displayName: 'KYC Status',
+    description: 'KYC verification completion status',
+    attribute: 'kyc_passed',
+    type: 'boolean',
+    operators: ['='],
+    verified: true
+  },
+  {
+    id: 'zkp-okx-kyc-age',
+    service: 'OKX',
+    category: 'Identity',
+    provider: 'zkpass',
+    displayName: 'Age (KYC)',
+    description: 'Age verified through OKX KYC',
+    attribute: 'age',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+
+  // ========== MUSIC & STREAMING (Camp Network) ==========
+  {
+    id: 'camp-spotify-artist-listens',
+    service: 'Spotify',
     category: 'Music',
     provider: 'camp',
-    schemaName: 'Spotify',
     displayName: 'Artist Listen Count',
-    description: 'Number of times user listened to an artist',
-    attribute: 'listens_to_artist',
+    description: 'Number of times listened to specific artist',
+    attribute: 'artist_play_count',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
     params: [
@@ -97,158 +119,354 @@ export const availableSchemas: ZKSchema[] = [
         type: 'string',
         required: true,
         placeholder: 'e.g., Kanye West',
-        description: 'Name of the artist'
+        description: 'Artist name'
       }
     ],
-    icon: '',
     verified: true
   },
   {
-    id: 'camp-spotify-top-artist',
+    id: 'camp-spotify-top-artists',
+    service: 'Spotify',
     category: 'Music',
     provider: 'camp',
-    schemaName: 'Spotify',
     displayName: 'Top Artists',
-    description: 'User\'s top artists',
+    description: 'User\'s most played artists',
     attribute: 'top_artists',
     type: 'string',
     operators: ['contains'],
-    icon: '',
     verified: true
   },
   {
-    id: 'custom-reddit-karma',
-    category: 'Social',
-    provider: 'zkpass',
-    schemaName: 'Reddit (Custom)',
-    displayName: 'Reddit Karma',
-    description: 'Total karma points on Reddit',
-    attribute: 'karma',
+    id: 'camp-spotify-monthly-minutes',
+    service: 'Spotify',
+    category: 'Music',
+    provider: 'camp',
+    displayName: 'Monthly Listening Time',
+    description: 'Minutes listened in past month',
+    attribute: 'monthly_minutes',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
-    verified: false
+    verified: true
   },
+
+  // ========== SOCIAL MEDIA ==========
   {
     id: 'camp-twitter-followers',
+    service: 'X (Twitter)',
     category: 'Social',
     provider: 'camp',
-    schemaName: 'X (Twitter)',
     displayName: 'Follower Count',
     description: 'Number of followers on X',
-    attribute: 'followers',
+    attribute: 'followers_count',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
+    verified: true
+  },
+  {
+    id: 'camp-twitter-tweets',
+    service: 'X (Twitter)',
+    category: 'Social',
+    provider: 'camp',
+    displayName: 'Tweet Count',
+    description: 'Total number of tweets',
+    attribute: 'tweet_count',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
     verified: true
   },
   {
     id: 'camp-tiktok-views',
+    service: 'TikTok',
     category: 'Social',
     provider: 'camp',
-    schemaName: 'TikTok',
-    displayName: 'Total Views',
-    description: 'Total video views on TikTok',
+    displayName: 'Total Video Views',
+    description: 'Combined views across all videos',
     attribute: 'total_views',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
     verified: true
   },
-  
-  // Financial (ZKPass)
   {
-    id: 'zkp-bank-balance',
+    id: 'camp-tiktok-followers',
+    service: 'TikTok',
+    category: 'Social',
+    provider: 'camp',
+    displayName: 'Follower Count',
+    description: 'Number of TikTok followers',
+    attribute: 'followers',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+  {
+    id: 'camp-telegram-groups',
+    service: 'Telegram',
+    category: 'Social',
+    provider: 'camp',
+    displayName: 'Group Memberships',
+    description: 'Number of groups joined',
+    attribute: 'group_count',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+  {
+    id: 'custom-reddit-karma',
+    service: 'Reddit',
+    category: 'Social',
+    provider: 'zkpass',
+    displayName: 'Total Karma',
+    description: 'Combined post and comment karma',
+    attribute: 'total_karma',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: false // Custom schema
+  },
+  {
+    id: 'zkp-quora-posts',
+    service: 'Quora',
+    category: 'Social',
+    provider: 'zkpass',
+    displayName: 'Answer Count',
+    description: 'Number of answers posted',
+    attribute: 'answer_count',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+
+  // ========== FINANCIAL ==========
+  {
+    id: 'zkp-anz-balance',
+    service: 'ANZ Bank',
     category: 'Financial',
     provider: 'zkpass',
-    schemaName: 'ANZ Bank',
     displayName: 'Account Balance',
-    description: 'Bank account balance verification',
+    description: 'Current account balance',
     attribute: 'balance',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
     verified: true
   },
   {
     id: 'zkp-paypal-verified',
+    service: 'PayPal',
     category: 'Financial',
     provider: 'zkpass',
-    schemaName: 'PayPal',
-    displayName: 'PayPal Verified',
-    description: 'PayPal account verification status',
-    attribute: 'verified',
+    displayName: 'Account Verified',
+    description: 'PayPal verification status',
+    attribute: 'is_verified',
     type: 'boolean',
     operators: ['='],
-    icon: '',
     verified: true
   },
-  
-  // Education (ZKPass)
   {
-    id: 'zkp-coursera-courses',
+    id: 'zkp-paypal-transactions',
+    service: 'PayPal',
+    category: 'Financial',
+    provider: 'zkpass',
+    displayName: 'Monthly Transactions',
+    description: 'Number of transactions in past month',
+    attribute: 'monthly_transactions',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+
+  // ========== EDUCATION & LEARNING ==========
+  {
+    id: 'zkp-coursera-completed',
+    service: 'Coursera',
     category: 'Education',
     provider: 'zkpass',
-    schemaName: 'Coursera',
     displayName: 'Courses Completed',
-    description: 'Number of completed courses',
+    description: 'Total completed courses',
     attribute: 'courses_completed',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
+    verified: true
+  },
+  {
+    id: 'zkp-coursera-certificates',
+    service: 'Coursera',
+    category: 'Education',
+    provider: 'zkpass',
+    displayName: 'Certificates Earned',
+    description: 'Number of certificates',
+    attribute: 'certificates',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
     verified: true
   },
   {
     id: 'zkp-duolingo-streak',
+    service: 'Duolingo',
     category: 'Education',
     provider: 'zkpass',
-    schemaName: 'Duolingo',
-    displayName: 'Learning Streak',
-    description: 'Current learning streak in days',
+    displayName: 'Current Streak',
+    description: 'Consecutive days of learning',
     attribute: 'streak_days',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
     verified: true
   },
-  
-  // E-Commerce (ZKPass)
   {
-    id: 'zkp-amazon-prime',
-    category: 'E-Commerce',
+    id: 'zkp-duolingo-languages',
+    service: 'Duolingo',
+    category: 'Education',
     provider: 'zkpass',
-    schemaName: 'Amazon',
-    displayName: 'Prime Member',
-    description: 'Amazon Prime membership status',
-    attribute: 'prime_member',
-    type: 'boolean',
-    operators: ['='],
-    icon: '',
-    verified: true
-  },
-  
-  // Crypto (ZKPass)
-  {
-    id: 'zkp-crypto-holdings',
-    category: 'Crypto',
-    provider: 'zkpass',
-    schemaName: 'OKX Exchange',
-    displayName: 'Crypto Holdings',
-    description: 'Total crypto holdings in USD',
-    attribute: 'total_holdings_usd',
+    displayName: 'Languages Learning',
+    description: 'Number of active languages',
+    attribute: 'language_count',
     type: 'number',
     operators: ['>', '<', '=', '>=', '<='],
-    icon: '',
+    verified: true
+  },
+  {
+    id: 'zkp-chatgpt-usage',
+    service: 'ChatGPT',
+    category: 'Education',
+    provider: 'zkpass',
+    displayName: 'Monthly Usage',
+    description: 'Messages sent in past month',
+    attribute: 'monthly_messages',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+
+  // ========== TRAVEL & LIFESTYLE ==========
+  {
+    id: 'zkp-delta-status',
+    service: 'Delta Airlines',
+    category: 'Travel',
+    provider: 'zkpass',
+    displayName: 'SkyMiles Status',
+    description: 'Medallion status level',
+    attribute: 'status',
+    type: 'string',
+    operators: ['=', '!=', 'in'],
+    verified: true
+  },
+  {
+    id: 'zkp-delta-miles',
+    service: 'Delta Airlines',
+    category: 'Travel',
+    provider: 'zkpass',
+    displayName: 'SkyMiles Balance',
+    description: 'Current miles balance',
+    attribute: 'miles',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+  {
+    id: 'zkp-hilton-honors',
+    service: 'Hilton',
+    category: 'Travel',
+    provider: 'zkpass',
+    displayName: 'Honors Status',
+    description: 'Hilton Honors tier',
+    attribute: 'honors_tier',
+    type: 'string',
+    operators: ['=', '!=', 'in'],
+    verified: true
+  },
+  {
+    id: 'zkp-hilton-nights',
+    service: 'Hilton',
+    category: 'Travel',
+    provider: 'zkpass',
+    displayName: 'Annual Nights',
+    description: 'Nights stayed this year',
+    attribute: 'annual_nights',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+  {
+    id: 'zkp-ferrari-owner',
+    service: 'Ferrari',
+    category: 'Lifestyle',
+    provider: 'zkpass',
+    displayName: 'Owner Status',
+    description: 'Ferrari ownership verification',
+    attribute: 'is_owner',
+    type: 'boolean',
+    operators: ['='],
+    verified: true
+  },
+
+  // ========== E-COMMERCE ==========
+  {
+    id: 'zkp-amazon-prime',
+    service: 'Amazon',
+    category: 'E-Commerce',
+    provider: 'zkpass',
+    displayName: 'Prime Member',
+    description: 'Amazon Prime subscription status',
+    attribute: 'has_prime',
+    type: 'boolean',
+    operators: ['='],
+    verified: true
+  },
+  {
+    id: 'zkp-amazon-purchases',
+    service: 'Amazon',
+    category: 'E-Commerce',
+    provider: 'zkpass',
+    displayName: 'Annual Purchase Count',
+    description: 'Orders placed this year',
+    attribute: 'annual_orders',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+
+  // ========== CRYPTO ==========
+  {
+    id: 'zkp-okx-holdings',
+    service: 'OKX Exchange',
+    category: 'Crypto',
+    provider: 'zkpass',
+    displayName: 'Portfolio Value',
+    description: 'Total holdings in USD',
+    attribute: 'portfolio_usd',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
+    verified: true
+  },
+  {
+    id: 'zkp-okx-trading-volume',
+    service: 'OKX Exchange',
+    category: 'Crypto',
+    provider: 'zkpass',
+    displayName: 'Monthly Trading Volume',
+    description: 'Trading volume in past 30 days',
+    attribute: 'monthly_volume',
+    type: 'number',
+    operators: ['>', '<', '=', '>=', '<='],
     verified: true
   }
 ];
 
-export const schemaCategories = [
-  { name: 'Demographics', icon: '', description: 'Age, location, identity' },
-  { name: 'Social', icon: '', description: 'Social media activity' },
-  { name: 'Music', icon: '', description: 'Music streaming behavior' },
-  { name: 'Financial', icon: '', description: 'Financial verification' },
-  { name: 'Education', icon: '', description: 'Learning and courses' },
-  { name: 'E-Commerce', icon: '', description: 'Shopping behavior' },
-  { name: 'Crypto', icon: '', description: 'Cryptocurrency activity' }
+// Group schemas by service for better organization
+export const schemasByService = availableSchemas.reduce((acc, schema) => {
+  if (!acc[schema.service]) {
+    acc[schema.service] = [];
+  }
+  acc[schema.service].push(schema);
+  return acc;
+}, {} as Record<string, ZKSchema[]>);
+
+export const serviceCategories = [
+  { name: 'Identity', services: ['MyGovID', 'OKX'] },
+  { name: 'Social', services: ['X (Twitter)', 'TikTok', 'Reddit', 'Quora', 'Telegram'] },
+  { name: 'Music', services: ['Spotify'] },
+  { name: 'Financial', services: ['ANZ Bank', 'PayPal'] },
+  { name: 'Education', services: ['Coursera', 'Duolingo', 'ChatGPT'] },
+  { name: 'Travel', services: ['Delta Airlines', 'Hilton'] },
+  { name: 'Lifestyle', services: ['Ferrari'] },
+  { name: 'E-Commerce', services: ['Amazon'] },
+  { name: 'Crypto', services: ['OKX Exchange'] }
 ];

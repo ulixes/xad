@@ -159,14 +159,13 @@ export default function EarningsCalculator() {
   const earnings = calculateEarnings()
 
   return (
-    <div className="bg-card rounded-none sm:rounded-2xl shadow-xl border-2 border-border w-full">
-      <div className="p-4 md:p-6">
-        <h3 className="text-2xl font-bold text-card-foreground mb-4">
-          {t[language].title}
-        </h3>
+    <div className="w-full">
+      <h3 className="text-2xl font-bold text-foreground mb-4">
+        {t[language].title}
+      </h3>
       
       {/* Platform Selection */}
-      <div className="mb-4">
+      <div className="mb-6">
         <div className="grid grid-cols-4 gap-2">
           {socialPlatforms.map((platform) => (
             <button
@@ -190,12 +189,12 @@ export default function EarningsCalculator() {
       </div>
 
       {/* Account Age */}
-      <div className="mb-4">
+      <div className="mb-4 mt-6">
         <label className="text-base font-medium text-card-foreground mb-2 block">
           {t[language].accountAge}: <span className="font-bold">{accountAge < 1 ? `<1 ${t[language].year}` : `${accountAge} ${accountAge === 1 ? t[language].year : t[language].years}`}</span>
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground font-medium">&lt;1</span>
+          <span className="text-base text-muted-foreground font-medium">&lt;1</span>
           <input
             type="range"
             min="0"
@@ -209,34 +208,37 @@ export default function EarningsCalculator() {
               accentColor: '#818cf8'
             }}
           />
-          <span className="text-sm text-muted-foreground font-medium">10+</span>
+          <span className="text-base text-muted-foreground font-medium">10+</span>
         </div>
       </div>
 
       {/* Platform-specific metrics */}
+      <div className="h-32">
       {selectedPlatform === 'reddit' ? (
-        <div className="mb-4">
-          <label className="text-base font-medium text-card-foreground mb-2 block">
-            Karma: <span className="font-bold">{karma === 100000 ? '100k' : karma.toLocaleString()}</span>
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground font-medium">&lt;100</span>
-            <input
-              type="range"
-              min="100"
-              max="100000"
-              step="100"
-              value={karma}
-              onChange={(e) => setKarma(Number(e.target.value))}
-              className="w-full"
-              style={{
-                background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${karma / 1000}%, #3a3633 ${karma / 1000}%, #3a3633 100%)`,
-                accentColor: '#818cf8'
-              }}
-            />
-            <span className="text-sm text-muted-foreground font-medium">100k+</span>
+        <>
+          <div className="mb-4">
+            <label className="text-base font-medium text-card-foreground mb-2 block">
+              Karma: <span className="font-bold">{karma === 100000 ? '100k' : karma.toLocaleString()}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-base text-muted-foreground font-medium">&lt;100</span>
+              <input
+                type="range"
+                min="100"
+                max="100000"
+                step="100"
+                value={karma}
+                onChange={(e) => setKarma(Number(e.target.value))}
+                className="w-full"
+                style={{
+                  background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${karma / 1000}%, #3a3633 ${karma / 1000}%, #3a3633 100%)`,
+                  accentColor: '#818cf8'
+                }}
+              />
+              <span className="text-base text-muted-foreground font-medium">100k+</span>
+            </div>
           </div>
-        </div>
+        </>
       ) : selectedPlatform === 'youtube' ? (
         <>
           <div className="mb-4">
@@ -244,7 +246,7 @@ export default function EarningsCalculator() {
               Subscribers: <span className="font-bold">{subscribers === 100000 ? '100k' : subscribers.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;100</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;100</span>
               <input
                 type="range"
                 min="100"
@@ -258,7 +260,7 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">100k+</span>
+              <span className="text-base text-muted-foreground font-medium">100k+</span>
             </div>
           </div>
           <div className="mb-4">
@@ -266,7 +268,7 @@ export default function EarningsCalculator() {
               Total Channel Views: <span className="font-bold">{totalViews === 10000000 ? '10M' : totalViews.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;1k</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;1k</span>
               <input
                 type="range"
                 min="1000"
@@ -280,7 +282,7 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">10M+</span>
+              <span className="text-base text-muted-foreground font-medium">10M+</span>
             </div>
           </div>
         </>
@@ -291,7 +293,7 @@ export default function EarningsCalculator() {
               Followers: <span className="font-bold">{followers === 100000 ? '100k' : followers.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;100</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;100</span>
               <input
                 type="range"
                 min="100"
@@ -305,7 +307,7 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">100k+</span>
+              <span className="text-base text-muted-foreground font-medium">100k+</span>
             </div>
           </div>
           <div className="mb-4">
@@ -313,7 +315,7 @@ export default function EarningsCalculator() {
               Total Likes: <span className="font-bold">{totalLikes === 1000000 ? '1M' : totalLikes.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;1k</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;1k</span>
               <input
                 type="range"
                 min="1000"
@@ -327,7 +329,7 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">1M+</span>
+              <span className="text-base text-muted-foreground font-medium">1M+</span>
             </div>
           </div>
         </>
@@ -338,7 +340,7 @@ export default function EarningsCalculator() {
               Followers: <span className="font-bold">{followers === 100000 ? '100k' : followers.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;100</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;100</span>
               <input
                 type="range"
                 min="100"
@@ -352,7 +354,7 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">100k+</span>
+              <span className="text-base text-muted-foreground font-medium">100k+</span>
             </div>
           </div>
           <div className="mb-4">
@@ -360,7 +362,7 @@ export default function EarningsCalculator() {
               Likes & Collects: <span className="font-bold">{likesAndCollects === 1000000 ? '1M' : likesAndCollects.toLocaleString()}</span>
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium">&lt;1k</span>
+              <span className="text-base text-muted-foreground font-medium">&lt;1k</span>
               <input
                 type="range"
                 min="1000"
@@ -374,39 +376,43 @@ export default function EarningsCalculator() {
                   accentColor: '#818cf8'
                 }}
               />
-              <span className="text-sm text-muted-foreground font-medium">1M+</span>
+              <span className="text-base text-muted-foreground font-medium">1M+</span>
             </div>
           </div>
         </>
       ) : (
-        <div className="mb-4">
-          <label className="text-base font-medium text-card-foreground mb-2 block">
-            Followers: <span className="font-bold">{followers >= 100000 ? '100k+' : followers.toLocaleString()}</span>
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground font-medium">&lt;100</span>
-            <input
-              type="range"
-              min="100"
-              max="100000"
-              step="100"
-              value={followers}
-              onChange={(e) => setFollowers(Number(e.target.value))}
-              className="w-full"
-              style={{
-                background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${followers / 1000}%, #3a3633 ${followers / 1000}%, #3a3633 100%)`,
-                accentColor: '#818cf8'
-              }}
-            />
-            <span className="text-sm text-muted-foreground font-medium">100k+</span>
+        <>
+          <div className="mb-4">
+            <label className="text-base font-medium text-card-foreground mb-2 block">
+              Followers: <span className="font-bold">{followers >= 100000 ? '100k+' : followers.toLocaleString()}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-base text-muted-foreground font-medium">&lt;100</span>
+              <input
+                type="range"
+                min="100"
+                max="100000"
+                step="100"
+                value={followers}
+                onChange={(e) => setFollowers(Number(e.target.value))}
+                className="w-full"
+                style={{
+                  background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${followers / 1000}%, #3a3633 ${followers / 1000}%, #3a3633 100%)`,
+                  accentColor: '#818cf8'
+                }}
+              />
+              <span className="text-base text-muted-foreground font-medium">100k+</span>
+            </div>
           </div>
-        </div>
+        </>
       )}
       </div>
 
+      {/* Spacer above earnings */}
+      <div className="h-6"></div>
+
       {/* Earnings Display */}
-      <div className="bg-primary/10 border-t-2 border-border rounded-none sm:rounded-b-2xl p-4 md:p-6">
-        <p className="text-lg font-semibold text-card-foreground mb-4">{t[language].estimatedEarnings}</p>
+      <div className="bg-secondary/20 border-t-2 border-border rounded-none sm:rounded-b-2xl py-4">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-base text-card-foreground">

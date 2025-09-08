@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { AdTargetingForm } from '../components/AdTargetingForm';
-import type { TargetingRule } from '../types/zk-schemas';
+import type { TargetingRule } from '../types/platform-schemas';
 
 const meta: Meta<typeof AdTargetingForm> = {
   title: 'ZK Advertising/AdTargetingForm',
@@ -9,7 +9,7 @@ const meta: Meta<typeof AdTargetingForm> = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'A privacy-preserving advertising targeting form using zero-knowledge proofs. Advertisers can build complex targeting rules using verified attributes from ZKPass and Camp Network without accessing raw user data.'
+        component: 'Privacy-preserving ad targeting using zero-knowledge proofs. Build complex targeting rules for TikTok, Reddit, X, Instagram, and other platforms. Advertisers can offer crypto payments for qualified engagements without accessing raw user data.'
       }
     }
   },
@@ -32,46 +32,46 @@ export const Empty: Story = {
   }
 };
 
-export const WithExampleRule: Story = {
+export const TikTokHighEngagement: Story = {
   args: {
     initialRule: {
-      id: 'rule-example',
-      name: 'Young Music Fans in USA',
-      description: 'Target users aged 18-35 in the USA who are active on social media and listen to hip-hop',
+      id: 'tiktok-targeting-1',
+      name: 'High-Engagement TikTok Creators',
+      description: 'Target TikTok creators with high engagement rates for music promotion',
       rootGroup: {
         id: 'group-root',
         operator: 'AND',
         conditions: [
           {
             id: 'cond-1',
-            schemaId: 'zkp-age',
+            schemaId: 'tiktok-followers',
             operator: '>',
-            value: 18,
+            value: 10000,
             params: {},
             logicalOperator: 'AND'
           },
           {
             id: 'cond-2',
-            schemaId: 'zkp-country',
-            operator: '=',
-            value: 'USA',
+            schemaId: 'tiktok-video-views',
+            operator: '>',
+            value: 100000,
             params: {},
             logicalOperator: 'AND'
           },
           {
             id: 'cond-3',
-            schemaId: 'custom-reddit-karma',
-            operator: '>',
-            value: 100,
+            schemaId: 'tiktok-fyf-eligible',
+            operator: '=',
+            value: true,
             params: {},
             logicalOperator: 'AND'
           },
           {
             id: 'cond-4',
-            schemaId: 'camp-spotify-listens',
+            schemaId: 'tiktok-audience-age',
             operator: '>',
-            value: 100,
-            params: { artist_name: 'Kanye West' }
+            value: 50,
+            params: { age_range: '18-24' }
           }
         ]
       },
@@ -84,62 +84,38 @@ export const WithExampleRule: Story = {
   }
 };
 
-export const ComplexNestedRule: Story = {
+export const RedditPowerUsers: Story = {
   args: {
     initialRule: {
-      id: 'rule-complex',
-      name: 'Premium Audience Segment',
-      description: 'High-value users with verified financial status or significant social influence',
+      id: 'reddit-targeting-1',
+      name: 'Reddit Power Users & Top Contributors',
+      description: 'Target elite Reddit users with top achievement badges',
       rootGroup: {
         id: 'group-root',
-        operator: 'OR',
+        operator: 'AND',
         conditions: [
           {
-            id: 'group-1',
-            operator: 'AND',
-            conditions: [
-              {
-                id: 'cond-1',
-                schemaId: 'zkp-bank-balance',
-                operator: '>',
-                value: 10000,
-                params: {}
-              },
-              {
-                id: 'cond-2',
-                schemaId: 'zkp-amazon-prime',
-                operator: '=',
-                value: true,
-                params: {}
-              },
-              {
-                id: 'cond-3',
-                schemaId: 'zkp-country',
-                operator: 'in',
-                value: 'USA,UK,Canada',
-                params: {}
-              }
-            ]
+            id: 'cond-1',
+            schemaId: 'reddit-account-age',
+            operator: '>',
+            value: 365,
+            params: {},
+            logicalOperator: 'AND'
           },
           {
-            id: 'group-2',
-            operator: 'AND',
-            conditions: [
-              {
-                id: 'cond-4',
-                schemaId: 'camp-twitter-followers',
-                operator: '>',
-                value: 10000,
-                params: {}
-              },
-              {
-                id: 'cond-5',
-                schemaId: 'camp-tiktok-views',
-                operator: '>',
-                value: 1000000,
-                params: {}
-              }
-            ]
+            id: 'cond-2',
+            schemaId: 'reddit-top-commenter',
+            operator: 'has_achievement',
+            value: '',
+            params: { tier: 'monthly-top-5-commenter' },
+            logicalOperator: 'OR'
+          },
+          {
+            id: 'cond-3',
+            schemaId: 'reddit-top-poster',
+            operator: 'has_achievement',
+            value: '',
+            params: { tier: 'monthly-top-5-poster' }
           }
         ]
       },
@@ -152,70 +128,30 @@ export const ComplexNestedRule: Story = {
   }
 };
 
-export const EducationFocused: Story = {
-  args: {
-    initialRule: {
-      id: 'rule-education',
-      name: 'Active Learners',
-      description: 'Users actively engaged in online education',
-      rootGroup: {
-        id: 'group-root',
-        operator: 'AND',
-        conditions: [
-          {
-            id: 'cond-1',
-            schemaId: 'zkp-coursera-courses',
-            operator: '>=',
-            value: 3,
-            params: {}
-          },
-          {
-            id: 'cond-2',
-            schemaId: 'zkp-duolingo-streak',
-            operator: '>',
-            value: 30,
-            params: {}
-          }
-        ]
-      },
-      createdAt: new Date('2024-02-01'),
-      updatedAt: new Date('2024-02-01'),
-      status: 'draft'
-    } as TargetingRule,
-    onSave: (rule) => console.log('Saved rule:', rule),
-    onCancel: () => console.log('Cancelled')
-  }
-};
 
-export const CryptoEnthusiasts: Story = {
+
+export const Web3SocialTargeting: Story = {
   args: {
     initialRule: {
-      id: 'rule-crypto',
-      name: 'Crypto Holders',
-      description: 'Users with significant cryptocurrency holdings',
+      id: 'web3-targeting-1',
+      name: 'Web3 Native Users',
+      description: 'Farcaster users with strong followings for crypto campaigns',
       rootGroup: {
         id: 'group-root',
         operator: 'AND',
         conditions: [
           {
             id: 'cond-1',
-            schemaId: 'zkp-crypto-holdings',
+            schemaId: 'farcaster-followers',
             operator: '>',
-            value: 1000,
-            params: {}
-          },
-          {
-            id: 'cond-2',
-            schemaId: 'zkp-paypal-verified',
-            operator: '=',
-            value: true,
+            value: 100,
             params: {}
           }
         ]
       },
-      createdAt: new Date('2024-02-10'),
-      updatedAt: new Date('2024-02-10'),
-      status: 'paused'
+      createdAt: new Date('2024-02-15'),
+      updatedAt: new Date('2024-02-15'),
+      status: 'active'
     } as TargetingRule,
     onSave: (rule) => console.log('Saved rule:', rule),
     onCancel: () => console.log('Cancelled')

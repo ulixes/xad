@@ -63,7 +63,7 @@ export default function HowItWorks() {
                           </svg>
                         )}
                       </div>
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-bold text-sm border-2 border-border">
+                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-bold text-base border-2 border-border">
                         {step.number}
                       </div>
                     </div>

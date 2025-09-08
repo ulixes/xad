@@ -1,135 +1,173 @@
 @import "tailwindcss";
 
-/* Force dark theme colors */
+/* Basic MDX content spacing */
+.mdx-content p {
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+.mdx-content h1,
+.mdx-content h2,
+.mdx-content h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.mdx-content ul,
+.mdx-content ol {
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+/* Dark theme configuration */
 :root {
-  --background: #1e1b18 !important;
-  --foreground: #e2e8f0 !important;
-  --card: #2c2825 !important;
-  --card-foreground: #e2e8f0 !important;
-  --primary: #818cf8 !important;
-  --primary-foreground: #1e1b18 !important;
-  --secondary: #3a3633 !important;
-  --secondary-foreground: #d1d5db !important;
-  --muted: #2c2825 !important;
-  --muted-foreground: #9ca3af !important;
-  --accent: #484441 !important;
-  --accent-foreground: #d1d5db !important;
-  --border: #3a3633 !important;
+  /* CSS variables in HSL format as expected by shadcn/ui */
+  --background: 30 15% 9%;           /* Dark brown background */
+  --foreground: 210 20% 98%;         /* Light text */
+  
+  --card: 25 12% 16%;                /* Card background */
+  --card-foreground: 210 20% 98%;    /* Card text */
+  
+  --popover: 25 10% 14%;             /* Dropdown background */
+  --popover-foreground: 210 20% 98%; /* Dropdown text */
+  
+  --primary: 239 84% 67%;            /* Indigo accent */
+  --primary-foreground: 0 0% 98%;    /* White text on primary */
+  
+  --secondary: 25 8% 22%;            /* Secondary background */
+  --secondary-foreground: 210 20% 98%; /* Secondary text */
+  
+  --muted: 25 8% 18%;                /* Muted background */
+  --muted-foreground: 215 15% 65%;   /* Muted text - readable gray */
+  
+  --accent: 25 8% 28%;               /* Accent background */
+  --accent-foreground: 210 20% 98%;  /* Accent text */
+  
+  --destructive: 0 84% 60%;          /* Red for errors */
+  --destructive-foreground: 0 0% 98%; /* White text on destructive */
+  
+  --border: 25 5% 35%;               /* Visible but subtle borders */
+  --input: 25 8% 16%;                /* Input background - matches card */
+  --ring: 239 84% 67%;               /* Focus ring - matches primary */
+  
+  --radius: 0.5rem;
 }
 
-/* Override all color classes directly */
-.bg-background {
-  background-color: #1e1b18 !important;
+/* Ensure dark mode is always on */
+.dark {
+  --background: 30 15% 9%;
+  --foreground: 210 20% 98%;
+  --card: 25 12% 16%;
+  --card-foreground: 210 20% 98%;
+  --popover: 25 10% 14%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 25 8% 22%;
+  --secondary-foreground: 210 20% 98%;
+  --muted: 25 8% 18%;
+  --muted-foreground: 215 15% 65%;
+  --accent: 25 8% 28%;
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 25 5% 35%;
+  --input: 25 8% 16%;
+  --ring: 239 84% 67%;
 }
 
-.bg-primary {
-  background-color: #818cf8 !important;
+/* Apply dark theme to body */
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
-.bg-card {
-  background-color: #2c2825 !important;
+/* Ensure all Radix UI portals use dark theme */
+[data-radix-popper-content-wrapper] {
+  --background: 25 10% 14%;
+  --foreground: 210 20% 98%;
 }
 
-.bg-secondary {
-  background-color: #3a3633 !important;
+/* Fix specific component issues */
+/* Select dropdown content */
+[role="listbox"] {
+  background-color: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
-.bg-muted {
-  background-color: #2c2825 !important;
+/* Select items focus state only - no hover */
+[role="option"]:focus,
+[role="option"][data-highlighted] {
+  background-color: hsl(var(--accent) / 0.3) !important;
 }
 
-.bg-accent {
-  background-color: #484441 !important;
+/* Input fields */
+input, textarea, select {
+  background-color: hsl(var(--input)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border) / 0.5) !important;
 }
 
-.text-foreground {
-  color: #e2e8f0 !important;
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
 }
 
-.text-primary {
-  color: #818cf8 !important;
+/* Focus states */
+input:focus, 
+textarea:focus, 
+select:focus,
+button:focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
+  border-color: hsl(var(--ring)) !important;
 }
 
-.text-primary-foreground {
-  color: #1e1b18 !important;
+/* Button hover states - only for actual buttons, not all button elements */
+button[type="button"]:hover,
+button[type="submit"]:hover,
+.hover\:bg-destructive\/10:hover {
+  opacity: 0.9;
 }
 
-.text-card-foreground {
-  color: #e2e8f0 !important;
+/* Ensure labels are readable */
+label {
+  color: hsl(var(--foreground)) !important;
 }
 
-.text-secondary-foreground {
-  color: #d1d5db !important;
+/* Border utilities with proper dark theme colors */
+.border-border {
+  border-color: hsl(var(--border) / 0.6) !important;
+}
+
+.border {
+  border-color: hsl(var(--border) / 0.6) !important;
+}
+
+/* Ensure proper text colors */
+.text-base,
+.text-sm,
+.text-xs,
+.text-lg,
+.text-xl {
+  color: hsl(var(--foreground)) !important;
 }
 
 .text-muted-foreground {
-  color: #9ca3af !important;
+  color: hsl(var(--muted-foreground)) !important;
 }
 
-.text-accent-foreground {
-  color: #d1d5db !important;
+/* Fix dropdown trigger buttons */
+[role="combobox"] {
+  background-color: hsl(var(--input)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
-.border-border {
-  border-color: #3a3633 !important;
-}
-
-.border-primary {
-  border-color: #818cf8 !important;
-}
-
-.border-secondary {
-  border-color: #3a3633 !important;
-}
-
-/* Opacity variants */
-.bg-primary\/5 {
-  background-color: rgba(129, 140, 248, 0.05) !important;
-}
-
-.bg-primary\/30 {
-  background-color: rgba(129, 140, 248, 0.3) !important;
-}
-
-.bg-muted\/30 {
-  background-color: rgba(44, 40, 37, 0.3) !important;
-}
-
-.text-primary-foreground\/80 {
-  color: rgba(30, 27, 24, 0.8) !important;
-}
-
-.text-primary-foreground\/90 {
-  color: rgba(30, 27, 24, 0.9) !important;
-}
-
-.border-primary-foreground\/50 {
-  border-color: rgba(30, 27, 24, 0.5) !important;
-}
-
-.hover\:bg-primary-foreground\/20:hover {
-  background-color: rgba(30, 27, 24, 0.2) !important;
-}
-
-.hover\:border-primary-foreground\/70:hover {
-  border-color: rgba(30, 27, 24, 0.7) !important;
-}
-
-.text-background {
-  color: #1e1b18 !important;
-}
-
-.text-background\/70 {
-  color: rgba(30, 27, 24, 0.7) !important;
-}
-
-/* Body and base styles */
-body {
-  background-color: #1e1b18 !important;
-  color: #e2e8f0 !important;
-}
-
-/* Button overrides */
-button {
-  cursor: pointer;
+/* Ensure all nested divs in the form have proper colors */
+.space-y-4 label,
+.space-y-2 label,
+.space-y-6 h2 {
+  color: hsl(var(--foreground)) !important;
 }

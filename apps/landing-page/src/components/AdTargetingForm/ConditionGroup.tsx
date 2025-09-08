@@ -1,14 +1,6 @@
-import { useState } from 'react';
-import type { ConditionGroup as ConditionGroupType, ConditionBlock as ConditionBlockType, LogicalOperator } from '../../types/zk-schemas';
+import type { ConditionGroup as ConditionGroupType, ConditionBlock as ConditionBlockType, LogicalOperator } from '../../types/platform-schemas';
 import { ConditionBlock } from './ConditionBlock';
 import { Button } from '../ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 
 interface ConditionGroupProps {
   group: ConditionGroupType;
@@ -16,6 +8,7 @@ interface ConditionGroupProps {
   onRemove?: () => void;
   isRoot?: boolean;
   depth?: number;
+  platform?: string;
 }
 
 export function ConditionGroup({ 
@@ -23,16 +16,14 @@ export function ConditionGroup({
   onUpdate, 
   onRemove, 
   isRoot = false,
-  depth = 0 
+  depth = 0,
+  platform 
 }: ConditionGroupProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
 
   const handleAddCondition = () => {
     const newCondition: ConditionBlockType = {
       id: `cond-${Date.now()}`,
       schemaId: '',
-      operator: '=',
-      value: '',
       params: {},
       logicalOperator: 'AND' // Default to AND for connecting to next condition
     };
@@ -73,57 +64,35 @@ export function ConditionGroup({
     }
   };
 
-  const borderColor = depth === 0 ? 'border-primary/30' : depth === 1 ? 'border-secondary/30' : 'border-muted/30';
-  const bgColor = depth === 0 ? 'bg-background' : depth === 1 ? 'bg-muted/5' : 'bg-muted/10';
+  const bgColor = depth === 0 ? '' : depth === 1 ? 'bg-secondary border border-border' : 'bg-accent border border-border';
 
   return (
-    <div className={`relative p-4 rounded-lg border-2 ${borderColor} ${bgColor}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          {/* Collapse Toggle */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg 
-              className={`h-5 w-5 transform transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-
-          <span className="text-base text-muted-foreground">
-            {group.conditions.length} condition{group.conditions.length !== 1 ? 's' : ''}
-          </span>
-
-          {!isRoot && depth > 0 && (
-            <span className="text-sm bg-muted px-2 py-1 rounded">
+    <div className={`relative ${bgColor} ${!isRoot ? 'rounded-lg p-4' : ''}`}>
+      {/* Header - only show for nested groups */}
+      {!isRoot && (
+        <div className="flex items-center justify-between p-4 pb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-base bg-muted px-2 py-1 rounded">
               Nested Group
             </span>
-          )}
-        </div>
+          </div>
 
-        {/* Remove Group Button */}
-        {!isRoot && (
+          {/* Remove Group Button */}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onRemove}
-            className="text-destructive hover:bg-destructive/10"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
           >
-            Remove Group
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Conditions */}
-      {isExpanded && (
-        <div className="space-y-2">
+      <div className="space-y-2">
           {group.conditions.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-base">
               No conditions yet. Add a condition to get started.
@@ -138,77 +107,78 @@ export function ConditionGroup({
                     condition={condition}
                     onUpdate={(updated) => handleUpdateCondition(index, updated)}
                     onRemove={() => handleRemoveCondition(index)}
+                    platform={platform}
                   />
                   
                   {/* Individual AND/OR selector between conditions */}
                   {index < group.conditions.length - 1 && (
-                    <div className="flex items-center justify-center py-3">
-                      <Select 
-                        value={condition.logicalOperator || 'AND'} 
-                        onValueChange={(value) => handleLogicalOperatorChange(index, value as LogicalOperator)}
+                    <div className="flex justify-center gap-2 my-4">
+                      <Button
+                        variant={condition.logicalOperator === 'AND' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleLogicalOperatorChange(index, 'AND')}
+                        className="h-8 w-16"
                       >
-                        <SelectTrigger className="w-28 h-10 text-base cursor-pointer hover:bg-muted/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AND" className="cursor-pointer text-base">AND</SelectItem>
-                          <SelectItem value="OR" className="cursor-pointer text-base">OR</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        AND
+                      </Button>
+                      <Button
+                        variant={condition.logicalOperator === 'OR' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleLogicalOperatorChange(index, 'OR')}
+                        className="h-8 w-16"
+                      >
+                        OR
+                      </Button>
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  {/* Nested group with operator before it */}
-                  {index > 0 && (
-                    <div className="flex items-center justify-center py-2">
-                      <span className="text-sm font-medium text-muted-foreground px-3 py-1 bg-muted rounded-full">
-                        {group.operator}
-                      </span>
-                    </div>
-                  )}
+                  {/* Nested group - use same AND/OR selector as conditions */}
                   <ConditionGroup
                     group={condition}
                     onUpdate={(updated) => handleUpdateCondition(index, updated)}
                     onRemove={() => handleRemoveCondition(index)}
                     depth={depth + 1}
+                    platform={platform}
                   />
+                  
+                  {/* AND/OR selector after nested group if not last */}
+                  {index < group.conditions.length - 1 && (
+                    <div className="flex justify-center gap-2 my-4">
+                      <Button
+                        variant={group.operator === 'AND' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => onUpdate({ ...group, operator: 'AND' })}
+                        className="h-8 w-16"
+                      >
+                        AND
+                      </Button>
+                      <Button
+                        variant={group.operator === 'OR' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => onUpdate({ ...group, operator: 'OR' })}
+                        className="h-8 w-16"
+                      >
+                        OR
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
           ))}
 
-          {/* Add Buttons */}
-          <div className="flex gap-2 pt-4 border-t border-border">
+          {/* Add Button */}
+          <div className="flex gap-2 mt-4">
             <Button
-              variant="outline"
-              size="sm"
               onClick={handleAddCondition}
-              className="border-dashed"
+              variant="default"
             >
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
               Add Condition
             </Button>
-            
-            {depth < 2 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddGroup}
-                className="border-dashed"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Add Group (Advanced)
-              </Button>
-            )}
           </div>
         </div>
-      )}
     </div>
   );
 }

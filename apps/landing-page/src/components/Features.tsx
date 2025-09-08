@@ -8,7 +8,7 @@ export default function Features() {
 
   const t = {
     en: {
-      title: "Why Choose Xadvo?",
+      title: "Why Choose zkad?",
       subtitle: "The most trusted platform for earning crypto through social media engagement",
       features: [
         {
@@ -19,7 +19,7 @@ export default function Features() {
         {
           icon: 'zap',
           title: "Fast Crypto Cashouts",
-          description: "Unlike bank transfers or PayPal, when you cash out on Xadvo, you get your money instantly. No waiting, almost zero fees."
+          description: "Unlike bank transfers or PayPal, when you cash out on zkad, you get your money instantly. No waiting, almost zero fees."
         },
         {
           icon: 'award',
@@ -44,7 +44,7 @@ export default function Features() {
       ]
     },
     zh: {
-      title: "为什么选择 Xadvo？",
+      title: "为什么选择 zkad？",
       subtitle: "通过社交媒体互动赚取加密货币的最可信赖平台",
       features: [
         {
@@ -55,7 +55,7 @@ export default function Features() {
         {
           icon: 'zap',
           title: "快速加密货币提现",
-          description: "与银行转账或 PayPal 不同，在 Xadvo 提现时，您可以立即收到资金。无需等待，几乎零手续费。"
+          description: "与银行转账或 PayPal 不同，在 zkad 提现时，您可以立即收到资金。无需等待，几乎零手续费。"
         },
         {
           icon: 'award',
