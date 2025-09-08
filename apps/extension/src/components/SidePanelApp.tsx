@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePrivyAuthMachine } from '../hooks/usePrivyAuthMachine';
+import { VerificationManager } from './VerificationManager';
 import { LoginButton } from '@xad/ui';
 import { LogoutButton } from '@xad/ui';
 import { UserProfile } from '@xad/ui';
@@ -88,7 +89,10 @@ export function SidePanelApp() {
                 }}
               />
 
-              {/* Wallet Management */}
+              {/* Verification Manager - Uses @xad/ui only */}
+              <VerificationManager />
+
+              {/* Wallet Management - Collapsed */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium">Wallets</h3>
@@ -103,7 +107,7 @@ export function SidePanelApp() {
                 {wallets && wallets.length > 0 ? (
                   <WalletList wallets={wallets} />
                 ) : (
-                  <div className="text-center py-4 text-sm text-muted-foreground">
+                  <div className="text-center py-2 text-xs text-muted-foreground">
                     No wallets created yet
                   </div>
                 )}
@@ -113,6 +117,7 @@ export function SidePanelApp() {
               <LogoutButton
                 onClick={logout}
                 className="w-full"
+                variant="outline"
               />
             </div>
           )}

@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { PLATFORM_CONFIGS, VERIFICATION_STEP_ICONS } from '@/config/platform-configs';
-import { VerificationFlow as VerificationFlowType, NormalizedUser } from '@/types/proof-config';
+import { PLATFORM_CONFIGS, VERIFICATION_STEP_ICONS } from '../../config/platform-configs';
+import { VerificationFlow as VerificationFlowType, NormalizedUser } from '../../types/proof-config';
+import { getUIText } from '../../config/ui-templates';
 import { cn } from '@/lib/utils';
 
 interface VerificationFlowProps {
@@ -230,6 +231,50 @@ export const VerificationFlow: React.FC<VerificationFlowProps> = ({
                 Open
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Result Display */}
+      {flow.result && flow.contextData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Verification Result</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(() => {
+              const uiText = getUIText(
+                flow.platform,
+                flow.contentType,
+                {
+                  username: flow.contextData.username,
+                  displayName: flow.contextData.displayName
+                },
+                flow.result
+              );
+              
+              const isVerified = flow.result.proofResult === true;
+              const hasError = !!flow.result.errorMessage;
+              
+              return (
+                <>
+                  <div className={cn(
+                    "p-3 rounded-lg font-medium",
+                    isVerified && "bg-green-50 text-green-800 border border-green-200",
+                    !isVerified && !hasError && "bg-red-50 text-red-800 border border-red-200",
+                    hasError && "bg-yellow-50 text-yellow-800 border border-yellow-200"
+                  )}>
+                    {uiText.status}
+                  </div>
+                  <div className="text-sm space-y-1 text-muted-foreground">
+                    <p>User: {uiText.user}</p>
+                    <p>{uiText.target}</p>
+                    <p>{uiText.stats}</p>
+                    <p>{uiText.timestamp}</p>
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
