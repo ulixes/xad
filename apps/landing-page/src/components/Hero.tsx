@@ -9,7 +9,7 @@ export default function Hero() {
 
   const t = {
     en: {
-      title: "Micro influencer marketing at scale",
+      title: "Micro-influencer marketing at scale",
       description: "Users like, comment, and engage to receive money. Advertisers only pay when qualified users engage. Powered by zero-knowledge proofs.",
       userCta: "Start Earning",
       brandCta: "Start Advertising"
@@ -24,7 +24,14 @@ export default function Hero() {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="relative py-16 sm:py-20 lg:py-24">
+      {/* Radial glow background */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(77, 97, 255, 0.25), transparent 70%), #0a0a0a",
+        }}
+      />
+      <div className="relative py-16 sm:py-20 lg:py-24 z-10">
         <div className="container mx-auto px-4">
           {/* Main Title */}
           <div className="text-left sm:text-center mb-12 max-w-5xl mx-auto">

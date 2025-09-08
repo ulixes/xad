@@ -6,7 +6,6 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Checkbox } from '../ui/checkbox';
 
 type Platform = 'tiktok' | 'reddit' | 'x' | 'instagram' | 'facebook' | 'farcaster';
 
@@ -164,43 +163,13 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
     <div className="flex gap-6">
       {/* Main Form */}
       <div className="flex-1 space-y-6">
-        {/* Header */}
-        <div className="rounded-lg bg-card border border-border p-6 space-y-4">
-          <h2 className="text-xl font-semibold">Targeting Rule</h2>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="rule-name" className="text-base font-medium">Name</Label>
-              <Input
-                id="rule-name"
-                value={rule.name}
-                onChange={(e) => setRule({ ...rule, name: e.target.value })}
-                placeholder="e.g., Young Music Fans in USA"
-                className="text-base"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="rule-description" className="text-base font-medium">Description (Optional)</Label>
-              <Textarea
-                id="rule-description"
-                value={rule.description}
-                onChange={(e) => setRule({ ...rule, description: e.target.value })}
-                placeholder="Describe your target audience..."
-                rows={2}
-                className="text-base"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Platform Selection */}
         <div className="rounded-lg bg-card border border-border p-6">
           <h2 className="text-xl font-semibold mb-4">Platform</h2>
           <div className="flex flex-wrap gap-3">
             {platforms.map((platform) => (
-              <Button
+              <button
                 key={platform.id}
-                variant={selectedPlatform === platform.id ? 'default' : 'outline'}
                 onClick={() => {
                   setSelectedPlatform(platform.id as Platform);
                   // Clear conditions when switching platforms
@@ -212,23 +181,26 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
                     }
                   });
                 }}
-                className="flex items-center gap-2 min-w-[120px]"
+                className={`flex items-center gap-2 w-[140px] justify-center px-4 py-2 rounded-lg border-2 transition-all cursor-pointer ${
+                  selectedPlatform === platform.id
+                    ? 'border-primary bg-primary/20 text-foreground'
+                    : 'border-border hover:border-primary/50 hover:bg-primary/10 text-foreground'
+                }`}
               >
                 <img 
                   src={platform.icon} 
                   alt={platform.name}
-                  className="w-4 h-4"
+                  className="w-4 h-4 rounded"
                 />
                 {platform.name}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
 
         {/* Condition Builder */}
-        <div className="rounded-lg bg-muted border border-border p-6">
-          <h2 className="text-xl font-semibold mb-4">Eligibility Conditions</h2>
-          <p className="text-sm text-muted-foreground mb-4">Define who can participate in this campaign</p>
+        <div className="rounded-lg bg-card border border-border p-6">
+          <h2 className="text-xl font-semibold mb-4">Targeting</h2>
             <ConditionGroup
               group={rule.rootGroup}
               onUpdate={handleUpdateRootGroup}
@@ -239,8 +211,7 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
 
         {/* Actions & Pricing */}
         <div className="rounded-lg bg-card border border-border p-6">
-          <h2 className="text-xl font-semibold mb-4">Actions & Pricing</h2>
-          <p className="text-sm text-muted-foreground mb-4">Select actions and configure payment details</p>
+          <h2 className="text-xl font-semibold mb-4">Actions</h2>
           
           <div className="space-y-3">
             {platformActions[selectedPlatform]?.map((action) => {
@@ -255,40 +226,32 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
               const checkboxId = `action-${key}`;
               
               return (
-                <div key={key} className="space-y-2">
-                  {/* Clickable label wrapping checkbox - proper shadcn pattern */}
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
+                <div key={key} className="relative p-4 rounded-lg bg-card border border-border space-y-3">
+                  {/* Action Header with Checkbox */}
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
                       id={checkboxId}
                       checked={config.enabled}
-                      onCheckedChange={(checked) => {
+                      onChange={(e) => {
                         setActionPricing(prev => ({
                           ...prev,
-                          [key]: { ...config, enabled: checked as boolean }
+                          [key]: { ...config, enabled: e.target.checked }
                         }));
                       }}
+                      className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                     />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label
-                        htmlFor={checkboxId}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {action.name}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Minimum: ${(action.minPrice / 100).toFixed(2)} per {action.name.toLowerCase()}
-                      </p>
-                    </div>
+                    <Label htmlFor={checkboxId} className="text-base font-medium cursor-pointer">
+                      {action.name}
+                    </Label>
                   </div>
-                  
-                  {/* Expanded configuration when checked */}
+
                   {config.enabled && (
-                    <div className="ml-6 p-4 border rounded-lg bg-muted/30 space-y-4">
+                    <>
                       {/* Target URL or Handle */}
                       <div className="space-y-2">
-                        <Label htmlFor={`${key}-target`} className="text-sm font-medium">
-                          {isFollowAction ? 'Account to Follow' : 'Content URL'}
-                          <span className="text-destructive ml-1">*</span>
+                        <Label htmlFor={`${key}-target`} className="text-base font-medium">
+                          {isFollowAction ? 'Account to Follow' : 'URL'}
                         </Label>
                         <Input
                           id={`${key}-target`}
@@ -311,14 +274,14 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
                               [key]: { ...config, target: e.target.value }
                             }));
                           }}
-                          className="font-mono"
+                          className="font-mono text-base h-11"
                         />
                       </div>
                       
                       {/* Price and Volume Grid */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label htmlFor={`${key}-price`} className="text-sm font-medium">
+                          <Label htmlFor={`${key}-price`} className="text-base font-medium">
                             Price per {action.name}
                           </Label>
                           <div className="relative">
@@ -338,13 +301,13 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
                                   }));
                                 }
                               }}
-                              className="pl-7"
+                              className="pl-7 text-base h-11"
                             />
                           </div>
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor={`${key}-volume`} className="text-sm font-medium">
+                          <Label htmlFor={`${key}-volume`} className="text-base font-medium">
                             Maximum Actions
                           </Label>
                           <Input
@@ -359,63 +322,15 @@ export function AdTargetingForm({ initialRule, onSave, onCancel }: AdTargetingFo
                                 [key]: { ...config, maxVolume: parseInt(e.target.value) || 1 }
                               }));
                             }}
+                            className="text-base h-11"
                           />
                         </div>
                       </div>
-                      
-                      {/* Action Budget */}
-                      <div className="flex justify-between items-center pt-3 border-t text-sm">
-                        <span className="text-muted-foreground">Total for this action:</span>
-                        <span className="font-semibold">
-                          ${((config.price * config.maxVolume) / 100).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
               );
-            })
-            
-            
-            {/* Campaign Summary */}
-            {Object.values(actionPricing).filter(p => p.enabled).length > 0 && (
-              <div className="mt-6 p-4 rounded-lg bg-card border">
-                <h3 className="text-sm font-medium mb-3">Campaign Summary</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Active Actions:</span>
-                    <span>
-                      {Object.values(actionPricing).filter(p => p.enabled).length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Total Volume:</span>
-                    <span>
-                      {Object.values(actionPricing)
-                        .filter(p => p.enabled)
-                        .reduce((sum, p) => sum + p.maxVolume, 0)
-                        .toLocaleString()} actions
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="font-medium">Total Budget:</span>
-                    <span className="font-bold text-lg">
-                      ${(
-                        Object.values(actionPricing)
-                          .filter(p => p.enabled)
-                          .reduce((sum, p) => sum + (p.price * p.maxVolume), 0) / 100
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {Object.values(actionPricing).filter(p => p.enabled).length === 0 && (
-              <p className="text-center py-8 text-muted-foreground text-sm">
-                Select at least one action to create a campaign
-              </p>
-            )}
+            })}
           </div>
         </div>
 

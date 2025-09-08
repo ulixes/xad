@@ -44,7 +44,7 @@ export default function ForBrands2() {
               <div className="flex flex-row gap-6 items-start">
                 <Check className="w-4 h-4 mt-2 text-primary" />
                 <div className="flex flex-col gap-1">
-                  <p>Scale of Microinfluencers</p>
+                  <p>Scale of Micro-influencers</p>
                   <p className="text-muted-foreground text-sm">
                     Get the authenticity of influencer marketing with the reach of traditional ads.
                   </p>

@@ -99,7 +99,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
         value={condition.value || ''}
         onChange={(e) => handleValueChange(e.target.value)}
         placeholder={`Enter ${schema.type} value`}
-        className="text-base"
+        className="text-base h-11"
       />
     );
   };
@@ -120,7 +120,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
       
       {/* Platform & Qualification Selection */}
       <div className="space-y-2 mb-1">
-        <Label className="text-sm font-medium">Requirement</Label>
+        <Label className="text-base font-medium">Requirement</Label>
         <QualificationSelector
           value={condition.schemaId}
           onChange={handleSchemaChange}
@@ -135,7 +135,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
           {schema.operators.length > 1 ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Operator</Label>
+                <Label className="text-base font-medium">Operator</Label>
                 <Select
                   value={condition.operator}
                   onValueChange={handleOperatorChange}
@@ -156,7 +156,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
               {/* Value Input */}
               {renderValueInput() && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Value</Label>
+                  <Label className="text-base font-medium">Value</Label>
                   {renderValueInput()}
                 </div>
               )}
@@ -165,7 +165,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
             /* Single operator or action type - show value input if needed */
             renderValueInput() && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Value</Label>
+                <Label className="text-base font-medium">Value</Label>
                 {renderValueInput()}
               </div>
             )
@@ -173,10 +173,10 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
 
           {/* Parameters (e.g., artist name, achievement tier) */}
           {schema.params && schema.params.length > 0 && (
-            <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-3 pt-2 border-t border-border">
               {schema.params.map((param) => (
                 <div key={param.name} className="space-y-2">
-                  <Label className="text-sm font-medium">
+                  <Label className="text-base font-medium">
                     {param.name.replace(/_/g, ' ').split(' ').map(w => 
                       w.charAt(0).toUpperCase() + w.slice(1)
                     ).join(' ')}
@@ -205,7 +205,7 @@ export function ConditionBlock({ condition, onUpdate, onRemove, platform }: Cond
                       value={condition.params?.[param.name] || ''}
                       onChange={(e) => handleParamChange(param.name, e.target.value)}
                       placeholder={param.placeholder}
-                      className="text-base"
+                      className="text-base h-11"
                     />
                   )}
                   

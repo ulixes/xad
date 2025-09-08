@@ -10,7 +10,7 @@ export default function FAQ() {
     en: [
       {
         question: "What is zkad?",
-        answer: "zkad is a platform that pays users for genuine social media engagement while letting brands advertise through microinfluencers at scale, all secured by zero-knowledge proofs."
+        answer: "zkad is a platform that pays users for genuine social media engagement while letting brands advertise through micro-influencers at scale, all secured by zero-knowledge proofs."
       },
       {
         question: "How do users get paid?",

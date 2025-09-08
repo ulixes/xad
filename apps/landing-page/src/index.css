@@ -1,173 +1,81 @@
 @import "tailwindcss";
 
-/* Basic MDX content spacing */
-.mdx-content p {
-  margin-bottom: 1.5rem;
-  line-height: 1.7;
-}
-
-.mdx-content h1,
-.mdx-content h2,
-.mdx-content h3 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-}
-
-.mdx-content ul,
-.mdx-content ol {
-  margin-bottom: 1.5rem;
-  padding-left: 1.5rem;
-}
-
-/* Dark theme configuration */
+/* Dark Theme - Direct HEX colors */
 :root {
-  /* CSS variables in HSL format as expected by shadcn/ui */
-  --background: 30 15% 9%;           /* Dark brown background */
-  --foreground: 210 20% 98%;         /* Light text */
-  
-  --card: 25 12% 16%;                /* Card background */
-  --card-foreground: 210 20% 98%;    /* Card text */
-  
-  --popover: 25 10% 14%;             /* Dropdown background */
-  --popover-foreground: 210 20% 98%; /* Dropdown text */
-  
-  --primary: 239 84% 67%;            /* Indigo accent */
-  --primary-foreground: 0 0% 98%;    /* White text on primary */
-  
-  --secondary: 25 8% 22%;            /* Secondary background */
-  --secondary-foreground: 210 20% 98%; /* Secondary text */
-  
-  --muted: 25 8% 18%;                /* Muted background */
-  --muted-foreground: 215 15% 65%;   /* Muted text - readable gray */
-  
-  --accent: 25 8% 28%;               /* Accent background */
-  --accent-foreground: 210 20% 98%;  /* Accent text */
-  
-  --destructive: 0 84% 60%;          /* Red for errors */
-  --destructive-foreground: 0 0% 98%; /* White text on destructive */
-  
-  --border: 25 5% 35%;               /* Visible but subtle borders */
-  --input: 25 8% 16%;                /* Input background - matches card */
-  --ring: 239 84% 67%;               /* Focus ring - matches primary */
-  
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #111111;
+  --card-foreground: #ededed;
+  --popover: #1a1a1a;
+  --popover-foreground: #ededed;
+  --primary: #4d61ff;
+  --primary-foreground: #ffffff;
+  --secondary: #262626;
+  --secondary-foreground: #ededed;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #262626;
+  --accent-foreground: #ededed;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+  --border: #262626;
+  --input: #1a1a1a;
+  --ring: #4d61ff;
+  --chart-1: #4ade80;
+  --chart-2: #60a5fa;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #2dd4bf;
+  --sidebar: #121212;
+  --sidebar-foreground: #898989;
+  --sidebar-primary: #006239;
+  --sidebar-primary-foreground: #dde8e3;
+  --sidebar-accent: #313131;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #292929;
+  --sidebar-ring: #4ade80;
+  --font-sans: Outfit, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: monospace;
   --radius: 0.5rem;
+  --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.09);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.09);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
+  --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
+  --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 2px 4px -1px hsl(0 0% 0% / 0.17);
+  --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 4px 6px -1px hsl(0 0% 0% / 0.17);
+  --shadow-xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 8px 10px -1px hsl(0 0% 0% / 0.17);
+  --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.43);
+  --tracking-normal: 0.025em;
+  --spacing: 0.25rem;
 }
 
-/* Ensure dark mode is always on */
-.dark {
-  --background: 30 15% 9%;
-  --foreground: 210 20% 98%;
-  --card: 25 12% 16%;
-  --card-foreground: 210 20% 98%;
-  --popover: 25 10% 14%;
-  --popover-foreground: 210 20% 98%;
-  --primary: 239 84% 67%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 25 8% 22%;
-  --secondary-foreground: 210 20% 98%;
-  --muted: 25 8% 18%;
-  --muted-foreground: 215 15% 65%;
-  --accent: 25 8% 28%;
-  --accent-foreground: 210 20% 98%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 25 5% 35%;
-  --input: 25 8% 16%;
-  --ring: 239 84% 67%;
+/* Register colors with Tailwind v4 */
+@theme inline {
+  --color-background: #0a0a0a;
+  --color-foreground: #ededed;
+  --color-card: #111111;
+  --color-card-foreground: #ededed;
+  --color-popover: #1a1a1a;
+  --color-popover-foreground: #ededed;
+  --color-primary: #4d61ff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #262626;
+  --color-secondary-foreground: #ededed;
+  --color-muted: #262626;
+  --color-muted-foreground: #a3a3a3;
+  --color-accent: #262626;
+  --color-accent-foreground: #ededed;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #fafafa;
+  --color-border: #262626;
+  --color-input: #1a1a1a;
+  --color-ring: #4d61ff;
 }
 
 /* Apply dark theme to body */
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-/* Ensure all Radix UI portals use dark theme */
-[data-radix-popper-content-wrapper] {
-  --background: 25 10% 14%;
-  --foreground: 210 20% 98%;
-}
-
-/* Fix specific component issues */
-/* Select dropdown content */
-[role="listbox"] {
-  background-color: hsl(var(--popover)) !important;
-  color: hsl(var(--popover-foreground)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-/* Select items focus state only - no hover */
-[role="option"]:focus,
-[role="option"][data-highlighted] {
-  background-color: hsl(var(--accent) / 0.3) !important;
-}
-
-/* Input fields */
-input, textarea, select {
-  background-color: hsl(var(--input)) !important;
-  color: hsl(var(--foreground)) !important;
-  border-color: hsl(var(--border) / 0.5) !important;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: hsl(var(--muted-foreground)) !important;
-}
-
-/* Focus states */
-input:focus, 
-textarea:focus, 
-select:focus,
-button:focus-visible {
-  outline: 2px solid hsl(var(--ring)) !important;
-  outline-offset: 2px !important;
-  border-color: hsl(var(--ring)) !important;
-}
-
-/* Button hover states - only for actual buttons, not all button elements */
-button[type="button"]:hover,
-button[type="submit"]:hover,
-.hover\:bg-destructive\/10:hover {
-  opacity: 0.9;
-}
-
-/* Ensure labels are readable */
-label {
-  color: hsl(var(--foreground)) !important;
-}
-
-/* Border utilities with proper dark theme colors */
-.border-border {
-  border-color: hsl(var(--border) / 0.6) !important;
-}
-
-.border {
-  border-color: hsl(var(--border) / 0.6) !important;
-}
-
-/* Ensure proper text colors */
-.text-base,
-.text-sm,
-.text-xs,
-.text-lg,
-.text-xl {
-  color: hsl(var(--foreground)) !important;
-}
-
-.text-muted-foreground {
-  color: hsl(var(--muted-foreground)) !important;
-}
-
-/* Fix dropdown trigger buttons */
-[role="combobox"] {
-  background-color: hsl(var(--input)) !important;
-  color: hsl(var(--foreground)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-/* Ensure all nested divs in the form have proper colors */
-.space-y-4 label,
-.space-y-2 label,
-.space-y-6 h2 {
-  color: hsl(var(--foreground)) !important;
+  background-color: var(--background);
+  color: var(--foreground);
+  letter-spacing: var(--tracking-normal);
 }

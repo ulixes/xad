@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AdTargetingForm } from '../components/AdTargetingForm';
+import { AdTargetingForm } from '../components/AdTargetingForm/AdTargetingForm';
 import type { TargetingRule } from '../types/platform-schemas';
 
 const meta: Meta<typeof AdTargetingForm> = {

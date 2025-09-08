@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 
 const socialPlatforms = [
   { id: 'x', name: 'X (Twitter)', icon: '/social-logos/x.png' },
@@ -412,10 +413,10 @@ export default function EarningsCalculator() {
       <div className="h-6"></div>
 
       {/* Earnings Display */}
-      <div className="bg-secondary/20 border-t-2 border-border rounded-none sm:rounded-b-2xl py-4">
+      <div className="border-t-2 border-border rounded-none sm:rounded-b-2xl py-4">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-base text-card-foreground">
+            <span className="text-xl text-card-foreground">
               {earnings.primaryLabel === 'Post' ? t[language].perPost : 
                earnings.primaryLabel === 'Upvote' ? t[language].perUpvote :
                earnings.primaryLabel === 'Like' ? t[language].perLike :
@@ -427,7 +428,7 @@ export default function EarningsCalculator() {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-base text-card-foreground">
+            <span className="text-xl text-card-foreground">
               {earnings.secondaryLabel === 'Comment' ? t[language].perComment :
                earnings.secondaryLabel === 'Share' ? t[language].perShare :
                earnings.secondaryLabel === 'Award' ? t[language].perAward :

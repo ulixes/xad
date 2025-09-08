@@ -72,7 +72,7 @@ export function ConditionGroup({
       {!isRoot && (
         <div className="flex items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-3">
-            <span className="text-base bg-muted px-2 py-1 rounded">
+            <span className="text-base font-medium bg-muted px-3 py-2 rounded">
               Nested Group
             </span>
           </div>
@@ -95,7 +95,7 @@ export function ConditionGroup({
       <div className="space-y-2">
           {group.conditions.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-base">
-              No conditions yet. Add a condition to get started.
+              No conditions yet.
             </div>
           )}
 
@@ -117,7 +117,7 @@ export function ConditionGroup({
                         variant={condition.logicalOperator === 'AND' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handleLogicalOperatorChange(index, 'AND')}
-                        className="h-8 w-16"
+                        className="h-10 w-20 text-base"
                       >
                         AND
                       </Button>
@@ -125,7 +125,7 @@ export function ConditionGroup({
                         variant={condition.logicalOperator === 'OR' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handleLogicalOperatorChange(index, 'OR')}
-                        className="h-8 w-16"
+                        className="h-10 w-20 text-base"
                       >
                         OR
                       </Button>
@@ -150,7 +150,7 @@ export function ConditionGroup({
                         variant={group.operator === 'AND' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => onUpdate({ ...group, operator: 'AND' })}
-                        className="h-8 w-16"
+                        className="h-10 w-20 text-base"
                       >
                         AND
                       </Button>
@@ -158,7 +158,7 @@ export function ConditionGroup({
                         variant={group.operator === 'OR' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => onUpdate({ ...group, operator: 'OR' })}
-                        className="h-8 w-16"
+                        className="h-10 w-20 text-base"
                       >
                         OR
                       </Button>
@@ -174,6 +174,7 @@ export function ConditionGroup({
             <Button
               onClick={handleAddCondition}
               variant="default"
+              className="h-11 text-base"
             >
               Add Condition
             </Button>
