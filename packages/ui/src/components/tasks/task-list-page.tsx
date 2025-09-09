@@ -114,7 +114,7 @@ export function TaskListPage({
     )}>
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 pb-24 space-y-6">
+        <div className="p-4 pb-24 space-y-4">
           {/* Header with back button and account */}
           <div className="flex items-center relative">
             <button
@@ -146,7 +146,7 @@ export function TaskListPage({
                       <Icon className={cn("w-4 h-4 flex-shrink-0", config.className)} />
                       <div className="flex flex-col items-start flex-1 min-w-0">
                         <span className="font-medium">
-                          {config.label} ${task.payment.toFixed(2)}
+                          {config.label} for ${task.payment.toFixed(2)}
                         </span>
                         <a 
                           href={task.url}
@@ -188,7 +188,7 @@ export function TaskListPage({
       </div>
       
       {/* Fixed footer with gradient background */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-6">
+      <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-4">
         <div className="bg-background">
           <Button 
             onClick={onStartTasks}

@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { EarningsWidget } from "@/components/earnings/earnings-widget"
-import { DailyStreakWidget } from "@/components/daily/daily-streak-widget"
-import { JackpotWidget } from "@/components/daily/jackpot-widget"
 import { cn } from "@/lib/utils"
 import { Plus, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
 
 interface ConnectedAccount {
   platform: string
@@ -14,20 +13,21 @@ interface ConnectedAccount {
 interface HomeProps {
   pendingEarnings?: number
   availableEarnings?: number
-  // Daily task props
-  currentStreak?: number
-  dailyTasksCompleted?: number
-  dailyTasksRequired?: number
-  streakMultiplier?: number
   // Jackpot props
   jackpotAmount?: number
-  jackpotTickets?: number
-  daysUntilDrawing?: number
+  hoursUntilDrawing?: number
+  minutesUntilDrawing?: number
+  secondsUntilDrawing?: number
+  dailyTasksCompleted?: number
+  dailyTasksRequired?: number
+  // Wallet
+  walletAddress?: string
   // Callbacks
-  onConnectAccount?: () => void
   onAddAccount?: (platform: string) => void
   onAccountClick?: (account: ConnectedAccount) => void
-  onStartDailyTasks?: () => void
+  onWalletClick?: () => void
+  onJackpotClick?: () => void
+  onCashOut?: () => void
   connectedAccounts?: ConnectedAccount[]
   className?: string
 }
@@ -42,23 +42,57 @@ const platforms = [
 export function Home({
   pendingEarnings = 0,
   availableEarnings = 0,
-  currentStreak = 0,
+  jackpotAmount = 50000,
+  hoursUntilDrawing = 3,
+  minutesUntilDrawing = 45,
+  secondsUntilDrawing = 0,
   dailyTasksCompleted = 0,
   dailyTasksRequired = 5,
-  streakMultiplier = 1,
-  jackpotAmount = 50000,
-  jackpotTickets = 0,
-  daysUntilDrawing = 3,
-  onConnectAccount,
+  walletAddress = '0x1234...5678',
   onAddAccount,
   onAccountClick,
-  onStartDailyTasks,
+  onWalletClick,
+  onJackpotClick,
+  onCashOut,
   connectedAccounts = [],
   className
 }: HomeProps) {
   const getAccountsForPlatform = (platformId: string) => {
     return connectedAccounts.filter(acc => acc.platform === platformId)
   }
+  
+  // Countdown timer state
+  const [timeLeft, setTimeLeft] = useState({
+    hours: hoursUntilDrawing,
+    minutes: minutesUntilDrawing,
+    seconds: secondsUntilDrawing
+  })
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        let { hours, minutes, seconds } = prev
+        
+        if (seconds > 0) {
+          seconds--
+        } else if (minutes > 0) {
+          minutes--
+          seconds = 59
+        } else if (hours > 0) {
+          hours--
+          minutes = 59
+          seconds = 59
+        } else {
+          // Timer reached 0, reset to 24 hours
+          return { hours: 24, minutes: 0, seconds: 0 }
+        }
+        
+        return { hours, minutes, seconds }
+      })
+    }, 1000)
+    
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div className={cn(
@@ -66,35 +100,46 @@ export function Home({
       "bg-background",
       className
     )}>
+      {/* Header */}
+      <div className="border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          {/* Lottery info */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onJackpotClick}
+            className="h-8"
+          >
+            <span className="text-sm">
+              ${Math.round(jackpotAmount/1000)}k in {timeLeft.hours}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+            </span>
+          </Button>
+          
+          {/* Wallet button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onWalletClick}
+            className="h-8"
+          >
+            {walletAddress}
+          </Button>
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-4">
+        <div className="p-4 space-y-4">
           {/* Earnings Widget */}
-          <EarningsWidget pending={pendingEarnings} available={availableEarnings} />
-
-          {/* Daily Streak Widget */}
-          <DailyStreakWidget 
-            currentStreak={currentStreak}
-            tasksCompleted={dailyTasksCompleted}
-            tasksRequired={dailyTasksRequired}
-            hasCompletedToday={dailyTasksCompleted >= dailyTasksRequired}
-            onStartTasks={onStartDailyTasks}
+          <EarningsWidget 
+            pending={pendingEarnings} 
+            available={availableEarnings} 
+            onWithdraw={onCashOut}
           />
 
-          {/* Jackpot Widget */}
-          <JackpotWidget
-            jackpotAmount={jackpotAmount}
-            hoursUntilDrawing={Math.floor(daysUntilDrawing)}
-            minutesUntilDrawing={45}
-            isEligible={dailyTasksCompleted >= dailyTasksRequired}
-          />
-
-          <div className="space-y-2 pt-4">
+          <div className="pt-4">
             <h2 className="text-xl font-semibold tracking-tight">
               Connect Accounts
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Connect your accounts to start earning
-            </p>
           </div>
 
           <div className="space-y-4">

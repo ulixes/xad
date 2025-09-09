@@ -10,6 +10,7 @@ export * from "./components/ui/dropdown-menu"
 export * from "./components/ui/tooltip"
 export * from "./components/ui/separator"
 export * from "./components/ui/alert"
+export * from "./components/ui/accordion"
 
 // Theme Components
 export * from "./components/theme-provider"
@@ -46,10 +47,12 @@ export * from "./components/tasks/task-list-page"
 
 // Earnings Components
 export * from "./components/earnings/earnings-widget"
+export * from "./components/earnings/cash-out-page"
 
 // Daily Task Components
 export * from "./components/daily/daily-streak-widget"
 export * from "./components/daily/jackpot-widget"
+export * from "./components/daily/jackpot-details-page"
 export * from "./components/daily/daily-task-card"
 
 // Utilities
