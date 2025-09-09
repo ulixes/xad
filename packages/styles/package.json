@@ -1,0 +1,27 @@
+{
+  "name": "@xad/styles",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js",
+    "./index.css": "./src/index.css",
+    "./tokens": "./src/tokens.js",
+    "./globals.css": "./src/globals.css",
+    "./tailwind-preset": "./src/tailwind-preset.js"
+  },
+  "scripts": {
+    "build": "bun run build:css",
+    "build:css": "tailwindcss -i ./src/base.css -o ./src/globals.css --minify",
+    "dev": "tailwindcss -i ./src/base.css -o ./src/globals.css --watch"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49"
+  }
+}

@@ -64,11 +64,11 @@ export function ActionListPage({
         )
       case 'completed':
         return (
-          <Check className="w-5 h-5 text-foreground" />
+          <Check className="w-4 h-4 text-foreground" />
         )
       case 'error':
         return (
-          <X className="w-5 h-5 text-destructive" />
+          <X className="w-4 h-4 text-destructive" />
         )
     }
   }

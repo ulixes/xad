@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { EarningsWidget } from "@/components/earnings/earnings-widget"
 import { cn } from "@/lib/utils"
 import { Plus, ChevronRight, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -141,12 +140,35 @@ export function Home({
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
-          {/* Earnings Widget */}
-          <EarningsWidget 
-            pending={pendingEarnings} 
-            available={availableEarnings} 
-            onWithdraw={onCashOut}
-          />
+          {/* Earnings Section */}
+          <div className="bg-card rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-around">
+              <div className="flex flex-col items-center">
+                <span className="text-sm text-muted-foreground mb-1">Pending</span>
+                <span className="text-2xl font-semibold">
+                  ${pendingEarnings.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-sm text-muted-foreground mb-1">Available</span>
+                <span className="text-2xl font-semibold">
+                  ${availableEarnings.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={onCashOut}
+              disabled={availableEarnings < 5}
+              className="w-full"
+              variant={availableEarnings < 5 ? "secondary" : "default"}
+            >
+              {availableEarnings < 5 
+                ? `Withdraw ($5)`
+                : `Withdraw $${availableEarnings.toFixed(2)}`
+              }
+            </Button>
+          </div>
 
           <div className="pt-4">
             <h2 className="text-xl font-semibold tracking-tight">

@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables from design tokens */
+:root {
+  /* Color variables */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 93%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 93%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 93%;
+  --primary: 233 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 93%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 93%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 15%;
+  --input: 0 0% 10%;
+  --ring: 233 100% 65%;
+  
+  /* Chart colors */
+  --chart-1: 142 76% 36%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 256 59% 59%;
+  --chart-4: 41 90% 61%;
+  --chart-5: 174 72% 56%;
+  
+  /* Other variables */
+  --radius: 0.5rem;
+  --font-sans: Outfit, system-ui, -apple-system, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", monospace;
+}
+
+/* Dark mode (already default, but explicit for clarity) */
+.dark {
+  /* Variables are already dark mode by default */
+}
+
+/* Light mode (if needed in future) */
+.light {
+  /* Override with light mode values when needed */
+}
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Ensure dark mode is applied by default */
+  html {
+    @apply dark;
+  }
+}

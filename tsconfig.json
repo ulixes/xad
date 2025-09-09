@@ -12,7 +12,15 @@
     "strict": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/web/src/*"],
+      "@ui/*": ["packages/ui/src/*"],
+      "@styles/*": ["packages/styles/src/*"],
+      "@xad/styles": ["packages/styles/src"],
+      "@xad/ui": ["packages/ui/src"]
+    }
   },
   "exclude": ["node_modules", "dist", ".turbo"]
 }
