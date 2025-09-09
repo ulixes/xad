@@ -70,6 +70,14 @@ export interface VerificationStep {
   icon?: Icon;
 }
 
+export interface VerificationResult {
+  proofResult: boolean;
+  targetId: string;
+  totalItems: number;
+  timestamp?: string;
+  errorMessage?: string;
+}
+
 export interface VerificationFlow {
   platform: Platform;
   contentType: ContentType;
@@ -78,4 +86,5 @@ export interface VerificationFlow {
   targetUrl?: string;
   contextData?: NormalizedUser;
   actionData?: any[];
+  result?: VerificationResult;
 }

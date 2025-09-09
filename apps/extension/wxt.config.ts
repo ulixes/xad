@@ -5,14 +5,23 @@ import path from 'node:path';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    permissions: ['sidePanel', 'activeTab', 'storage'],
+    permissions: [
+      'sidePanel', 
+      'activeTab', 
+      'storage',
+      'debugger',
+      'tabs',
+      'webRequest'
+    ],
     action: {
       default_title: 'Open Microtask Side Panel',
     },
     host_permissions: [
       "https://auth.privy.io/*",
       "https://www.googletagmanager.com/*",
-      "https://embed-wallet.privy.io/*"
+      "https://embed-wallet.privy.io/*",
+      "https://x.com/*",
+      "https://twitter.com/*"
     ]
   },
   vite: () => ({

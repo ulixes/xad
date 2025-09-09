@@ -2,8 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PLATFORM_CONFIGS } from '@/config/platform-configs';
-import { Platform, ContentType } from '@/types/proof-config';
+import { PLATFORM_CONFIGS } from '../../config/platform-configs';
+import { Platform, ContentType } from '../../types/proof-config';
 import { cn } from '@/lib/utils';
 
 interface PlatformSelectorProps {

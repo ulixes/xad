@@ -24,6 +24,9 @@ export * from "./components/auth/user-profile"
 export * from "./components/wallet/create-wallet-button"
 export * from "./components/wallet/wallet-list"
 
+// Verification Components
+export * from "./components/verification/verification-flow"
+export * from "./components/verification/platform-selector"
 
 // Error Handling Components
 export * from "./components/error/error-display"
