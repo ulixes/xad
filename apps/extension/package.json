@@ -22,7 +22,9 @@
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
+    "@privy-io/react-auth": "^2.24.0",
     "@xad/ui": "workspace:*",
+    "buffer": "^6.0.3",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
