@@ -37,5 +37,20 @@ export * from "./components/state/auth-state-indicator"
 // Loading Components
 export * from "./components/loading/spinner"
 
+// Welcome Pages
+export * from "./components/welcome/welcome-page"
+export * from "./components/welcome/home"
+
+// Task Pages
+export * from "./components/tasks/task-list-page"
+
+// Earnings Components
+export * from "./components/earnings/earnings-widget"
+
+// Daily Task Components
+export * from "./components/daily/daily-streak-widget"
+export * from "./components/daily/jackpot-widget"
+export * from "./components/daily/daily-task-card"
+
 // Utilities
 export * from "./lib/utils"
