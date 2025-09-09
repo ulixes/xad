@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Check, Loader2, X, Heart, MessageCircle, Repeat2, Share2, ArrowUp, Bookmark, UserRoundPlus, ChevronLeft } from "lucide-react"
 
-export type TaskStatus = 'pending' | 'loading' | 'completed' | 'error'
+export type ActionStatus = 'pending' | 'loading' | 'completed' | 'error'
 
-export interface Task {
+export interface Action {
   id: string
   type: 'like' | 'comment' | 'retweet' | 'share' | 'upvote' | 'save' | 'follow'
   status: TaskStatus
@@ -14,18 +14,18 @@ export interface Task {
   platform: 'tiktok' | 'instagram' | 'x' | 'reddit'
 }
 
-interface TaskListPageProps {
+interface ActionListPageProps {
   accountHandle: string
   platform: 'tiktok' | 'instagram' | 'x' | 'reddit'
-  tasks: Task[]
-  availableTasksCount: number
-  onStartTasks?: () => void
-  onTaskClick?: (taskId: string) => void
+  actions: Action[]
+  availableActionsCount: number
+  onStartActions?: () => void
+  onActionClick?: (actionId: string) => void
   onBack?: () => void
   className?: string
 }
 
-const taskTypeConfig = {
+const actionTypeConfig = {
   like: { icon: Heart, label: 'Like', className: 'text-red-500 fill-red-500' },
   comment: { icon: MessageCircle, label: 'Comment', className: 'text-foreground fill-foreground' },
   retweet: { icon: Repeat2, label: 'Retweet', className: 'text-green-500' },
@@ -35,44 +35,40 @@ const taskTypeConfig = {
   follow: { icon: UserRoundPlus, label: 'Follow', className: 'text-blue-500 fill-blue-500' }
 }
 
-const platformTaskTypes: Record<string, Array<Task['type']>> = {
+const platformActionTypes: Record<string, Array<Action['type']>> = {
   tiktok: ['like', 'comment', 'share', 'follow'],
   instagram: ['like', 'comment', 'save', 'follow'],
   x: ['like', 'comment', 'retweet', 'follow'],
   reddit: ['upvote', 'comment', 'save']
 }
 
-export function TaskListPage({
+export function ActionListPage({
   accountHandle,
   platform,
-  tasks,
-  availableTasksCount,
-  onStartTasks,
-  onTaskClick,
+  actions,
+  availableActionsCount,
+  onStartActions,
+  onActionClick,
   onBack,
   className
-}: TaskListPageProps) {
-  const renderTaskStatus = (status: TaskStatus) => {
+}: ActionListPageProps) {
+  const renderActionStatus = (status: ActionStatus) => {
     switch (status) {
       case 'pending':
         return (
-          <div className="w-5 h-5 rounded border-2 border-muted-foreground/40" />
+          <div className="w-5 h-5" />
         )
       case 'loading':
         return (
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <Loader2 className="w-5 h-5 animate-spin text-foreground" />
         )
       case 'completed':
         return (
-          <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
-            <Check className="w-3 h-3 text-primary-foreground" />
-          </div>
+          <Check className="w-5 h-5 text-foreground" />
         )
       case 'error':
         return (
-          <div className="w-5 h-5 rounded bg-destructive flex items-center justify-center">
-            <X className="w-3 h-3 text-destructive-foreground" />
-          </div>
+          <X className="w-5 h-5 text-destructive" />
         )
     }
   }
@@ -128,46 +124,46 @@ export function TaskListPage({
             </div>
           </div>
 
-          {/* Tasks List */}
+          {/* Actions List */}
           <div className="space-y-3">
-            {tasks.map((task) => {
-              const config = taskTypeConfig[task.type]
+            {actions.map((action) => {
+              const config = actionTypeConfig[action.type]
               const Icon = config.icon
               
               return (
-                <div key={task.id} className="space-y-2">
+                <div key={action.id} className="space-y-2">
                   <div
                     className={cn(
                       "w-full bg-card rounded-lg p-3 flex items-center justify-between",
-                      task.status === 'loading' && "opacity-80"
+                      action.status === 'loading' && "opacity-80"
                     )}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Icon className={cn("w-4 h-4 flex-shrink-0", config.className)} />
                       <div className="flex flex-col items-start flex-1 min-w-0">
                         <span className="font-medium">
-                          {config.label} for ${task.payment.toFixed(2)}
+                          {config.label} for ${action.payment.toFixed(2)}
                         </span>
                         <a 
-                          href={task.url}
+                          href={action.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="text-sm text-primary hover:underline truncate w-full text-left"
                         >
-                          {truncateUrl(task.url, platform)}
+                          {truncateUrl(action.url, platform)}
                         </a>
                       </div>
                     </div>
                     <div className="flex-shrink-0 ml-3">
-                      {renderTaskStatus(task.status)}
+                      {renderActionStatus(action.status)}
                     </div>
                   </div>
                   
-                  {task.status === 'error' && task.errorMessage && (
+                  {action.status === 'error' && action.errorMessage && (
                     <div className="pl-7 pr-3">
                       <p className="text-sm text-destructive">
-                        {task.errorMessage}
+                        {action.errorMessage}
                       </p>
                     </div>
                   )}
@@ -177,10 +173,10 @@ export function TaskListPage({
           </div>
 
           {/* Empty State */}
-          {tasks.length === 0 && (
+          {actions.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <p className="text-muted-foreground text-center">
-                No tasks available at the moment
+                No actions available at the moment
               </p>
             </div>
           )}
@@ -191,10 +187,10 @@ export function TaskListPage({
       <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-4">
         <div className="bg-background">
           <Button 
-            onClick={onStartTasks}
+            onClick={onStartActions}
             size="lg"
             className="w-full"
-            disabled={tasks.length === 0}
+            disabled={actions.length === 0}
           >
             Start
           </Button>

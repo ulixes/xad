@@ -39,21 +39,17 @@ export * from "./components/state/auth-state-indicator"
 export * from "./components/loading/spinner"
 
 // Welcome Pages
-export * from "./components/welcome/welcome-page"
 export * from "./components/welcome/home"
 
-// Task Pages
-export * from "./components/tasks/task-list-page"
+// Action Pages
+export * from "./components/tasks/action-list-page"
 
 // Earnings Components
 export * from "./components/earnings/earnings-widget"
 export * from "./components/earnings/cash-out-page"
 
-// Daily Task Components
-export * from "./components/daily/daily-streak-widget"
-export * from "./components/daily/jackpot-widget"
+// Daily Components
 export * from "./components/daily/jackpot-details-page"
-export * from "./components/daily/daily-task-card"
 
 // Utilities
 export * from "./lib/utils"

@@ -36,13 +36,13 @@ const meta = {
       control: 'number',
       description: 'Seconds until next jackpot drawing'
     },
-    dailyTasksCompleted: {
+    dailyActionsCompleted: {
       control: 'number',
-      description: 'Daily tasks completed'
+      description: 'Daily actions completed'
     },
-    dailyTasksRequired: {
+    dailyActionsRequired: {
       control: 'number',
-      description: 'Daily tasks required'
+      description: 'Daily actions required'
     },
     walletAddress: {
       control: 'text',
@@ -50,7 +50,7 @@ const meta = {
     },
     onAddAccount: {
       action: 'add-account-clicked',
-      description: 'Called when an Add Account button is clicked for a platform'
+      description: 'Called when user confirms adding an account with platform and handle'
     },
     onAccountClick: {
       action: 'account-clicked',
@@ -86,13 +86,13 @@ export const Default: Story = {
   args: {
     pendingEarnings: 0,
     availableEarnings: 0,
-    dailyTasksCompleted: 0,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 0,
+    dailyActionsRequired: 5,
     jackpotAmount: 50000,
     hoursUntilDrawing: 3,
     minutesUntilDrawing: 45,
     secondsUntilDrawing: 0,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     onWalletClick: () => console.log('Wallet clicked'),
@@ -104,13 +104,13 @@ export const WithStreak: Story = {
   args: {
     pendingEarnings: 45.50,
     availableEarnings: 125.00,
-    dailyTasksCompleted: 3,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 3,
+    dailyActionsRequired: 5,
     jackpotAmount: 75000,
     hoursUntilDrawing: 2,
     minutesUntilDrawing: 30,
     secondsUntilDrawing: 15,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     onWalletClick: () => console.log('Wallet clicked'),
@@ -122,22 +122,22 @@ export const WithConnectedAccounts: Story = {
   args: {
     pendingEarnings: 25.75,
     availableEarnings: 89.50,
-    dailyTasksCompleted: 2,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 2,
+    dailyActionsRequired: 5,
     jackpotAmount: 60000,
     hoursUntilDrawing: 4,
     minutesUntilDrawing: 15,
     secondsUntilDrawing: 30,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     onWalletClick: () => console.log('Wallet clicked'),
     onCashOut: () => console.log('Cash out clicked'),
     connectedAccounts: [
-      { platform: 'tiktok', handle: 'johndoe', availableTasks: 5 },
-      { platform: 'tiktok', handle: 'janedoe', availableTasks: 3 },
-      { platform: 'instagram', handle: 'john_photos', availableTasks: 8 },
-      { platform: 'x', handle: 'johntweets', availableTasks: 2 },
+      { platform: 'tiktok', handle: 'johndoe', availableActions: 5 },
+      { platform: 'tiktok', handle: 'janedoe', availableActions: 3 },
+      { platform: 'instagram', handle: 'john_photos', availableActions: 8 },
+      { platform: 'x', handle: 'johntweets', availableActions: 2 },
     ],
   },
 }
@@ -146,18 +146,18 @@ export const PartiallyConnected: Story = {
   args: {
     pendingEarnings: 75.00,
     availableEarnings: 250.00,
-    dailyTasksCompleted: 5,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 5,
+    dailyActionsRequired: 5,
     jackpotAmount: 100000,
     hoursUntilDrawing: 1,
     minutesUntilDrawing: 10,
     secondsUntilDrawing: 45,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     connectedAccounts: [
-      { platform: 'tiktok', handle: 'creator123', availableTasks: 12 },
-      { platform: 'reddit', handle: 'redditor42', availableTasks: 7 },
+      { platform: 'tiktok', handle: 'creator123', availableActions: 12 },
+      { platform: 'reddit', handle: 'redditor42', availableActions: 7 },
     ],
   },
 }
@@ -166,19 +166,71 @@ export const MultipleAccountsSamePlatform: Story = {
   args: {
     pendingEarnings: 234.50,
     availableEarnings: 892.30,
-    dailyTasksCompleted: 4,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 4,
+    dailyActionsRequired: 5,
     jackpotAmount: 125000,
     hoursUntilDrawing: 3,
     minutesUntilDrawing: 45,
     secondsUntilDrawing: 0,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     connectedAccounts: [
-      { platform: 'instagram', handle: 'main_account', availableTasks: 10 },
-      { platform: 'instagram', handle: 'business_account', availableTasks: 15 },
-      { platform: 'instagram', handle: 'personal_account', availableTasks: 3 },
+      { platform: 'instagram', handle: 'main_account', availableActions: 10 },
+      { platform: 'instagram', handle: 'business_account', availableActions: 15 },
+      { platform: 'instagram', handle: 'personal_account', availableActions: 3 },
+    ],
+  },
+}
+
+export const AddingAccount: Story = {
+  args: {
+    pendingEarnings: 25.75,
+    availableEarnings: 89.50,
+    dailyActionsCompleted: 2,
+    dailyActionsRequired: 5,
+    jackpotAmount: 60000,
+    hoursUntilDrawing: 4,
+    minutesUntilDrawing: 15,
+    secondsUntilDrawing: 30,
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+    connectedAccounts: [
+      { platform: 'tiktok', handle: 'johndoe', availableActions: 5 },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    // Simulate clicking the Add Account button to show the input field
+    const addButton = canvasElement.querySelector('button:has(.lucide-plus)')
+    if (addButton) {
+      // This is just for story documentation, actual interaction would trigger the state
+      console.log('Story Note: Click "Add Account" to see the input field')
+    }
+  }
+}
+
+export const VerifyingAccount: Story = {
+  args: {
+    pendingEarnings: 25.75,
+    availableEarnings: 89.50,
+    dailyActionsCompleted: 2,
+    dailyActionsRequired: 5,
+    jackpotAmount: 60000,
+    hoursUntilDrawing: 4,
+    minutesUntilDrawing: 15,
+    secondsUntilDrawing: 30,
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+    connectedAccounts: [
+      { platform: 'tiktok', handle: 'johndoe', availableActions: 5 },
+      { platform: 'instagram', handle: 'newaccount', availableActions: 0, isVerifying: true },
+      { platform: 'instagram', handle: 'existingaccount', availableActions: 8 },
     ],
   },
 }
@@ -192,13 +244,13 @@ export const MobileView: Story = {
   args: {
     pendingEarnings: 0,
     availableEarnings: 0,
-    dailyTasksCompleted: 0,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 0,
+    dailyActionsRequired: 5,
     jackpotAmount: 50000,
     hoursUntilDrawing: 3,
     minutesUntilDrawing: 45,
     secondsUntilDrawing: 0,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
   },
@@ -213,18 +265,18 @@ export const TabletView: Story = {
   args: {
     pendingEarnings: 35.25,
     availableEarnings: 75.00,
-    dailyTasksCompleted: 1,
-    dailyTasksRequired: 5,
+    dailyActionsCompleted: 1,
+    dailyActionsRequired: 5,
     jackpotAmount: 65000,
     hoursUntilDrawing: 2,
     minutesUntilDrawing: 30,
     secondsUntilDrawing: 15,
-    onAddAccount: (platform) => console.log('Add account for:', platform),
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
     onAccountClick: (account) => console.log('Account clicked:', account),
     onJackpotClick: () => console.log('Jackpot clicked'),
     connectedAccounts: [
-      { platform: 'tiktok', handle: 'creator', availableTasks: 5 },
-      { platform: 'instagram', handle: 'photographer', availableTasks: 8 },
+      { platform: 'tiktok', handle: 'creator', availableActions: 5 },
+      { platform: 'instagram', handle: 'photographer', availableActions: 8 },
     ],
   },
 }

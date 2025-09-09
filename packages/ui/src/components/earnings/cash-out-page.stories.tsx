@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { CashOutPage, TaskHistory } from './cash-out-page'
+import { CashOutPage, ActionHistory } from './cash-out-page'
 
 const meta = {
   title: 'Pages/CashOut',
@@ -16,9 +16,9 @@ const meta = {
       control: 'number',
       description: 'Available earnings for cash out'
     },
-    taskHistory: {
+    actionHistory: {
       control: 'object',
-      description: 'History of completed tasks'
+      description: 'History of completed actions'
     },
     onBack: {
       action: 'back-clicked',
@@ -37,7 +37,7 @@ type Story = StoryObj<typeof meta>
 const now = new Date()
 const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
 
-const sampleTasks: TaskHistory[] = [
+const sampleActions: ActionHistory[] = [
   {
     id: '1',
     type: 'like',
@@ -121,7 +121,7 @@ const sampleTasks: TaskHistory[] = [
 export const Default: Story = {
   args: {
     availableEarnings: 0.75,
-    taskHistory: sampleTasks,
+    actionHistory: sampleActions,
     onBack: () => console.log('Back clicked'),
     onCashOut: () => console.log('Cash out clicked'),
   },
@@ -130,7 +130,7 @@ export const Default: Story = {
 export const BelowMinimum: Story = {
   args: {
     availableEarnings: 2.50,
-    taskHistory: sampleTasks.slice(0, 3),
+    actionHistory: sampleActions.slice(0, 3),
     onBack: () => console.log('Back clicked'),
     onCashOut: () => console.log('Cash out clicked'),
   },
@@ -139,8 +139,8 @@ export const BelowMinimum: Story = {
 export const CanCashOut: Story = {
   args: {
     availableEarnings: 12.75,
-    taskHistory: [
-      ...sampleTasks,
+    actionHistory: [
+      ...sampleActions,
       {
         id: '7',
         type: 'like',
@@ -168,7 +168,7 @@ export const CanCashOut: Story = {
 export const AllPending: Story = {
   args: {
     availableEarnings: 0,
-    taskHistory: [
+    actionHistory: [
       {
         id: '1',
         type: 'like',
@@ -208,7 +208,7 @@ export const AllPending: Story = {
 export const MixedStatuses: Story = {
   args: {
     availableEarnings: 5.25,
-    taskHistory: [
+    actionHistory: [
       {
         id: '1',
         type: 'like',
@@ -255,7 +255,7 @@ export const MixedStatuses: Story = {
 export const EmptyHistory: Story = {
   args: {
     availableEarnings: 0,
-    taskHistory: [],
+    actionHistory: [],
     onBack: () => console.log('Back clicked'),
     onCashOut: () => console.log('Cash out clicked'),
   },

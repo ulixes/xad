@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button"
 import { EarningsWidget } from "@/components/earnings/earnings-widget"
 import { ChevronLeft, Heart, MessageCircle, Repeat2, Share2, ArrowUp, Bookmark, UserPlus, Check } from "lucide-react"
 
-export type TaskHistoryStatus = 'pending' | 'verified' | 'failed'
+export type ActionHistoryStatus = 'pending' | 'verified' | 'failed'
 
-export interface TaskHistory {
+export interface ActionHistory {
   id: string
   type: 'like' | 'comment' | 'retweet' | 'share' | 'upvote' | 'save' | 'follow'
   status: TaskHistoryStatus
@@ -19,13 +19,13 @@ export interface TaskHistory {
 
 interface CashOutPageProps {
   availableEarnings: number
-  taskHistory: TaskHistory[]
+  actionHistory: ActionHistory[]
   onBack?: () => void
   onCashOut?: () => void
   className?: string
 }
 
-const taskTypeConfig = {
+const actionTypeConfig = {
   like: { icon: Heart, label: 'Liked', className: 'text-red-500 fill-red-500' },
   comment: { icon: MessageCircle, label: 'Commented', className: 'text-foreground fill-foreground' },
   retweet: { icon: Repeat2, label: 'Retweeted', className: 'text-green-500' },
@@ -45,23 +45,23 @@ const getCleanUrl = (url: string): string => {
     .replace(/^reddit\.com/, '')
 }
 
-const getStatusDisplay = (status: TaskHistoryStatus, daysRemaining?: number, hoursRemaining?: number) => {
+const getStatusDisplay = (status: ActionHistoryStatus, daysRemaining?: number, hoursRemaining?: number) => {
   switch (status) {
     case 'pending':
       if (hoursRemaining !== undefined && hoursRemaining < 24) {
         const hours = Math.floor(hoursRemaining)
         return {
           text: hours === 1 ? '1 hour' : `${hours} hours`,
-          className: 'text-muted-foreground'
+          className: 'text-foreground'
         }
       }
       if (daysRemaining !== undefined) {
         return {
           text: daysRemaining === 1 ? '1 day' : `${daysRemaining} days`,
-          className: 'text-muted-foreground'
+          className: 'text-foreground'
         }
       }
-      return { text: 'Pending', className: 'text-muted-foreground' }
+      return { text: 'Pending', className: 'text-foreground' }
     case 'verified':
       return { text: '', className: '', showCheck: true }
     case 'failed':
@@ -73,17 +73,17 @@ const getStatusDisplay = (status: TaskHistoryStatus, daysRemaining?: number, hou
 
 export function CashOutPage({
   availableEarnings,
-  taskHistory,
+  actionHistory,
   onBack,
   onCashOut,
   className
 }: CashOutPageProps) {
-  const totalPending = taskHistory
-    .filter(t => t.status === 'pending')
-    .reduce((sum, t) => sum + t.payment, 0)
-  const totalVerified = taskHistory
-    .filter(t => t.status === 'verified')
-    .reduce((sum, t) => sum + t.payment, 0)
+  const totalPending = actionHistory
+    .filter(a => a.status === 'pending')
+    .reduce((sum, a) => sum + a.payment, 0)
+  const totalVerified = actionHistory
+    .filter(a => a.status === 'verified')
+    .reduce((sum, a) => sum + a.payment, 0)
   const canCashOut = totalVerified >= 5
 
   return (
@@ -114,41 +114,39 @@ export function CashOutPage({
           {/* Earnings Widget */}
           <EarningsWidget pending={totalPending} available={totalVerified} />
 
-          {/* Task History */}
+          {/* Action History */}
           <div className="space-y-1">
-            <h3 className="font-medium">Task History</h3>
+            <h3 className="font-medium">Action History</h3>
             <p className="text-sm text-muted-foreground">
-              Tasks remain pending for 7 days to verify completion
+              Actions remain pending for 7 days to verify completion
             </p>
           </div>
 
           <div className="space-y-2">
-            {taskHistory.map((task) => {
-              const config = taskTypeConfig[task.type]
+            {actionHistory.map((action) => {
+              const config = actionTypeConfig[action.type]
               const Icon = config.icon
-              const status = getStatusDisplay(task.status, task.daysRemaining, task.hoursRemaining)
+              const status = getStatusDisplay(action.status, action.daysRemaining, action.hoursRemaining)
               
               return (
                 <div
-                  key={task.id}
+                  key={action.id}
                   className="w-full bg-card rounded-lg p-3 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Icon className={cn("w-4 h-4 flex-shrink-0", config.className)} />
                     <div className="flex flex-col items-start flex-1 min-w-0">
                       <span className="font-medium">
-                        {config.label} for ${task.payment.toFixed(2)}
+                        {config.label} for ${action.payment.toFixed(2)}
                       </span>
                       <p className="text-sm text-primary hover:underline truncate w-full text-left">
-                        {getCleanUrl(task.url)}
+                        {getCleanUrl(action.url)}
                       </p>
                     </div>
                   </div>
                   <div className="flex-shrink-0 ml-3">
                     {status.showCheck ? (
-                      <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
-                      </div>
+                      <Check className="w-5 h-5 text-foreground" />
                     ) : (
                       <span className={cn("text-xs", status.className)}>
                         {status.text}

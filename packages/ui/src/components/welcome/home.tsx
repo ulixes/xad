@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { EarningsWidget } from "@/components/earnings/earnings-widget"
 import { cn } from "@/lib/utils"
-import { Plus, ChevronRight } from "lucide-react"
+import { Plus, ChevronRight, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface ConnectedAccount {
   platform: string
   handle: string
-  availableTasks: number
+  availableActions: number
+  isVerifying?: boolean
 }
 
 interface HomeProps {
@@ -18,12 +20,12 @@ interface HomeProps {
   hoursUntilDrawing?: number
   minutesUntilDrawing?: number
   secondsUntilDrawing?: number
-  dailyTasksCompleted?: number
-  dailyTasksRequired?: number
+  dailyActionsCompleted?: number
+  dailyActionsRequired?: number
   // Wallet
   walletAddress?: string
   // Callbacks
-  onAddAccount?: (platform: string) => void
+  onAddAccount?: (platform: string, handle: string) => void
   onAccountClick?: (account: ConnectedAccount) => void
   onWalletClick?: () => void
   onJackpotClick?: () => void
@@ -46,8 +48,8 @@ export function Home({
   hoursUntilDrawing = 3,
   minutesUntilDrawing = 45,
   secondsUntilDrawing = 0,
-  dailyTasksCompleted = 0,
-  dailyTasksRequired = 5,
+  dailyActionsCompleted = 0,
+  dailyActionsRequired = 5,
   walletAddress = '0x1234...5678',
   onAddAccount,
   onAccountClick,
@@ -57,8 +59,18 @@ export function Home({
   connectedAccounts = [],
   className
 }: HomeProps) {
+  // State for adding new accounts
+  const [addingPlatform, setAddingPlatform] = useState<string | null>(null)
+  const [handleInput, setHandleInput] = useState('')
+  const [localAccounts, setLocalAccounts] = useState<ConnectedAccount[]>(connectedAccounts)
+  
+  // Update local accounts when props change
+  useEffect(() => {
+    setLocalAccounts(connectedAccounts)
+  }, [connectedAccounts])
+  
   const getAccountsForPlatform = (platformId: string) => {
-    return connectedAccounts.filter(acc => acc.platform === platformId)
+    return localAccounts.filter(acc => acc.platform === platformId)
   }
   
   // Countdown timer state
@@ -151,32 +163,100 @@ export function Home({
                     <span className="font-medium">{platform.name}</span>
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => onAddAccount?.(platform.id)}
-                      className="h-8"
+                      size="icon"
+                      onClick={() => {
+                        setAddingPlatform(platform.id)
+                        setHandleInput('')
+                      }}
+                      className="h-8 w-8"
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Account
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   
+                  {addingPlatform === platform.id && (
+                    <div className="w-full bg-card hover:bg-accent transition-colors rounded-lg p-3 flex items-center justify-between">
+                      <Input
+                        placeholder="Enter handle"
+                        value={handleInput}
+                        onChange={(e) => setHandleInput(e.target.value.replace('@', ''))}
+                        className="h-8 mr-2 flex-1 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && handleInput.trim()) {
+                            const cleanHandle = handleInput.trim().replace('@', '')
+                            // Add the account locally with verifying state
+                            setLocalAccounts(prev => [...prev, {
+                              platform: platform.id,
+                              handle: cleanHandle,
+                              availableActions: 0,
+                              isVerifying: true
+                            }])
+                            // Notify parent
+                            onAddAccount?.(platform.id, cleanHandle)
+                            setAddingPlatform(null)
+                            setHandleInput('')
+                          } else if (e.key === 'Escape') {
+                            setAddingPlatform(null)
+                            setHandleInput('')
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        className="h-8"
+                        disabled={!handleInput.trim()}
+                        onClick={() => {
+                          if (handleInput.trim()) {
+                            const cleanHandle = handleInput.trim().replace('@', '')
+                            // Add the account locally with verifying state
+                            setLocalAccounts(prev => [...prev, {
+                              platform: platform.id,
+                              handle: cleanHandle,
+                              availableActions: 0,
+                              isVerifying: true
+                            }])
+                            // Notify parent
+                            onAddAccount?.(platform.id, cleanHandle)
+                            setAddingPlatform(null)
+                            setHandleInput('')
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  )}
+                  
                   {accounts.length > 0 && (
                     <div className="space-y-2">
-                      {accounts.map((account, idx) => (
-                        <button
-                          key={`${account.platform}-${account.handle}-${idx}`}
-                          onClick={() => onAccountClick?.(account)}
-                          className="w-full bg-card hover:bg-accent transition-colors rounded-lg p-3 flex items-center justify-between group"
-                        >
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">@{account.handle}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {account.availableTasks} available tasks
-                            </span>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </button>
-                      ))}
+                      {accounts.map((account, idx) => {
+                        const isVerifying = account.isVerifying
+                        
+                        return (
+                          <button
+                            key={`${account.platform}-${account.handle}-${idx}`}
+                            onClick={() => !isVerifying && onAccountClick?.(account)}
+                            disabled={isVerifying}
+                            className={cn(
+                              "w-full bg-card transition-colors rounded-lg p-3 flex items-center justify-between group",
+                              isVerifying ? "opacity-60 cursor-not-allowed" : "hover:bg-accent"
+                            )}
+                          >
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">@{account.handle}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {isVerifying ? "Verifying..." : `${account.availableActions} available actions`}
+                              </span>
+                            </div>
+                            {isVerifying ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

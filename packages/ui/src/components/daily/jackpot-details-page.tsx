@@ -7,8 +7,8 @@ interface JackpotDetailsPageProps {
   jackpotAmount: number
   hoursUntilDrawing: number
   minutesUntilDrawing: number
-  dailyTasksCompleted: number
-  dailyTasksRequired: number
+  dailyActionsCompleted: number
+  dailyActionsRequired: number
   isEligible?: boolean
   onBack?: () => void
   className?: string
@@ -18,14 +18,14 @@ export function JackpotDetailsPage({
   jackpotAmount,
   hoursUntilDrawing,
   minutesUntilDrawing,
-  dailyTasksCompleted = 0,
-  dailyTasksRequired = 10,
+  dailyActionsCompleted = 0,
+  dailyActionsRequired = 10,
   isEligible = false,
   onBack,
   className
 }: JackpotDetailsPageProps) {
-  const progress = (dailyTasksCompleted / dailyTasksRequired) * 100
-  const isComplete = dailyTasksCompleted >= dailyTasksRequired
+  const progress = (dailyActionsCompleted / dailyActionsRequired) * 100
+  const isComplete = dailyActionsCompleted >= dailyActionsRequired
 
   return (
     <div className={cn(
@@ -76,12 +76,12 @@ export function JackpotDetailsPage({
           {/* Progress */}
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Today's Progress</span>
+              <span className="text-muted-foreground">Today</span>
               <span className={cn(
                 "font-medium",
                 isComplete ? "text-green-500" : "text-foreground"
               )}>
-                {dailyTasksCompleted}/{dailyTasksRequired} completed
+                {dailyActionsCompleted}/{dailyActionsRequired}
               </span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -95,7 +95,7 @@ export function JackpotDetailsPage({
             </div>
             {!isComplete && (
               <p className="text-xs text-muted-foreground text-center">
-                Complete {dailyTasksRequired - dailyTasksCompleted} more tasks to enter today's megapot
+                Complete {dailyActionsRequired - dailyActionsCompleted} more actions for a chance to win today
               </p>
             )}
           </div>
@@ -116,7 +116,7 @@ export function JackpotDetailsPage({
               <AccordionItem value="item-1">
                 <AccordionTrigger>How do I win?</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
-                  Complete your daily tasks to be automatically entered into the daily megapot drawing. One random winner is selected before the lottery every day.
+                  Complete your daily actions to be automatically entered into the daily megapot drawing. One random winner is selected before the lottery every day.
                 </AccordionContent>
               </AccordionItem>
 
@@ -128,9 +128,9 @@ export function JackpotDetailsPage({
               </AccordionItem>
 
               <AccordionItem value="item-3">
-                <AccordionTrigger>How many tasks do I need to complete?</AccordionTrigger>
+                <AccordionTrigger>How many actions do I need to complete?</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
-                  Complete {dailyTasksRequired} tasks each day to qualify for that day's megapot.
+                  Complete {dailyActionsRequired} actions each day to qualify for that day's megapot.
                 </AccordionContent>
               </AccordionItem>
 
@@ -149,16 +149,16 @@ export function JackpotDetailsPage({
               </AccordionItem>
 
               <AccordionItem value="item-5">
-                <AccordionTrigger>Do my chances increase with more tasks?</AccordionTrigger>
+                <AccordionTrigger>Do my chances increase with more actions?</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
-                  Yes! Every 10 additional tasks completed beyond the minimum gives you an extra entry into the megapot drawing.
+                  Yes! Every 10 additional actions completed beyond the minimum gives you an extra entry into the megapot drawing.
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="item-6">
                 <AccordionTrigger>How does the lottery work?</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
-                  Winners earn tickets for the ${jackpotAmount.toLocaleString()} megapot lottery. Every correct completion gives you a chance at lottery tickets. Every 10 tasks = 1 additional lottery ticket.
+                  Winners earn tickets for the ${jackpotAmount.toLocaleString()} megapot lottery. Every correct completion gives you a chance at lottery tickets. Every 10 actions = 1 additional lottery ticket.
                 </AccordionContent>
               </AccordionItem>
 
