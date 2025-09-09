@@ -33,18 +33,6 @@ export function ConditionGroup({
     });
   };
 
-  const handleAddGroup = () => {
-    const newGroup: ConditionGroupType = {
-      id: `group-${Date.now()}`,
-      operator: 'AND',
-      conditions: []
-    };
-    onUpdate({
-      ...group,
-      conditions: [...group.conditions, newGroup]
-    });
-  };
-
   const handleUpdateCondition = (index: number, updatedCondition: ConditionBlockType | ConditionGroupType) => {
     const newConditions = [...group.conditions];
     newConditions[index] = updatedCondition;

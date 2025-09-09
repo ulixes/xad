@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import './RotatingText.css';
 
-function cn(...classes: string[]) {
+function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 

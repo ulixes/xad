@@ -1,5 +1,5 @@
-export type OperatorType = '>' | '<' | '=' | '>=' | '<=' | '!=' | 'contains' | 'in' | 'has_achievement' | 'min_unlocked' | 'can_perform';
-export type AttributeType = 'number' | 'string' | 'boolean' | 'date' | 'achievement' | 'tier' | 'action';
+export type OperatorType = '>' | '<' | '=' | '>=' | '<=' | '!=' | 'contains' | 'in' | 'has_achievement' | 'min_unlocked' | 'can_perform' | 'is' | 'is not' | 'during';
+export type AttributeType = 'number' | 'string' | 'boolean' | 'date' | 'achievement' | 'tier' | 'action' | 'select';
 export type LogicalOperator = 'AND' | 'OR';
 
 export interface SchemaParam {

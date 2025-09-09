@@ -54,9 +54,8 @@ export function ToggleGroupItem({ value, className, children, asChild }: ToggleG
   }
   
   if (asChild) {
-    const child = React.Children.only(children) as React.ReactElement
+    const child = React.Children.only(children) as React.ReactElement<any>
     return React.cloneElement(child, {
-      ...child.props,
       onClick: () => onValueChange(value),
       className: cn(
         "inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -67,7 +66,7 @@ export function ToggleGroupItem({ value, className, children, asChild }: ToggleG
         isSelected && "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
         !isSelected && "bg-transparent",
         className,
-        child.props.className
+        child.props?.className
       )
     })
   }

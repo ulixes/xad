@@ -164,7 +164,11 @@ export const ClickableCard: Story = {
         <Checkbox 
           id="card-checkbox" 
           checked={checked}
-          onCheckedChange={setChecked}
+          onCheckedChange={(checkedState) => {
+            if (typeof checkedState === 'boolean') {
+              setChecked(checkedState);
+            }
+          }}
           className="mt-1"
         />
         <div className="space-y-1 leading-none">

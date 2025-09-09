@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 
 const socialPlatforms = [
   { id: 'x', name: 'X (Twitter)', icon: '/social-logos/x.png' },
