@@ -61,29 +61,23 @@ export function Home({
   // State for adding new accounts
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null)
   const [handleInput, setHandleInput] = useState('')
-  const [localAccounts, setLocalAccounts] = useState<ConnectedAccount[]>(connectedAccounts)
-  
-  // Update local accounts when props change
-  useEffect(() => {
-    setLocalAccounts(connectedAccounts)
-  }, [connectedAccounts])
-  
+
   const getAccountsForPlatform = (platformId: string) => {
-    return localAccounts.filter(acc => acc.platform === platformId)
+    return connectedAccounts.filter(acc => acc.platform === platformId)
   }
-  
+
   // Countdown timer state
   const [timeLeft, setTimeLeft] = useState({
     hours: hoursUntilDrawing,
     minutes: minutesUntilDrawing,
     seconds: secondsUntilDrawing
   })
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         let { hours, minutes, seconds } = prev
-        
+
         if (seconds > 0) {
           seconds--
         } else if (minutes > 0) {
@@ -97,11 +91,11 @@ export function Home({
           // Timer reached 0, reset to 24 hours
           return { hours: 24, minutes: 0, seconds: 0 }
         }
-        
+
         return { hours, minutes, seconds }
       })
     }, 1000)
-    
+
     return () => clearInterval(timer)
   }, [])
 
@@ -125,7 +119,7 @@ export function Home({
               ${Math.round(jackpotAmount/1000)}k in {timeLeft.hours}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
             </span>
           </Button>
-          
+
           {/* Wallet button */}
           <Button
             variant="outline"
@@ -140,6 +134,7 @@ export function Home({
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
+<<<<<<< HEAD
           {/* Earnings Section */}
           <div className="bg-card rounded-lg p-6 space-y-4">
             <div className="flex items-center justify-around">
@@ -169,6 +164,14 @@ export function Home({
               }
             </Button>
           </div>
+=======
+          {/* Earnings Widget */}
+          <EarningsWidget
+            pending={pendingEarnings}
+            available={availableEarnings}
+            onWithdraw={onCashOut}
+          />
+>>>>>>> 2e65cf2 (Add XState-based state management architecture for social accounts)
 
           <div className="pt-4">
             <h2 className="text-xl font-semibold tracking-tight">
@@ -195,7 +198,7 @@ export function Home({
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {addingPlatform === platform.id && (
                     <div className="w-full bg-card hover:bg-accent transition-colors rounded-lg p-3 flex items-center justify-between">
                       <Input
@@ -207,18 +210,7 @@ export function Home({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && handleInput.trim()) {
                             const cleanHandle = handleInput.trim().replace('@', '')
-                            // Add the account locally with verifying state
-                            setLocalAccounts(prev => [...prev, {
-                              platform: platform.id,
-                              handle: cleanHandle,
-                              availableActions: 0,
-                              isVerifying: true
-                            }])
-                            // Notify parent
                             onAddAccount?.(platform.id, cleanHandle)
-                            setAddingPlatform(null)
-                            setHandleInput('')
-                          } else if (e.key === 'Escape') {
                             setAddingPlatform(null)
                             setHandleInput('')
                           }
@@ -231,14 +223,6 @@ export function Home({
                         onClick={() => {
                           if (handleInput.trim()) {
                             const cleanHandle = handleInput.trim().replace('@', '')
-                            // Add the account locally with verifying state
-                            setLocalAccounts(prev => [...prev, {
-                              platform: platform.id,
-                              handle: cleanHandle,
-                              availableActions: 0,
-                              isVerifying: true
-                            }])
-                            // Notify parent
                             onAddAccount?.(platform.id, cleanHandle)
                             setAddingPlatform(null)
                             setHandleInput('')
@@ -249,12 +233,12 @@ export function Home({
                       </Button>
                     </div>
                   )}
-                  
+
                   {accounts.length > 0 && (
                     <div className="space-y-2">
                       {accounts.map((account, idx) => {
                         const isVerifying = account.isVerifying
-                        
+
                         return (
                           <button
                             key={`${account.platform}-${account.handle}-${idx}`}
@@ -287,7 +271,7 @@ export function Home({
           </div>
         </div>
       </div>
-      
+
     </div>
   )
 }

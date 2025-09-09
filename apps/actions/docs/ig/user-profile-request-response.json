@@ -1,0 +1,105 @@
+{
+    "data": {
+        "user": {
+            "friendship_status": null,
+            "gating": null,
+            "is_memorialized": false,
+            "is_private": false,
+            "has_story_archive": true,
+            "is_coppa_enforced": false,
+            "supervision_info": {
+                "is_guardian_of_viewer": false,
+                "is_supervised_by_viewer": false
+            },
+            "is_regulated_c18": false,
+            "regulated_news_in_locations": [],
+            "bio_links": [
+                {
+                    "image_url": "",
+                    "is_pinned": false,
+                    "link_type": "external",
+                    "lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fma3ak.health%2F%3Ffbclid%3DPAZXh0bgNhZW0CMTEAAaelTw-RSSRnknZIEzZDYNhWT4UKPpp128CVPxgBV2Yocq_oXwL7pZjjnnoemA_aem_RivHCwLpiQh3yvfAZZddAg\u0026e=AT1aemin6xA8WT-7VmAOVGr2JUxhuKxH-suOdwGiQJxnhdmqUqilYTm7wCOhZE9YoLWQ-3AoxfVrnlLhXW-rqHA57V9L5fSfpm78PCDHfg",
+                    "media_accent_color_hex": "",
+                    "media_type": "none",
+                    "title": "إنضم الأن",
+                    "url": "https://ma3ak.health",
+                    "creation_source": ""
+                }
+            ],
+            "linked_fb_info": {
+                "linked_fb_page": null,
+                "linked_fb_user": {
+                    "name": "Yousef Alaqra",
+                    "profile_url": "https://www.facebook.com/profile.php?id=100000524687171"
+                }
+            },
+            "text_post_app_badge_label": "aqrajo",
+            "show_text_post_app_badge": true,
+            "username": "aqrajo", // extract
+            "text_post_new_post_count": null,
+            "pk": "650864995",
+            "live_broadcast_visibility": null,
+            "live_broadcast_id": null,
+            "profile_pic_url": "https://instagram.ftbs4-2.fna.fbcdn.net/v/t51.2885-19/504537579_18517855246048996_4631380616129184032_n.jpg?stp=dst-jpg_s150x150_tt6\u0026efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0\u0026_nc_ht=instagram.ftbs4-2.fna.fbcdn.net\u0026_nc_cat=104\u0026_nc_oc=Q6cZ2QF_OHGS4dW1gsbZRUK3_fgPjxmEVJVkp9X0oqwUPdmb50vwFT6-nw4tScRezN8SFLo\u0026_nc_ohc=3QKXosie0qIQ7kNvwHIAJcW\u0026_nc_gid=rDt7uBpBmmm25HizFxbC3g\u0026edm=ALGbJPMBAAAA\u0026ccb=7-5\u0026oh=00_AfbynfbgcGbIs7ynaOIg4XXyJW8VtctQqLTWFFUUeXK0Yw\u0026oe=68C634EE\u0026_nc_sid=7d3ac5",
+            "hd_profile_pic_url_info": {
+                "url": "https://instagram.ftbs4-2.fna.fbcdn.net/v/t51.2885-19/504537579_18517855246048996_4631380616129184032_n.jpg?efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0\u0026_nc_ht=instagram.ftbs4-2.fna.fbcdn.net\u0026_nc_cat=104\u0026_nc_oc=Q6cZ2QF_OHGS4dW1gsbZRUK3_fgPjxmEVJVkp9X0oqwUPdmb50vwFT6-nw4tScRezN8SFLo\u0026_nc_ohc=3QKXosie0qIQ7kNvwHIAJcW\u0026_nc_gid=rDt7uBpBmmm25HizFxbC3g\u0026edm=ALGbJPMBAAAA\u0026ccb=7-5\u0026oh=00_AfZFjkznSCvwaKCKULrStYleLotOcMMUJ6-kBZhTQLA9uQ\u0026oe=68C634EE\u0026_nc_sid=7d3ac5"
+            },
+            "is_unpublished": false,
+            "latest_reel_media": 0,
+            "has_profile_pic": true,
+            "profile_pic_genai_tool_info": [],
+            "biography": "كثير بيحاولوا يلتزموا، بس قليل بيستمروا. أنا يوسف الأقرع، بلعبها صح وبساعدك تخلي الحياة الصحية عادة مش عبء.", // extract
+            "full_name": "Yousef Alaqra", // extract
+            "is_verified": false, // extract
+            "show_account_transparency_details": true,
+            "account_type": 3, // extract
+            "follower_count": 599, // extract
+            "mutual_followers_count": null,
+            "profile_context_links_with_user_ids": null,
+            "profile_context_facepile_users": null,
+            "address_street": "", // extract
+            "city_name": "", // extract
+            "is_business": false, // extract
+            "zip": "", // extract
+            "biography_with_entities": {
+                "entities": []
+            },
+            "category": "Health/beauty", // extract
+            "should_show_category": true,
+            "account_badges": [],
+            "ai_agent_type": null,
+            "external_lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fma3ak.health%2F%3Ffbclid%3DPAZXh0bgNhZW0CMTEAAaelTw-RSSRnknZIEzZDYNhWT4UKPpp128CVPxgBV2Yocq_oXwL7pZjjnnoemA_aem_RivHCwLpiQh3yvfAZZddAg\u0026e=AT1aemin6xA8WT-7VmAOVGr2JUxhuKxH-suOdwGiQJxnhdmqUqilYTm7wCOhZE9YoLWQ-3AoxfVrnlLhXW-rqHA57V9L5fSfpm78PCDHfg",
+            "external_url": "https://ma3ak.health",
+            "pronouns": [],
+            "transparency_label": null,
+            "transparency_product": null,
+            "hide_creator_marketplace_badge": false,
+            "has_chaining": true,
+            "remove_message_entrypoint": null,
+            "fbid_v2": "17841401469860169",
+            "is_embeds_disabled": false,
+            "is_professional_account": true,
+            "following_count": 477, // extract
+            "media_count": 183, // extract
+            "total_clips_count": 101, // extract
+            "latest_besties_reel_media": 0,
+            "reel_media_seen_timestamp": null,
+            "id": "650864995"
+        },
+        "viewer": {
+            "user": {
+                "pk": "650864995",
+                "id": "650864995",
+                "can_see_organic_insights": true
+            }
+        }
+    },
+    "extensions": {
+        "is_final": true,
+        "server_metadata": {
+            "request_start_time_ms": 1757432730503,
+            "time_at_flush_ms": 1757432730718
+        }
+    },
+    "status": "ok"
+}

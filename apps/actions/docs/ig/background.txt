@@ -1,0 +1,176 @@
+We have background.ts entrypoint... I think to use it as portal only we avoid adding any business logic.
+
+
+APIS exist in the background.ts entrypoint.
+
+
+
+🔹 browser.runtime
+browser.runtime.onMessage.addListener(callback)
+Receives one-off messages sent from other parts of the app.
+
+Example:
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Received message:", message);
+  sendResponse({response: "pong"});
+});
+
+browser.runtime.sendMessage(message)
+Sends a one-off message to the extension (background, popup, or content script).
+
+Example:
+browser.runtime.sendMessage({greeting: "hello"}).then((response) => {
+  console.log("Response:", response);
+});
+
+browser.runtime.onSuspend.addListener(callback)
+Triggered before the background worker is unloaded (Manifest V3). Use for cleanup.
+
+Example:
+browser.runtime.onSuspend.addListener(() => {
+  console.log("Background worker unloading, cleaning up...");
+});
+
+browser.runtime.onInstalled.addListener(callback)
+Triggered when the extension is installed or updated.
+
+Example:
+browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete") {
+    console.log("Tab finished loading:", tab.url);
+  }
+});
+
+browser.tabs.onRemoved.addListener(callback)
+Fired when a tab is closed.
+
+Example:
+browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  console.log("Tab closed:", tabId);
+});
+
+🔹 browser.debugger
+browser.debugger.attach(target, version)
+Attaches the extension to a debugging target (tab).
+
+Example:
+await browser.debugger.attach({tabId: 123}, "1.3");
+
+browser.debugger.detach(target)
+Detaches the debugger from a target.
+
+
+
+Example:
+await browser.debugger.detach({tabId: 123});
+
+browser.debugger.sendCommand(target, method, commandParams)
+Sends a command to the debugging target (uses Chrome DevTools Protocol).
+
+Example:
+await browser.debugger.sendCommand({tabId: 123}, "Network.enable");
+
+browser.debugger.onEvent.addListener(callback)
+Fired when an event is received from the debugging target.
+
+
+Example:
+browser.debugger.onEvent.addListener((source, method, params) => {
+  console.log(`Debugger event: ${method}`, params);
+});
+
+
+
+browser.debugger.attach({ tabId }, "1.3", () => {
+  browser.debugger.sendCommand({ tabId }, "Network.enable");
+});
+Attaches to a specific tab.
+
+browser.debugger.onEvent.addListener((source, method, params) => {
+  if (method === "Network.responseReceived" && source.tabId) {
+    const url = params.response.url;
+    console.log("Response received from:", url);
+  }
+});
+
+
+When to detach
+
+When a tab is closed (tabs.onRemoved).
+When a session is finissued user complete prfile creation (after extracting needed data).
+When the extension is shutting down (runtime.onSuspend
+
+function cleanupDebugger(tabId) {
+  if (attachedTabs.has(tabId)) {
+    browser.debugger.detach({ tabId }, () => {
+      if (browser.runtime.lastError) {
+        console.warn("Error detaching debugger:", browser.runtime.lastError.message);
+      } else {
+        console.log(`Debugger detached cleanly from tab ${tabId}`);
+      }
+      attachedTabs.delete(tabId);
+    });
+  }
+}
+
+Why sendCommand is needed here
+
+When you use browser.debugger.onEvent.addListener(...) with "Network.responseReceived",
+the event only tells you:
+
+Which request finished (requestId)
+
+Metadata (URL, headers, status, MIME type, etc.)
+
+👉 But it does not include the full response body (the actual JSON or HTML payload).
+
+That’s why you need an extra step:
+browser.debugger.sendCommand("Network.getResponseBody", { requestId })
+
+This explicitly asks DevTools Protocol:
+
+“For this request, give me the full response body.”
+
+🔹 Flow
+
+Enable network tracking
+
+await browser.debugger.sendCommand({ tabId }, "Network.enable");
+
+
+→ Start capturing network events.
+
+Listen for responses
+
+browser.debugger.onEvent.addListener((source, method, params) => {
+  if (method === "Network.responseReceived") {
+    console.log("Response received:", params.response.url);
+  }
+});
+
+
+→ You know a response happened, but you don’t have the actual payload.
+
+Request the body
+
+browser.debugger.sendCommand(
+  { tabId: source.tabId },
+  "Network.getResponseBody",
+  { requestId: params.requestId },
+  (response) => {
+    console.log("Full response body:", response.body);
+  }
+);
+
+
+→ This gives you the raw text/JSON that came back from the server.
+
+🔹 Analogy
+
+Think of it like a package delivery:
+
+"Network.responseReceived" → The delivery guy tells you “a package has arrived from Amazon.”
+
+"Network.getResponseBody" → You actually open the box and see what’s inside.
+
+Without the second step, you only know something was delivered, not what the contents are.
