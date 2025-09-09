@@ -1,108 +1,67 @@
 {
-  "id": "081699c7-0191-4f5a-a33b-e9b4155c61ca",
+  "id": "acb9a310-4b29-4528-8498-2940ecca1e41",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.brands": {
-      "name": "brands",
+    "public.action_runs": {
+      "name": "action_runs",
       "schema": "",
       "columns": {
-        "brand_id": {
-          "name": "brand_id",
+        "id": {
+          "name": "id",
           "type": "uuid",
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "brands_name_unique": {
-          "name": "brands_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.task_assignments": {
-      "name": "task_assignments",
-      "schema": "",
-      "columns": {
-        "task_assignment_id": {
-          "name": "task_assignment_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "task_id": {
-          "name": "task_id",
+        "action_id": {
+          "name": "action_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "text",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "social_account_id": {
+          "name": "social_account_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "task_assignment_status",
+          "type": "action_run_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'assigned'"
+          "default": "'pending_verification'"
         },
-        "evidence": {
-          "name": "evidence",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reward_amount": {
-          "name": "reward_amount",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
+        "proof": {
+          "name": "proof",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'USD'"
+          "default": "'{}'::jsonb"
         },
-        "submitted_at": {
-          "name": "submitted_at",
-          "type": "timestamp",
+        "verification_data": {
+          "name": "verification_data",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
-        "approved_at": {
-          "name": "approved_at",
+        "payment_data": {
+          "name": "payment_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -112,191 +71,6 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
-        },
-        "payout_status": {
-          "name": "payout_status",
-          "type": "payout_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'pending'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "unique_active_assignment_idx": {
-          "name": "unique_active_assignment_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"task_assignments\".\"status\" = 'assigned'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "task_assignments_task_id_tasks_task_id_fk": {
-          "name": "task_assignments_task_id_tasks_task_id_fk",
-          "tableFrom": "task_assignments",
-          "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "task_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "task_assignments_user_id_users_privy_user_id_fk": {
-          "name": "task_assignments_user_id_users_privy_user_id_fk",
-          "tableFrom": "task_assignments",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "privy_user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "task_assignments_task_id_user_id_unique": {
-          "name": "task_assignments_task_id_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "task_id",
-            "user_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tasks": {
-      "name": "tasks",
-      "schema": "",
-      "columns": {
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "brand_id": {
-          "name": "brand_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "platform",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "task_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "targets": {
-          "name": "targets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "volume": {
-          "name": "volume",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "budget": {
-          "name": "budget",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'USD'"
-        },
-        "reward_per_action": {
-          "name": "reward_per_action",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "expiration_date": {
-          "name": "expiration_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payout_release_after": {
-          "name": "payout_release_after",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "instructions": {
-          "name": "instructions",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "verification": {
-          "name": "verification",
-          "type": "verification",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'auto'"
-        },
-        "max_actions_per_user": {
-          "name": "max_actions_per_user",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "reward_distribution": {
-          "name": "reward_distribution",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -315,17 +89,241 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "tasks_brand_id_brands_brand_id_fk": {
-          "name": "tasks_brand_id_brands_brand_id_fk",
-          "tableFrom": "tasks",
-          "tableTo": "brands",
+        "action_runs_action_id_actions_id_fk": {
+          "name": "action_runs_action_id_actions_id_fk",
+          "tableFrom": "action_runs",
+          "tableTo": "actions",
           "columnsFrom": [
-            "brand_id"
+            "action_id"
           ],
           "columnsTo": [
-            "brand_id"
+            "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "action_runs_user_id_users_id_fk": {
+          "name": "action_runs_user_id_users_id_fk",
+          "tableFrom": "action_runs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "action_runs_social_account_id_social_accounts_id_fk": {
+          "name": "action_runs_social_account_id_social_accounts_id_fk",
+          "tableFrom": "action_runs",
+          "tableTo": "social_accounts",
+          "columnsFrom": [
+            "social_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.actions": {
+      "name": "actions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "platform": {
+          "name": "platform",
+          "type": "platform",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_type": {
+          "name": "action_type",
+          "type": "action_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target": {
+          "name": "target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_volume": {
+          "name": "max_volume",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_volume": {
+          "name": "current_volume",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "eligibility_criteria": {
+          "name": "eligibility_criteria",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.social_accounts": {
+      "name": "social_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform": {
+          "name": "platform",
+          "type": "platform",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handle": {
+          "name": "handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform_user_id": {
+          "name": "platform_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_verified": {
+          "name": "is_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_verified_at": {
+          "name": "last_verified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "social_accounts_user_id_users_id_fk": {
+          "name": "social_accounts_user_id_users_id_fk",
+          "tableFrom": "social_accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -339,25 +337,32 @@
       "name": "users",
       "schema": "",
       "columns": {
-        "privy_user_id": {
-          "name": "privy_user_id",
-          "type": "text",
+        "id": {
+          "name": "id",
+          "type": "uuid",
           "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "privy_id": {
+          "name": "privy_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true
         },
-        "balance": {
-          "name": "balance",
-          "type": "numeric(10, 2)",
+        "status": {
+          "name": "status",
+          "type": "user_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'0.00'"
-        },
-        "cash_out_limit": {
-          "name": "cash_out_limit",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'5.00'"
+          "default": "'pending_verification'"
         },
         "created_at": {
           "name": "created_at",
@@ -372,100 +377,78 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "reddit_username": {
-          "name": "reddit_username",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reddit_data": {
-          "name": "reddit_data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profile_scraped_at": {
-          "name": "profile_scraped_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "users_privy_id_unique": {
+          "name": "users_privy_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privy_id"
+          ]
+        },
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     }
   },
   "enums": {
-    "public.payout_status": {
-      "name": "payout_status",
+    "public.action_run_status": {
+      "name": "action_run_status",
       "schema": "public",
       "values": [
-        "pending",
-        "on_hold",
-        "released",
-        "failed"
+        "pending_verification",
+        "completed",
+        "failed",
+        "paid"
+      ]
+    },
+    "public.action_type": {
+      "name": "action_type",
+      "schema": "public",
+      "values": [
+        "like",
+        "comment",
+        "share",
+        "follow",
+        "retweet",
+        "upvote",
+        "award"
       ]
     },
     "public.platform": {
       "name": "platform",
       "schema": "public",
       "values": [
+        "tiktok",
         "x",
+        "instagram",
+        "reddit",
+        "facebook",
         "farcaster",
-        "reddit"
+        "youtube",
+        "linkedin"
       ]
     },
-    "public.reward_mode": {
-      "name": "reward_mode",
+    "public.user_status": {
+      "name": "user_status",
       "schema": "public",
       "values": [
-        "static",
-        "dynamic"
-      ]
-    },
-    "public.task_assignment_status": {
-      "name": "task_assignment_status",
-      "schema": "public",
-      "values": [
-        "assigned",
-        "submitted",
-        "approved",
-        "awaiting",
-        "paid",
-        "rejected",
-        "expired"
-      ]
-    },
-    "public.task_type": {
-      "name": "task_type",
-      "schema": "public",
-      "values": [
-        "comment",
-        "upvote",
-        "like",
-        "love",
-        "follow"
-      ]
-    },
-    "public.verification": {
-      "name": "verification",
-      "schema": "public",
-      "values": [
-        "manual",
-        "auto"
+        "active",
+        "pending_verification",
+        "suspended",
+        "deactivated"
       ]
     }
   },

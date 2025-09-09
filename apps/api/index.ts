@@ -1,9 +1,7 @@
 import { Hono, type ExecutionContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import userRoutes from "./src/routes/users";
-import taskRoutes from "./src/routes/tasks";
-import brandsROutes from "./src/routes/brands";
+import actionRoutes from "./src/routes/tasks";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
@@ -61,9 +59,7 @@ app.get("/", (c) => {
 });
 
 // Routes
-app.route("/api/users", userRoutes);
-app.route("/api/tasks", taskRoutes);
-app.route("/api/brands", brandsROutes);
+app.route("/api/actions", actionRoutes);
 
 // Error handling
 app.onError((err, c) => {

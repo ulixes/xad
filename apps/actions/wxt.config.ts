@@ -6,5 +6,19 @@ export default defineConfig({
   manifest: {
     action: {},
     permissions: ['sidePanel', 'tabs']
-  }
+  },
+  vite: () => ({
+    css: {
+      postcss: './postcss.config.js'
+    },
+    optimizeDeps: {
+      include: ['@xad/ui'],
+      exclude: ['@xad/ui/src']
+    },
+    server: {
+      fs: {
+        allow: ['..']
+      }
+    }
+  })
 });
