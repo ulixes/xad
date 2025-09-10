@@ -13,6 +13,37 @@
   --w3m-color-fg-3: #808080; /* Tertiary text */
 }
 
+/* Fix AppKit button hover states and icon alignment */
+appkit-button {
+  /* Remove nested background effects on hover */
+  --w3m-hover-bg-opacity: 0.1;
+}
+
+/* Fix nested square hover effects */
+appkit-button::part(button):hover {
+  background-color: rgba(42, 42, 42, 0.3) !important;
+}
+
+/* Remove inner container background on hover to prevent square-in-square */
+appkit-button::part(container):hover,
+appkit-button::part(balance):hover {
+  background-color: transparent !important;
+}
+
+/* Fix icon vertical alignment */
+appkit-button::part(icon) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Ensure network/chain icons are properly centered */
+appkit-button img,
+appkit-button svg {
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
 /* Force dark theme colors that actually work */
 * {
   color-scheme: dark;

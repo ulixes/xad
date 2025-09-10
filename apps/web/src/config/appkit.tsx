@@ -48,12 +48,22 @@ createAppKit({
   themeVariables: {
     '--w3m-border-radius-master': '0.375rem', // Match your button's rounded-md (6px)
     '--w3m-font-family': 'Inter, system-ui, sans-serif', // Match your app's font
+    
+    /* Background colors */
     '--w3m-color-bg-1': '#0a0a0a', // Match your dark background
-    '--w3m-color-bg-2': '#1a1a1a', // Match your input/secondary backgrounds
+    '--w3m-color-bg-2': '#1a1a1a', // Match your input/secondary backgrounds  
     '--w3m-color-bg-3': '#2a2a2a', // Slightly lighter for hover states
+    
+    /* Text colors */
     '--w3m-color-fg-1': '#ededed', // Match your light text color
     '--w3m-color-fg-2': '#b0b0b0', // Slightly dimmed for secondary text
     '--w3m-color-fg-3': '#808080', // Even dimmer for tertiary elements
+    
+    /* Fix hover opacity to prevent nested squares */
+    '--w3m-color-overlay': 'rgba(42, 42, 42, 0.1)', // Subtle hover overlay
+    '--w3m-hover-highlight': 'transparent', // Remove inner hover highlights
+    '--w3m-color-mix': 'rgba(42, 42, 42, 0.1)', // Consistent hover mixing
+    '--w3m-color-mix-strength': '10%', // Low strength to avoid nested effects
   }
 })
 
