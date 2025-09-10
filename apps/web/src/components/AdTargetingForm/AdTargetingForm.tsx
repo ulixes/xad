@@ -6,7 +6,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { calculateCampaignPrice } from '../../utils/pricing-calculator';
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { useWalletClient, usePublicClient } from 'wagmi';
+import { PaymentFlowService } from '../../services/paymentFlow';
 
 type Platform = 'tiktok' | 'reddit' | 'x' | 'instagram' | 'facebook' | 'farcaster';
 
@@ -75,9 +80,16 @@ interface AdTargetingFormProps {
 }
 
 export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
+  const { open } = useAppKit()
+  const { address, isConnected } = useAppKitAccount()
+  const { data: walletClient } = useWalletClient()
+  const publicClient = usePublicClient()
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [actionPricing, setActionPricing] = useState<ActionPricing>({});
   const [estimatedCost, setEstimatedCost] = useState<any>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   const [rule, setRule] = useState<TargetingRule>(
     initialRule || {
       id: `rule-${Date.now()}`,
@@ -86,7 +98,12 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
       rootGroup: {
         id: `group-root`,
         operator: 'AND',
-        conditions: []
+        conditions: [{
+          id: `cond-${Date.now()}`,
+          schemaId: '',
+          params: {},
+          logicalOperator: 'AND'
+        }]
       },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -109,12 +126,143 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     }
   }, [actionPricing, rule.rootGroup.conditions, selectedPlatform]);
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave({
-        ...rule,
-        updatedAt: new Date()
-      });
+  const handleSave = async () => {
+    // Reset previous states
+    setPaymentError(null)
+    setPaymentSuccess(null)
+    
+    // Check wallet connection
+    if (!isConnected) {
+      setPaymentError('Please connect your wallet first')
+      open()
+      return
+    }
+
+    if (!address) {
+      setPaymentError('Wallet address not found')
+      return
+    }
+
+    // Validate minimum amount
+    if (!estimatedCost || estimatedCost.totalCost < 5) {
+      setPaymentError('Minimum campaign budget is $5')
+      return
+    }
+
+    // Validate actions selected
+    const enabledActions = Object.values(actionPricing).filter(p => p.enabled)
+    if (enabledActions.length === 0) {
+      setPaymentError('Please select at least one action')
+      return
+    }
+
+    // Validate targets are filled
+    const invalidTargets = Object.entries(actionPricing)
+      .filter(([_, config]: [string, any]) => config.enabled && !config.target.trim())
+    
+    if (invalidTargets.length > 0) {
+      setPaymentError('Please fill in all target URLs/handles for selected actions')
+      return
+    }
+
+    setIsProcessingPayment(true)
+
+    try {
+      // Prepare campaign data
+      const campaignData = {
+        name: rule.name || `${selectedPlatform} Campaign ${new Date().toLocaleDateString()}`,
+        description: rule.description || '',
+        platform: selectedPlatform,
+        targetingRules: rule,
+        totalAmount: (estimatedCost.totalCost / 100).toString(), // Convert cents to ETH equivalent
+        actions: Object.entries(actionPricing)
+          .filter(([_, config]: [string, any]) => config.enabled)
+          .map(([key, config]: [string, any]) => {
+            const [, actionType] = key.split('_')
+            return {
+              type: actionType,
+              target: config.target,
+              price: config.price,
+              maxVolume: config.maxVolume
+            }
+          }),
+        brandWalletAddress: address
+      }
+
+      console.log('Campaign data:', campaignData)
+
+      if (!walletClient) {
+        throw new Error('Wallet not connected')
+      }
+
+      if (!publicClient) {
+        throw new Error('Network connection failed')
+      }
+
+      // Step 1: Create draft campaign
+      console.log('Step 1: Creating draft campaign...')
+      const campaign = await PaymentFlowService.createDraftCampaign(campaignData, address)
+      
+      // Step 2: Process blockchain payment
+      console.log('Step 2: Processing blockchain payment...')
+      const paymentResult = await PaymentFlowService.processPayment(
+        {
+          campaignId: campaign.id,
+          totalAmount: campaignData.totalAmount,
+          actions: campaignData.actions,
+          targetingRules: campaignData.targetingRules,
+          platform: campaignData.platform
+        },
+        walletClient,
+        publicClient
+      )
+      
+      console.log('Payment transaction submitted:', paymentResult.transactionHash)
+      
+      // Step 3: Wait for transaction confirmation
+      console.log('Step 3: Waiting for transaction confirmation...')
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: paymentResult.transactionHash,
+        timeout: 60_000 // 60 second timeout
+      })
+      
+      if (receipt.status === 'success') {
+        console.log('Transaction confirmed!', {
+          blockNumber: receipt.blockNumber,
+          gasUsed: receipt.gasUsed
+        })
+        
+        // Step 4: Confirm payment with API to activate campaign
+        console.log('Step 4: Confirming payment with API...')
+        await PaymentFlowService.confirmPayment(campaign.id, {
+          transactionHash: paymentResult.transactionHash,
+          amount: paymentResult.amount,
+          blockNumber: receipt.blockNumber.toString(),
+          gasUsed: receipt.gasUsed?.toString()
+        })
+        
+        console.log('Campaign activated successfully!')
+        
+        setPaymentSuccess(
+          `Payment successful! Campaign activated with ${paymentResult.currency} on ${paymentResult.network}. Transaction: ${paymentResult.transactionHash?.slice(0, 10)}...`
+        )
+        
+        // Call original onSave if provided
+        if (onSave) {
+          onSave({
+            ...rule,
+            updatedAt: new Date()
+          })
+        }
+      } else {
+        throw new Error('Transaction failed on blockchain')
+      }
+      
+    } catch (error) {
+      console.error('Payment failed:', error)
+      setPaymentError(error instanceof Error ? error.message : 'Payment failed. Please try again.')
+    } finally {
+      setIsProcessingPayment(false)
     }
   };
 
@@ -359,13 +507,14 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           </div>
         </div>
 
+
         {/* Total */}
         {estimatedCost && estimatedCost.breakdown.length > 0 && (
           <div className="py-6 border-t border-border">
             <div className="flex justify-between items-center">
               <span className="text-2xl font-semibold">Total</span>
               <div className="text-right">
-                <span className={`text-2xl font-semibold ${estimatedCost.totalCost < 30 ? 'text-red-500' : 'text-foreground'}`}>
+                <span className={`text-2xl font-semibold ${estimatedCost.totalCost < 50 ? 'text-red-500' : 'text-foreground'}`}>
                   ${estimatedCost.totalCost.toFixed(2)}
                 </span>
                 {estimatedCost.volumeDiscount < 1 && (
@@ -378,20 +527,49 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           </div>
         )}
 
+        {/* Payment Status Alerts */}
+        {paymentError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Payment Error</AlertTitle>
+            <AlertDescription>{paymentError}</AlertDescription>
+          </Alert>
+        )}
+
+        {paymentSuccess && (
+          <Alert className="border-green-500/50 text-green-700 [&>svg]:text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Payment Successful!</AlertTitle>
+            <AlertDescription>{paymentSuccess}</AlertDescription>
+          </Alert>
+        )}
+
+
         {/* Pay Button */}
         <div className="pt-6">
           <Button 
             onClick={handleSave} 
             disabled={
+              isProcessingPayment ||
               rule.rootGroup.conditions.length === 0 ||
               Object.values(actionPricing).filter(p => p.enabled).length === 0 ||
-              (estimatedCost && estimatedCost.totalCost < 30)
+              (estimatedCost && estimatedCost.totalCost < 5)
             }
             size="lg"
             className="w-full"
           >
-            Pay ${estimatedCost?.totalCost?.toFixed(2) || '0.00'}
+            {isProcessingPayment ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing Payment...
+              </>
+            ) : (
+              'Pay'
+            )}
           </Button>
+          <p className="text-muted-foreground mt-2">
+            {!isConnected ? 'Connect your wallet to proceed' : 'Minimum: $5'}
+          </p>
         </div>
     </div>
   );

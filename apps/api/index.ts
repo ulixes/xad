@@ -1,7 +1,7 @@
 import { Hono, type ExecutionContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import actionRoutes from "./src/routes/tasks";
+import campaignRoutes from "./src/routes/campaigns";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
@@ -59,7 +59,7 @@ app.get("/", (c) => {
 });
 
 // Routes
-app.route("/api/actions", actionRoutes);
+app.route("/api/campaigns", campaignRoutes);
 
 // Error handling
 app.onError((err, c) => {

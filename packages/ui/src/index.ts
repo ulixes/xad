@@ -45,7 +45,8 @@ export * from "./components/welcome/home"
 export * from "./components/tasks/action-list-page"
 
 // Earnings Components
-export * from "./components/earnings/cash-out-page"
+export * from "./components/earnings/earnings-calculator"
+export * from "./components/earnings/withdraw-page"
 
 // Daily Components
 export * from "./components/daily/jackpot-details-page"

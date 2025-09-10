@@ -5,8 +5,6 @@ import { Link, useLocation } from 'react-router-dom'
 export default function Header() {
   const location = useLocation()
   const [currentLang, setCurrentLang] = useState<'en' | 'zh'>('en')
-  const [isWalletConnected, setIsWalletConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
   
   // Read the current locale from cookie
   useEffect(() => {
@@ -16,45 +14,7 @@ export default function Header() {
       const locale = lingoCookie.split('=')[1] as 'en' | 'zh'
       setCurrentLang(locale)
     }
-    
-    // Check if wallet is already connected
-    checkWalletConnection()
   }, [])
-  
-  const checkWalletConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-        if (accounts.length > 0) {
-          setIsWalletConnected(true)
-          setWalletAddress(accounts[0])
-        }
-      } catch (error) {
-        console.error('Error checking wallet connection:', error)
-      }
-    }
-  }
-  
-  const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-        if (accounts.length > 0) {
-          setIsWalletConnected(true)
-          setWalletAddress(accounts[0])
-        }
-      } catch (error) {
-        console.error('Error connecting wallet:', error)
-      }
-    } else {
-      alert('Please install MetaMask or another Web3 wallet')
-    }
-  }
-  
-  const disconnectWallet = () => {
-    setIsWalletConnected(false)
-    setWalletAddress(null)
-  }
   
   const toggleLanguage = () => {
     const newLang = currentLang === 'en' ? 'zh' : 'en'
@@ -65,10 +25,6 @@ export default function Header() {
     document.cookie = `lingo-locale=${newLang}; path=/; max-age=31536000`
     // Reload to apply the new locale
     window.location.reload()
-  }
-  
-  const formatAddress = (address: string) => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`
   }
   
   return (
@@ -120,38 +76,8 @@ export default function Header() {
               {currentLang === 'en' ? 'EN' : '中文'}
             </Button>
             
-            {/* Wallet Connect Button */}
-            {!isWalletConnected ? (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={connectWallet}
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8"/>
-                  <path d="M3 12h18"/>
-                  <path d="M12 5v7"/>
-                  <circle cx="18" cy="18" r="3"/>
-                  <line x1="18" y1="15" x2="18" y2="21"/>
-                  <line x1="21" y1="18" x2="15" y2="18"/>
-                </svg>
-                Connect Wallet
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={disconnectWallet}
-                title={walletAddress || 'Connected'}
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8"/>
-                  <circle cx="18" cy="18" r="3" fill="currentColor"/>
-                  <path d="M12 5v7"/>
-                </svg>
-                {formatAddress(walletAddress!)}
-              </Button>
-            )}
+            {/* AppKit Wallet Connect Button */}
+            <appkit-button />
           </div>
         </div>
       </div>
@@ -159,13 +85,11 @@ export default function Header() {
   )
 }
 
-// Add TypeScript declaration for window.ethereum
+// TypeScript declaration for AppKit web components
 declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>
-      on?: (eventName: string, callback: (...args: any[]) => void) => void
-      removeListener?: (eventName: string, callback: (...args: any[]) => void) => void
+  namespace JSX {
+    interface IntrinsicElements {
+      'appkit-button': any
     }
   }
 }

@@ -6,11 +6,6 @@ export interface Config {
     url: string;
   };
   auth: {
-    privy: {
-      appId: string;
-      appSecret: string;
-      jwksUrl?: string;
-    };
     admin: {
       token: string;
     };
@@ -36,17 +31,13 @@ export class ConfigManager {
   }
 
   initialize(env: Env): Config {
+    console.log("Environment being passed:", env);
+    console.log("ENVIRONMENT value:", env?.ENVIRONMENT);
     if (!env.ENVIRONMENT) {
       throw new Error("ENVIRONMENT is required");
     }
     if (!env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required");
-    }
-    if (!env.PRIVY_APP_ID) {
-      throw new Error("PRIVY_APP_ID is required");
-    }
-    if (!env.PRIVY_APP_SECRET) {
-      throw new Error("PRIVY_APP_SECRET is required");
     }
     if (!env.ADMIN_AUTH_TOKEN) {
       throw new Error("ADMIN_AUTH_TOKEN is required");
@@ -57,11 +48,6 @@ export class ConfigManager {
         url: env.DATABASE_URL,
       },
       auth: {
-        privy: {
-          appId: env.PRIVY_APP_ID,
-          appSecret: env.PRIVY_APP_SECRET,
-          jwksUrl: `https://auth.privy.io/api/v1/apps/${env.PRIVY_APP_ID}/jwks.json`,
-        },
         admin: {
           token: env.ADMIN_AUTH_TOKEN,
         },
@@ -86,7 +72,9 @@ export class ConfigManager {
   static fromContext(c: Context<{ Bindings: Env }>): Config {
     const instance = ConfigManager.getInstance();
     if (!instance.config) {
-      instance.initialize(c.env);
+      // Use process.env for local development, c.env for Cloudflare Workers
+      const env = (c.env && Object.keys(c.env).length > 0) ? c.env : process.env as any as Env;
+      instance.initialize(env);
     }
     return instance.getConfig();
   }

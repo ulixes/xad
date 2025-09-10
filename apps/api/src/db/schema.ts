@@ -3,6 +3,8 @@ import { relations } from 'drizzle-orm';
 
 export const actionRunStatusEnum = pgEnum('action_run_status', [
   'pending_verification',
+  'dom_verified',
+  'cdp_verified',
   'completed', 
   'failed',
   'paid'
@@ -36,9 +38,25 @@ export const userStatusEnum = pgEnum('user_status', [
   'deactivated'
 ]);
 
+export const campaignStatusEnum = pgEnum('campaign_status', [
+  'draft',
+  'pending_payment', 
+  'active',
+  'paused',
+  'completed',
+  'cancelled'
+]);
+
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'pending',
+  'processing', 
+  'completed',
+  'failed',
+  'refunded'
+]);
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  privyId: text('privy_id').unique(),
   email: text('email').notNull().unique(),
   status: userStatusEnum('status').notNull().default('pending_verification'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -53,6 +71,68 @@ export const socialAccounts = pgTable('social_accounts', {
   platformUserId: text('platform_user_id'),
   isVerified: boolean('is_verified').notNull().default(false),
   lastVerifiedAt: timestamp('last_verified_at'),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Wallet users table (for brands using wallet-based auth)
+export const walletUsers = pgTable('wallet_users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  walletAddress: text('wallet_address').notNull().unique(),
+  ens: text('ens'),
+  email: text('email'),
+  isBrand: boolean('is_brand').notNull().default(false),
+  status: userStatusEnum('status').notNull().default('active'),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Campaigns table (form submissions from brands)
+export const campaigns = pgTable('campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  brandWalletAddress: text('brand_wallet_address').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  platform: platformEnum('platform').notNull(),
+  targetingRules: jsonb('targeting_rules').notNull(),
+  totalBudget: integer('total_budget').notNull(),
+  remainingBudget: integer('remaining_budget').notNull(),
+  status: campaignStatusEnum('status').notNull().default('draft'),
+  isActive: boolean('is_active').notNull().default(false),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Campaign actions (individual actions from campaigns)
+export const campaignActions = pgTable('campaign_actions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  actionType: actionTypeEnum('action_type').notNull(),
+  target: text('target').notNull(),
+  pricePerAction: integer('price_per_action').notNull(),
+  maxVolume: integer('max_volume').notNull(),
+  currentVolume: integer('current_volume').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Payment tracking table
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  fromAddress: text('from_address').notNull(),
+  toAddress: text('to_address'),
+  amount: text('amount').notNull(),
+  currency: text('currency').notNull().default('ETH'),
+  transactionHash: text('transaction_hash').unique(),
+  blockNumber: integer('block_number'),
+  gasUsed: text('gas_used'),
+  gasPrice: text('gas_price'),
+  status: paymentStatusEnum('status').notNull().default('pending'),
   metadata: jsonb('metadata').notNull().default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
