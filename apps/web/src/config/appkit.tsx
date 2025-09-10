@@ -34,8 +34,7 @@ const wagmiAdapter = new WagmiAdapter({
   ssr: false
 })
 
-// Create modal with SIWX authentication
-console.log('Creating AppKit with config:', { projectId, networks, metadata })
+// Create modal with SIWX authentication  
 createAppKit({
   adapters: [wagmiAdapter],
   networks: networks as any,
@@ -44,9 +43,13 @@ createAppKit({
   siwx: siwxConfig,
   features: {
     analytics: true
+  },
+  themeMode: 'light',
+  themeVariables: {
+    '--w3m-border-radius-master': '0.375rem', // Match your button's rounded-md (6px)
+    '--w3m-font-family': 'Inter, system-ui, sans-serif', // Match your app's font
   }
 })
-console.log('AppKit created successfully')
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
   return (

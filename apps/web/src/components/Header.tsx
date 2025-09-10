@@ -2,27 +2,12 @@ import { Button } from './ui/button'
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount } from 'wagmi'
-import { useAppKit } from '@reown/appkit/react'
 
 export default function Header() {
   const location = useLocation()
   const { isConnected, address } = useAccount()
-  const { open } = useAppKit()
   const [currentLang, setCurrentLang] = useState<'en' | 'zh'>('en')
   const [hasAuthToken, setHasAuthToken] = useState(false)
-  
-  // Debug logging
-  useEffect(() => {
-    console.log('Header state:', { isConnected, address, hasAuthToken })
-    console.log('AppKit open function:', open)
-  }, [isConnected, address, hasAuthToken, open])
-  
-  // Debug AppKit initialization
-  useEffect(() => {
-    console.log('Header mounted, checking AppKit...')
-    console.log('useAppKit hook result:', { open })
-    console.log('Wagmi account state:', { isConnected, address })
-  }, [])
   
   // Read the current locale from cookie and check auth token
   useEffect(() => {
@@ -124,50 +109,8 @@ export default function Header() {
               {currentLang === 'en' ? 'EN' : '中文'}
             </Button>
             
-            {/* Wallet Connect Button */}
-            <div className="border border-red-500 p-1">
-              {console.log('Rendering button area - isConnected:', isConnected, 'address:', address, 'open:', open)}
-              {isConnected ? (
-                <div className="flex items-center gap-2">
-                  {console.log('Rendering connected state')}
-                  <span className="text-sm text-muted-foreground">
-                    {address?.slice(0, 6)}...{address?.slice(-4)}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Connected wallet button clicked, calling open()', open)
-                      open()
-                    }}
-                    className="text-foreground hover:text-primary"
-                  >
-                    Wallet
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  {console.log('Rendering disconnected state')}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Connect Wallet clicked, open function:', open)
-                      console.log('Trying to call open()')
-                      try {
-                        open()
-                        console.log('open() called successfully')
-                      } catch (error) {
-                        console.error('Error calling open():', error)
-                      }
-                    }}
-                    className="text-foreground hover:text-primary bg-blue-500"
-                  >
-                    Connect Wallet
-                  </Button>
-                </div>
-              )}
-            </div>
+            {/* AppKit Wallet Connect Button */}
+            <appkit-button />
           </div>
         </div>
       </div>
