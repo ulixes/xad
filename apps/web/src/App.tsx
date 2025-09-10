@@ -2,10 +2,13 @@ import './App.css'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
 import Advertise from './pages/Advertise'
+import { Dashboard } from './pages/Dashboard'
+import { TestAuth } from './pages/TestAuth'
 import { AppKitProvider } from './config/appkit'
 
 function App() {
@@ -20,6 +23,12 @@ function App() {
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/advertise" element={<Advertise />} />
+              <Route path="/test-auth" element={<TestAuth />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
             </Routes>
             <Footer />
           </div>

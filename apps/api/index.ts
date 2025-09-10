@@ -2,6 +2,7 @@ import { Hono, type ExecutionContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import campaignRoutes from "./src/routes/campaigns";
+import authRoutes from "./src/routes/auth";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
@@ -12,7 +13,6 @@ const app = new Hono<{ Bindings: Env }>();
 // Initialize config and DB middleware
 app.use("*", async (c, next) => {
   const config = ConfigManager.fromContext(c);
-  console.log("Config loaded:", config);
   const dbInstance = initDB(config.database.url, config.app.serviceName, config.app.environment);
   c.set("db", dbInstance.db);
   await next();
@@ -58,6 +58,7 @@ app.get("/", (c) => {
 });
 
 // Routes
+app.route("/api/auth", authRoutes);
 app.route("/api/campaigns", campaignRoutes);
 
 // Error handling

@@ -4,13 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import type { ReactNode } from 'react'
 import { getNetworkConfig } from './networks'
+import { siwxConfig } from './siwx'
 import { base, baseSepolia } from '@reown/appkit/networks'
 
 // Setup queryClient
 const queryClient = new QueryClient()
 
 // Get projectId from environment or use a default for localhost
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || 'b56e18d47c72ab683b10814fe9495694'
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || '9e00be111bf9590d6e97cb80cde0bd45'
 
 // Get network configuration based on environment
 const networkConfig = getNetworkConfig()
@@ -33,16 +34,19 @@ const wagmiAdapter = new WagmiAdapter({
   ssr: false
 })
 
-// Create modal
+// Create modal with SIWX authentication
+console.log('Creating AppKit with config:', { projectId, networks, metadata })
 createAppKit({
   adapters: [wagmiAdapter],
   networks: networks as any,
   projectId,
   metadata,
+  siwx: siwxConfig,
   features: {
     analytics: true
   }
 })
+console.log('AppKit created successfully')
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
   return (

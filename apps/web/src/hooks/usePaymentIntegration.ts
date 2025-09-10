@@ -1,7 +1,7 @@
 // Hook for integrating payment flow with the AdTargetingForm
 
 import { useState } from 'react'
-import { useAppKitAccount } from '@reown/appkit/react'
+import { useAccount } from 'wagmi'
 import { usePaymentFlow } from '../services/paymentFlow'
 import type { TargetingRule } from '../types/platform-schemas'
 
@@ -14,7 +14,7 @@ interface PaymentState {
 }
 
 export function usePaymentIntegration() {
-  const { address, isConnected } = useAppKitAccount()
+  const { address, isConnected } = useAccount()
   const { processFullPayment } = usePaymentFlow()
   const [paymentState, setPaymentState] = useState<PaymentState>({
     isProcessing: false,

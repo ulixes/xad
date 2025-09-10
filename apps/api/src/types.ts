@@ -4,6 +4,8 @@ import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 export interface Env {
   DATABASE_URL: string;
   ADMIN_AUTH_TOKEN: string;
+  JWT_SECRET: string;
+  ESCROW_WALLET_ADDRESS: string;
   ENVIRONMENT: string; // "development" | "production" | "test"
 }
 
