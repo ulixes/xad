@@ -11,6 +11,12 @@
   --w3m-color-fg-1: #ededed; /* Primary text */
   --w3m-color-fg-2: #b0b0b0; /* Secondary text */
   --w3m-color-fg-3: #808080; /* Tertiary text */
+  
+  /* Modal border radius - apply to all modal components */
+  --w3m-modal-border-radius: 0.375rem; /* Match your UI components */
+  --w3m-container-border-radius: 0.375rem; /* Container elements */
+  --w3m-button-border-radius: 0.375rem; /* Buttons within modal */
+  --w3m-input-border-radius: 0.375rem; /* Input fields */
 }
 
 /* Fix AppKit button hover states and icon alignment */
@@ -42,6 +48,34 @@ appkit-button img,
 appkit-button svg {
   margin: 0 !important;
   vertical-align: middle !important;
+}
+
+/* Fix AppKit modal border radius to match UI design system */
+appkit-modal,
+w3m-modal,
+w3m-router {
+  --w3m-border-radius-master: 0.375rem !important;
+}
+
+/* Target specific modal parts for consistent border radius */
+appkit-modal::part(modal),
+appkit-modal::part(overlay),
+appkit-modal::part(container) {
+  border-radius: 0.375rem !important;
+}
+
+/* Ensure all buttons within modal match UI style */
+appkit-modal button,
+w3m-modal button,
+appkit-modal .w3m-button,
+w3m-modal .w3m-button {
+  border-radius: 0.375rem !important;
+}
+
+/* Fix input fields within modal */
+appkit-modal input,
+w3m-modal input {
+  border-radius: 0.375rem !important;
 }
 
 /* Force dark theme colors that actually work */

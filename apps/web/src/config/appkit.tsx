@@ -64,6 +64,12 @@ createAppKit({
     '--w3m-hover-highlight': 'transparent', // Remove inner hover highlights
     '--w3m-color-mix': 'rgba(42, 42, 42, 0.1)', // Consistent hover mixing
     '--w3m-color-mix-strength': '10%', // Low strength to avoid nested effects
+    
+    /* Modal-specific border radius overrides */
+    '--w3m-modal-border-radius': '0.375rem', // Main modal container
+    '--w3m-container-border-radius': '0.375rem', // Inner containers  
+    '--w3m-button-border-radius': '0.375rem', // Buttons within modal
+    '--w3m-input-border-radius': '0.375rem', // Input fields
   }
 })
 
