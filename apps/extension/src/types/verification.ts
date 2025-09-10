@@ -1,49 +1,45 @@
-export interface VerificationContext {
-  selectedPlatform: string | null;
-  selectedContentType: string | null;
-  targetId: string | null;
-  activeSessionId: string | null;
-  proofConfig: any | null;
-  contextData: any | null;
-  actionData: any | null;
-  completedProof: CompletedProof | null;
-  error: string | null;
+export interface ProfileData {
+  username: string;
+  fullName: string;
+  biography: string;
+  isVerified: boolean;
+  followerCount: number;
+  followingCount: number;
+  mediaCount: number;
+  profilePicUrl: string;
+  accountType: number;
+  isPrivate: boolean;
+  isBusiness: boolean;
+  category?: string;
+  externalUrl?: string;
 }
 
-export interface CompletedProof {
-  type: string;
+export interface VerificationResult {
+  success: boolean;
+  profileData?: ProfileData;
+  error?: string;
+}
+
+export interface PlatformVerifier {
   platform: string;
-  contentType: string;
-  context: any;
-  action: any[];
-  timestamp: number;
-  sessionId: string;
+  verifyAccount(username: string, tabId: number): Promise<VerificationResult>;
+  extractProfileData(responseBody: string): ProfileData | null;
+  isTargetRequest(url: string): boolean;
 }
 
-export type VerificationEvent = 
-  | { type: 'SELECT_PLATFORM'; platform: string }
-  | { type: 'SELECT_CONTENT_TYPE'; contentType: string }
-  | { type: 'START_VERIFICATION'; platform: string; contentType: string; targetId: string }
-  | { type: 'BACK_TO_PLATFORM_SELECTION' }
-  | { type: 'BACK_TO_CONTENT_SELECTION' }
-  | { type: 'SESSION_STARTED' }
-  | { type: 'SESSION_ERROR'; error: string }
-  | { type: 'NAVIGATION_DETECTED'; sessionId: string; url: string }
-  | { type: 'PROOF_DATA_EXTRACTED'; sessionId: string; dataType: 'context' | 'action'; data: any; isComplete: boolean }
-  | { type: 'PROOF_COMPLETED'; sessionId: string; proof: CompletedProof }
-  | { type: 'PROOF_ERROR'; sessionId: string; error: string }
-  | { type: 'PROOF_TIMEOUT'; sessionId: string }
-  | { type: 'RETRY' }
-  | { type: 'RESET' };
-
-export enum VerificationState {
-  IDLE = 'idle',
-  PLATFORM_SELECTION = 'platform_selection',
-  CONTENT_SELECTION = 'content_selection',
-  STARTING_SESSION = 'starting_session',
-  WAITING_FOR_NAVIGATION = 'waiting_for_navigation',
-  CAPTURING_DATA = 'capturing_data',
-  SHOWING_RESULTS = 'showing_results',
-  COMPLETED = 'completed',
-  ERROR = 'error'
-}
+export type VerificationMessage = 
+  | { type: 'START_VERIFICATION'; platform: string; username: string }
+  | { type: 'VERIFICATION_COMPLETE'; profileData: ProfileData }
+  | { type: 'VERIFICATION_ERROR'; error: string }
+  | { type: 'CREATE_VERIFICATION_TAB'; platform: string; username: string }
+  | { type: 'TAB_CREATED'; tabId: number }
+  | { type: 'TAB_CREATION_ERROR'; error: string }
+  | { type: 'ATTACH_DEBUGGER'; tabId: number; username: string }
+  | { type: 'DEBUGGER_ATTACHED' }
+  | { type: 'DEBUGGER_ATTACHMENT_ERROR'; error: string }
+  | { type: 'CLEANUP_VERIFICATION'; tabId: number }
+  | { type: 'CLEANUP_COMPLETE' }
+  | { type: 'VERIFICATION_RESPONSE'; tabId: number; profileData: ProfileData; requestId: string }
+  | { type: 'BUILD_IG_PROFILE_COMPLETE'; username: string; userId: string }
+  | { type: 'IG_PROFILE_COMPLETE'; username: string; userId: string; profileData: any }
+  | { type: 'IG_PROFILE_ERROR'; error: string };

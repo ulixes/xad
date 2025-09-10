@@ -1,6 +1,6 @@
 {
-  "name": "xad-actions",
-  "description": "manifest.json description",
+  "name": "xad-request-extractor",
+  "description": "Extract HTTP requests, GraphQL requests and responses from active tabs",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,24 +12,19 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare",
-    "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui",
-    "e2e:debug": "playwright test --debug"
+    "postinstall": "wxt prepare"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slot": "^1.2.3",
     "@xad/ui": "workspace:*",
-    "@xstate/react": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss-animate": "^1.0.7",
-    "xstate": "^5.21.0"
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

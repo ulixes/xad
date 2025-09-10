@@ -1,0 +1,28 @@
+Ad Form Field,Primary Request Source,JSON Path (Primary),Alternative Sources / Paths,Validation Logic,Coverage
+ig-follower-count,PolarisProfilePageContentQuery,data.user.follower_count,PolarisAccountInsightsProfileQuery → accounts_reached_30d (proxy),≥ target_value,100%
+ig-audience-gender,PolarisAccountInsightsFollowersQuery,data.business_manager.account_insights_node.follower_demographics.gender[].percentage,—,≥ gender_threshold,90%
+ig-audience-age,PolarisAccountInsightsFollowersQuery,data.business_manager.account_insights_node.follower_demographics.age_ranges[].percentage,—,≥ age_range_threshold,90%
+ig-profile-visits-7d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.profile_visits_7d,—,≥ target_visits,85%
+ig-profile-visits-30d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.profile_visits_30d,—,≥ target_visits,85%
+ig-profile-visits-90d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.profile_visits_90d,—,≥ target_visits,85%
+ig-accounts-reached-7d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.accounts_reached_7d,PolarisAccountInsightsTopContentByViewsQuery (growth proxy),≥ target_reach,85%
+ig-accounts-reached-30d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.accounts_reached_30d,PolarisAccountInsightsTopContentByViewsQuery (growth proxy),≥ target_reach,85%
+ig-accounts-engaged-7d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.accounts_engaged_7d,PolarisInsightsMediaGridCardViewInitialQuery → medias.edges[].node.inline_insights_node.metric_single_value_query.results[].total_value (content-level),≥ target_engagement,85%
+ig-accounts-engaged-30d,PolarisAccountInsightsProfileQuery,data.business_manager.account_insights_node.profile_actions.accounts_engaged_30d,PolarisInsightsMediaGridCardViewInitialQuery (aggregated content engagement),≥ target_engagement,85%
+ig-follower-growth-7d,PolarisAccountInsightsTopContentByViewsQuery,data.business_manager.follower_growth.growth_7d.percentage,—,≥ growth_rate_threshold,80%
+ig-follower-growth-30d,PolarisAccountInsightsTopContentByViewsQuery,data.business_manager.follower_growth.growth_30d.percentage,—,≥ growth_rate_threshold,80%
+ig-follower-growth-90d,PolarisAccountInsightsTopContentByViewsQuery,data.business_manager.follower_growth.growth_90d.percentage,—,≥ growth_rate_threshold,80%
+ig-engagement-rate,PolarisAccountInsightsTopContentByViewsQuery,data.business_manager.engagement_metrics.overall_engagement_rate,PolarisInsightsMediaGridCardViewInitialQuery → calculate from content engagement patterns,≥ target_rate,80%
+ig-top-location,PolarisAccountInsightsFollowersQuery,data.business_manager.account_insights_node.follower_demographics.top_locations[].location_name,PolarisProfilePageContentQuery → data.user.city_name,equals target_location,75%
+ig-account-type,PolarisProfilePageContentQuery,data.user.account_type,—,match target_type (1=personal 2=business 3=creator),100%
+ig-is-verified,PolarisProfilePageContentQuery,data.user.is_verified,—,true/false,100%
+ig-category,PolarisProfilePageContentQuery,data.user.category,—,equals target_category,80%
+ig-location-country,PolarisAccountInsightsFollowersQuery,data.business_manager.account_insights_node.follower_demographics.top_locations[].location_name,PolarisProfilePageContentQuery → data.user.city_name,contains target_country,85%
+ig-location-city,PolarisAccountInsightsFollowersQuery,data.business_manager.account_insights_node.follower_demographics.top_locations[].location_name,PolarisProfilePageContentQuery → data.user.city_name,contains target_city,75%
+ig-media-count,PolarisProfilePageContentQuery,data.user.media_count,—,≥ target_post_count,100%
+ig-is-business,PolarisProfilePageContentQuery,data.user.is_business,—,true/false,100%
+ig-is-professional,PolarisProfilePageContentQuery,data.user.is_professional_account,—,true/false (required for insights access),100%
+ig-external-url,PolarisProfilePageContentQuery,data.user.external_url,—,exists/not_exists,60%
+ig-video-content-ratio,PolarisProfilePageContentQuery,calculated: data.user.total_clips_count / data.user.media_count * 100,PolarisInsightsMediaGridCardViewInitialQuery → analyze media_product_type distribution,≥ video_percentage_threshold,90%
+ig-content-engagement-trend,PolarisInsightsMediaGridCardViewInitialQuery,data.user.business_manager.medias.edges[].node.inline_insights_node.metric_single_value_query.results[].total_value,—,analyze top 20 content pieces for engagement patterns,85%
+ig-content-type-performance,PolarisInsightsMediaGridCardViewInitialQuery,data.user.business_manager.medias.edges[].node.instagram_media_product_type,—,compare CLIPS vs STORY engagement rates,85%

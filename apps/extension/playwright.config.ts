@@ -1,59 +1,57 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 
+/**
+ * @see https://playwright.dev/docs/test-configuration
+ */
 export default defineConfig({
   testDir: './e2e',
+  /* Run tests in files in parallel */
   fullyParallel: true,
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
+  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html'],
-    ['list'],
-    ['json', { outputFile: 'test-results/results.json' }]
-  ],
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: 'html',
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    // baseURL: 'http://127.0.0.1:3000',
+
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    baseURL: 'http://localhost:3000',
-    
-    // Extension-specific settings
-    headless: false, // Extensions require headed mode
-    viewport: { width: 400, height: 600 }, // Side panel dimensions
-    
-    // Custom context options for extension testing
-    contextOptions: {
-      // Load the extension from the build output
-      args: [
-        `--disable-extensions-except=${path.join(__dirname, '.output/chrome-mv3')}`,
-        `--load-extension=${path.join(__dirname, '.output/chrome-mv3')}`
-      ],
-      permissions: ['clipboard-read', 'clipboard-write'],
-    },
   },
 
+  /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
       use: { 
         ...devices['Desktop Chrome'],
-        channel: 'chromium'
+        // Chrome extension testing requires headless: false for proper extension loading
+        headless: false,
       },
     },
-    {
-      name: 'chrome',
-      use: { 
-        ...devices['Desktop Chrome'],
-        channel: 'chrome'
-      },
-    },
+
+    // Uncomment if you want to test on other browsers (extensions work best on Chromium)
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ],
 
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: 'http://127.0.0.1:3000',
+  //   reuseExistingServer: !process.env.CI,
+  // },
 });

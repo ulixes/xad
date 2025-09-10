@@ -1,0 +1,282 @@
+{
+  "data": {
+    "fx_identity_management": {
+      "screen_resources_v3": {
+        "avatar_editor_content": { "your_avatar_text": "Your avatar" },
+        "id": "fxim:screen_resources_v3(interface:ig_web)"
+      },
+      "identities_and_central_identities": {
+        "linked_identities_to_pci": [
+          {
+            "__typename": "PersonalLinkedIdentityData",
+            "id": "fxim:identity:61551884567900",
+            "canonical_id": "61551884567900",
+            "account_type": "FACEBOOK",
+            "cal_time": 1587268010,
+            "administering_account_id": "100000524687171",
+            "can_edit_identifying_fields": true,
+            "inactive_status": null,
+            "__isILinkedIdentityData": "PersonalLinkedIdentityData",
+            "profile_picture_info": {
+              "profile_picture_url": "https://scontent.ftbs6-2.fna.fbcdn.net/v/t1.30497-1/453178253_471506465671661_2781666950760530985_n.png?stp=dst-png_s200x200&_nc_cat=1&ccb=1-7&_nc_sid=780d13&_nc_ohc=dWao2MoQK00Q7kNvwErSZ__&_nc_oc=Adn8lGUAW9tNiZ6o-fK44uIhVcN--l7i1ODXeFTUeKo-qaG5Ybipqj9gI1WLcvnNFf0&_nc_zt=24&_nc_ht=scontent.ftbs6-2.fna&oh=00_AfZRVByV7-j8-cvSxbwLs05RbDIqmCIYxqVP96pNsAwTMQ&oe=68E8917A"
+            },
+            "avatar_preview_url": null,
+            "detailed_identity_type": "FB_ADDITIONAL_PROFILE",
+            "identity_type": "FB_ADDITIONAL_PROFILE",
+            "full_name": "Olive Harmony",
+            "username": "oliveharmonyngo",
+            "identity_type_string": "Facebook",
+            "inactive_label": null,
+            "screen_resources_v2": {
+              "__typename": "PersonalLinkedIdentityScreenResourcesV2",
+              "id": "fxci_personal_identity_screen_resources(61551884567900)",
+              "checkpointed_identity_text": null,
+              "ai_profile_label": null
+            }
+          },
+          {
+            "__typename": "PersonalLinkedIdentityData",
+            "id": "fxim:identity:100000524687171",
+            "canonical_id": "100000524687171",
+            "account_type": "FACEBOOK",
+            "cal_time": 1587268010,
+            "administering_account_id": "100000524687171",
+            "can_edit_identifying_fields": true,
+            "inactive_status": null,
+            "__isILinkedIdentityData": "PersonalLinkedIdentityData",
+            "profile_picture_info": {
+              "profile_picture_url": "https://scontent.ftbs6-2.fna.fbcdn.net/v/t39.30808-1/510241749_24499684832965666_3480648501178942533_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=102&ccb=1-7&_nc_sid=fe59b0&_nc_ohc=l5HgmbF-x9IQ7kNvwFVoGkn&_nc_oc=Adkl6ae4JgSJML4eKmmkUY7yyGbO-p5e0CgTgBO5padIQfO3eujiUfNZy3vUNL3SN9Q&_nc_zt=24&_nc_ht=scontent.ftbs6-2.fna&_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&oh=00_AfYdt9IYOKFOS7I4nvdVA6og68hBkOC4PLc_fSHCU7h8JQ&oe=68C6F021"
+            },
+            "avatar_preview_url": null,
+            "detailed_identity_type": "FB_USER",
+            "identity_type": "FB_USER",
+            "full_name": "Yousef Alaqra",
+            "username": "aqraeno",
+            "identity_type_string": "Facebook",
+            "inactive_label": null,
+            "screen_resources_v2": {
+              "__typename": "PersonalLinkedIdentityScreenResourcesV2",
+              "id": "fxci_personal_identity_screen_resources(100000524687171)",
+              "checkpointed_identity_text": null,
+              "ai_profile_label": null
+            }
+          },
+          {
+            "__typename": "PersonalLinkedIdentityData",
+            "id": "fxim:identity:17841460977358772",
+            "canonical_id": "17841460977358772",
+            "account_type": "INSTAGRAM",
+            "cal_time": 1691279505,
+            "administering_account_id": "17841460977358772",
+            "can_edit_identifying_fields": true,
+            "inactive_status": null,
+            "__isILinkedIdentityData": "PersonalLinkedIdentityData",
+            "profile_picture_info": {
+              "profile_picture_url": "https://scontent.ftbs6-2.fna.fbcdn.net/v/t1.30497-1/115870214_694925034696967_1870022665148339563_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=1&ccb=1-7&_nc_sid=7565cd&_nc_ohc=-xxtJsvWCdkQ7kNvwFUE7q2&_nc_oc=Adml-ez_vQtb1_UdTTtKC-EAG9zRe6wYZQ7kDnfaJBCLLQhoEW5q4taT0lsNwQf6Qwo&_nc_zt=24&_nc_ht=scontent.ftbs6-2.fna&oh=00_AfaTWDR6CVaHJCng1RvTDQcOwdR69tEbM-ugwUoX8DovLg&oe=68E87F22"
+            },
+            "avatar_preview_url": null,
+            "detailed_identity_type": "IG_PERSONAL",
+            "identity_type": "IG_USER",
+            "full_name": "",
+            "username": "oliveharmony_ps",
+            "identity_type_string": "Instagram",
+            "inactive_label": null,
+            "screen_resources_v2": {
+              "__typename": "PersonalLinkedIdentityScreenResourcesV2",
+              "id": "fxci_personal_identity_screen_resources(17841460977358772)",
+              "checkpointed_identity_text": null,
+              "ai_profile_label": null
+            }
+          }
+        ],
+        "personal_central_identities": [
+          {
+            "id": "1910515053109492",
+            "__isICentralIdentityData": "PersonalCentralIdentityDataV2",
+            "linked_identities": [
+              {
+                "__typename": "PersonalLinkedIdentityData",
+                "cal_time": 1587268010,
+                "canonical_id": "100000524687171",
+                "__isILinkedIdentityData": "PersonalLinkedIdentityData",
+                "identity_type_string": "Facebook",
+                "detailed_identity_type": "FB_USER",
+                "full_name": "Yousef Alaqra",
+                "profile_picture_info": {
+                  "profile_picture_url": "https://scontent.ftbs6-2.fna.fbcdn.net/v/t39.30808-1/510241749_24499684832965666_3480648501178942533_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=102&ccb=1-7&_nc_sid=fe59b0&_nc_ohc=l5HgmbF-x9IQ7kNvwFVoGkn&_nc_oc=Adkl6ae4JgSJML4eKmmkUY7yyGbO-p5e0CgTgBO5padIQfO3eujiUfNZy3vUNL3SN9Q&_nc_zt=24&_nc_ht=scontent.ftbs6-2.fna&_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&oh=00_AfYdt9IYOKFOS7I4nvdVA6og68hBkOC4PLc_fSHCU7h8JQ&oe=68C6F021"
+                },
+                "username": "aqraeno",
+                "id": "fxim:identity:100000524687171",
+                "avatar_preview_url": null,
+                "identity_type": "FB_USER",
+                "inactive_label": null,
+                "screen_resources_v2": {
+                  "__typename": "PersonalLinkedIdentityScreenResourcesV2",
+                  "id": "fxci_personal_identity_screen_resources(100000524687171)",
+                  "checkpointed_identity_text": null,
+                  "ai_profile_label": null
+                }
+              },
+              {
+                "__typename": "BusinessLinkedIdentityData",
+                "cal_time": 1587268010,
+                "canonical_id": "17841401469860169",
+                "__isILinkedIdentityData": "BusinessLinkedIdentityData",
+                "identity_type_string": "Instagram",
+                "detailed_identity_type": "IG_CREATOR",
+                "full_name": "Yousef Alaqra",
+                "profile_picture_info": {
+                  "profile_picture_url": "https://scontent.cdninstagram.com/v/t51.75761-19/504537579_18517855246048996_4631380616129184032_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=101&ccb=7-5&_nc_sid=7fff4e&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=x0hwAd4FM24Q7kNvwG8v1Io&_nc_oc=AdlUdxlglgSuUXeHzETJQVozvF5kXL46tkX0DOd-iEYi94wFJwTJkeH7Y-g--UCdQg8&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&oh=00_AfbMe1R1_5SuysNNdXA7arEqeJ6e0bbPRli303WlD0I4xw&oe=68C70395"
+                },
+                "username": "aqrajo",
+                "id": "fxim:identity:18057932348125583",
+                "avatar_preview_url": "https://scontent.ftbs6-2.fna.fbcdn.net/m1/v/t6/An9ebA2WPCqi84Ys-VojMLYec-7_GI2bwigraEKN786m7XBcKL-6nmC9X6knbad0xQquCLQADDvhf4uS_olb1lihWSmQ8faYtykW5yka.png?_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&_nc_oc=Adnsldzduu0FlWyLJbU33uOB4cqgIo6sYjLD9sdYv9RXhF66W-WM0diJMQ-uRJFCKDE&strext=1&ccb=10-5&oh=00_AfY6F7dzECLWrQ1FvjskC8Xfjcs9BIeWRQtUkTghKClB2w&oe=68C2DAF2&_nc_sid=fdc050",
+                "identity_type": "IG_PROFESSIONAL",
+                "inactive_label": null,
+                "screen_resources_v2": {
+                  "__typename": "BusinessLinkedIdentityScreenResourcesV2",
+                  "id": "fxci_business_identity_screen_resources(17841401469860169)",
+                  "checkpointed_identity_text": null,
+                  "ai_profile_label": null
+                }
+              }
+            ],
+            "synced_attributes": ["NAME", "PROFILE_PHOTO"]
+          }
+        ],
+        "business_identities": [
+          {
+            "__typename": "BusinessLinkedIdentityData",
+            "id": "fxim:identity:18057932348125583",
+            "canonical_id": "17841401469860169",
+            "managed_by_viewer": true,
+            "cal_time": 1587268010,
+            "detailed_identity_type": "IG_CREATOR",
+            "can_edit_identifying_fields": true,
+            "__isILinkedIdentityData": "BusinessLinkedIdentityData",
+            "profile_picture_info": {
+              "profile_picture_url": "https://scontent.cdninstagram.com/v/t51.75761-19/504537579_18517855246048996_4631380616129184032_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=101&ccb=7-5&_nc_sid=7fff4e&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=x0hwAd4FM24Q7kNvwG8v1Io&_nc_oc=AdlUdxlglgSuUXeHzETJQVozvF5kXL46tkX0DOd-iEYi94wFJwTJkeH7Y-g--UCdQg8&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&oh=00_AfbMe1R1_5SuysNNdXA7arEqeJ6e0bbPRli303WlD0I4xw&oe=68C70395"
+            },
+            "avatar_preview_url": "https://scontent.ftbs6-2.fna.fbcdn.net/m1/v/t6/An9ebA2WPCqi84Ys-VojMLYec-7_GI2bwigraEKN786m7XBcKL-6nmC9X6knbad0xQquCLQADDvhf4uS_olb1lihWSmQ8faYtykW5yka.png?_nc_gid=iCSbD4KxVMUYgNKtCiACnQ&_nc_oc=Adnsldzduu0FlWyLJbU33uOB4cqgIo6sYjLD9sdYv9RXhF66W-WM0diJMQ-uRJFCKDE&strext=1&ccb=10-5&oh=00_AfY6F7dzECLWrQ1FvjskC8Xfjcs9BIeWRQtUkTghKClB2w&oe=68C2DAF2&_nc_sid=fdc050",
+            "identity_type": "IG_PROFESSIONAL",
+            "full_name": "Yousef Alaqra",
+            "username": "aqrajo",
+            "identity_type_string": "Instagram",
+            "inactive_label": null,
+            "screen_resources_v2": {
+              "__typename": "BusinessLinkedIdentityScreenResourcesV2",
+              "id": "fxci_business_identity_screen_resources(17841401469860169)",
+              "checkpointed_identity_text": null,
+              "ai_profile_label": null
+            }
+          }
+        ],
+        "id": "identities_and_central_identities"
+      },
+      "screen_resources_v2": {
+        "accounts_and_profiles_content": {
+          "add_button_text": { "text": "Add accounts" },
+          "no_accounts_description_text": {
+            "inline_style_ranges": [],
+            "image_ranges": [],
+            "ranges": [],
+            "color_ranges": [],
+            "text": "Add your accounts to enable connected experiences."
+          },
+          "entrypoint_identity_subtitle": { "text": "Accounts & profiles" },
+          "profiles_description_subtitle_text": "Manage your profile info, and use the same info across Facebook, Instagram and Meta Horizon. Add more profiles by adding your accounts.",
+          "profiles_description_link_text": "Learn more",
+          "profiles_description_link_url": "https://help.instagram.com/1731078377046291/?locale=en_US&helpref=learn_more",
+          "no_profiles_description_subtitle_text": "Add accounts to enable connected experiences, and use the same profile info like name, profile picture and avatar across Facebook, Instagram and Messenger. Add profiles by adding your accounts.",
+          "profiles_entrypoint_title": { "text": "Profiles" }
+        },
+        "id": "fxim:screen_resources_v2(platform:1)"
+      },
+      "can_see_single_app_identity_without_cal_link": false,
+      "can_see_single_account_state": false,
+      "can_add_accounts_when_linked": true,
+      "is_threads_only_account": false,
+      "can_see_identity_management": true
+    },
+    "fx_accounts_management": {
+      "can_see_new_account_representation": true,
+      "accounts": [
+        { "__typename": "XFBFXIGAccountInfo", "id": "17841401469860169" },
+        { "__typename": "XFBFXIGAccountInfo", "id100000524687171/": "17841460977358772" },
+        { "__typename": "XFBFXFBAccountInfo", "id": "100000524687171" }
+      ]
+    },
+    "fxcal_web_flow_init": {
+      "error": null,
+      "multi_web_auth": [
+        {
+          "config": {
+            "url": "https://www.instagram.com/fxcal/auth/login/?app_id=1217981644879628&etoken=AbjngWmBQrsjx8IBsz2cF00llP21p2RKK0pXrSGUEQrqAiMRaWNnY2LjyN5bBeGzPwRF2Qx95nNa2ZoKZXXO5yZquuGOolZk1ZY91tV1VKfiy3_HpRHLci8G&flow=igcaltest&entry_point=ig_web_settings&next=https%3A%2F%2Faccountscenter.instagram.com%2F%3Fauth_flow%3Dig_linking",
+            "next_param": "next"
+          },
+          "account_type_selection_label": "Add Instagram account",
+          "account_type": "INSTAGRAM"
+        },
+        {
+          "config": {
+            "url": "https://auth.meta.com/fxauth/?app_id=1217981644879628&etoken=AbjPpgr-01Km4NArd7PWqIqnWNYU1AJQ1tl7SGWhi7lmnQZCkc-eIFc7Vf6B1IzgUOfrhCoF7sbEYMctU8mWKiDiLCGC12NlI8RXYL7t50_Yb967Um9BLrso&next=%3Fauth_flow%3Dlinking&flow=frl&force_logout=0",
+            "next_param": "next"
+          },
+          "account_type_selection_label": "Add Meta account",
+          "account_type": "FRL"
+        }
+      ],
+      "can_use_native_auth": false
+    },
+    "fxcal_settings": {
+      "more_from_meta_section_project_one": {
+        "title": "More from Meta",
+        "cards": [
+          {
+            "title": "Meta Verified",
+            "description": "Meta Verified",
+            "url": "/meta_verified/",
+            "icon": "https://static.xx.fbcdn.net/rsrc.php/v4/yl/r/KAnpRpqhQCP.png",
+            "dark_icon": "https://static.xx.fbcdn.net/rsrc.php/v4/yl/r/KAnpRpqhQCP.png",
+            "card_id": "UPGRADE_ACCOUNT"
+          }
+        ]
+      },
+      "ac_phase": "CENTRALIZED_SETTINGS_WITH_SENSITIVE",
+      "node": {
+        "__typename": "XFBFXSettingsProfiles",
+        "name": "Profiles",
+        "show_birthday_and_cp_in_profiles": false,
+        "personal_info_section": {
+          "nodes": [
+            {
+              "__typename": "XFBFXSettingsContactPoint",
+              "name": "Contact info",
+              "url_string": "/personal_info/contact_points/",
+              "navigation_row_subtitle": "aqra.jo@gmail.com, +970595675811",
+              "is_navigation_to_setting_disabled": false,
+              "show_in_profiles": false,
+              "url_in_profiles": "/profiles/contact_points/?entrypoint=profile_page"
+            },
+            {
+              "__typename": "XFBFXSettingsBirthday",
+              "name": "Birthday",
+              "url_string": "/personal_info/birthday/?entrypoint=accounts_center",
+              "navigation_row_subtitle": "November 6, 1995",
+              "is_navigation_to_setting_disabled": false,
+              "show_in_profiles": false,
+              "url_in_profiles": "/profiles/birthday/?entrypoint=profile_page"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "extensions": {
+    "server_metadata": {
+      "request_start_time_ms": 1757485125566,
+      "time_at_flush_ms": 1757485126089
+    },
+    "is_final": true
+  }
+}

@@ -1,9 +1,0 @@
-1. User click on add account in the IG platfrom section in the home page.
-2. System prompt user to enter their social account username
-3. System open new tap: https://www.instagram.com/{username}/
-4. System listen to network request "./user-profile-request.sh"
-5. SYStem attach debugger to the request to inspect the response "./user-profile-request-response.json" and extract the user data form the repsonse that are have //extract comemnt next to into user profile object
-6. System remove debugger attachment from the tap
-6. System verify the extracted object if the user input username value is euqal to the username value in the response we have vlaid user profile object
-7. Add the user profile object to the state
-

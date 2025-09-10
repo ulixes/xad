@@ -1,0 +1,23 @@
+1. User click on add account in the IG platfrom section in the home page.
+2. System prompt user to enter their social account username
+3. System open new tap: https://www.instagram.com/{username}/
+4. System listen to network request "./user-profile-request.sh"
+5. SYStem attach debugger to the request to inspect the response "./user-profile-request-response.json" and extract the user data form the repsonse that are have //extract comemnt next to into user profile object
+6. System remove debugger attachment from the tap
+6. System verify the extracted object if the user input username value is euqal to the username value in the response we have vlaid user profile object
+7. Add the user profile object to the state
+
+
+
+New flow:
+
+1. User add account in the IG platfrom section in the home page.
+2. User insert their social account username
+3. System open new tap: https://accountscenter.instagram.com/profiles/
+4. System intercepts for /home/ulyx/dev/xad/apps/actions/docs/ig/user-profiles-request.sh 
+5. SYstem extract the request response /home/ulyx/dev/xad/apps/actions/docs/ig/user-profiles-request-response.json
+6. Data to look for in the response body: data.fx_identity_management.identities_and_central_identities.linked_identities_to_pci : []
+7. System lookup the array find accounts with account_type === "INSTAGRAM"  and username=$username
+9. If record found system extract: identity_type, full_name, detailed_identity_type, canonical_id
+12. If record not found adding account session end with incopmlete status with info account not found
+13. If record found and data were extracted the system complete verifcation and added extraced data as profile data.  

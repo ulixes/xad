@@ -5,7 +5,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     action: {},
-    permissions: ['sidePanel', 'tabs', 'debugger']
+    permissions: ['sidePanel', 'tabs', 'debugger', 'storage', 'downloads']
   },
   vite: () => ({
     css: {

@@ -1,0 +1,1373 @@
+{
+  "session": {
+    "id": "session_1757511173312_b4i1ql4wi",
+    "url": "https://www.reddit.com/user/cleaverbranch/comments/",
+    "startTime": "2025-09-10T13:32:53.312Z",
+    "endTime": "2025-09-10T13:33:03.515Z",
+    "duration": 10203,
+    "status": "completed"
+  },
+  "requestCount": 4,
+  "requests": [
+    {
+      "request": {
+        "id": "451386.186",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/comments/",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\""
+        },
+        "body": {
+          "operation": "ExposeVariant",
+          "variables": {
+            "input": {
+              "experimentName": "web3x_search_dynamic_scoped_typeahead",
+              "variant": "enabled",
+              "experimentVersion": "6"
+            }
+          },
+          "csrf_token": "6685ea6dea1b174ae79761ad98f20e92"
+        },
+        "timestamp": "1970-01-03T14:00:20.840Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "input": {
+              "experimentName": "web3x_search_dynamic_scoped_typeahead",
+              "variant": "enabled",
+              "experimentVersion": "6"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "136",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-WJm5F0SsliQij2X26mTx8w==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-WJm5F0SsliQij2X26mTx8w==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:32:54 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "exposeExperiment": {
+              "ok": true,
+              "errors": null
+            }
+          },
+          "operation": "ExposeVariant",
+          "duration": 15.392475999891758,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:00:21.140Z",
+        "responseTime": "300.46800000127405ms"
+      }
+    },
+    {
+      "request": {
+        "id": "451386.187",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/comments/",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\""
+        },
+        "body": {
+          "operation": "IdentityUserPreferences",
+          "variables": {
+            "includeNightMode": true
+          },
+          "csrf_token": "6685ea6dea1b174ae79761ad98f20e92"
+        },
+        "timestamp": "1970-01-03T14:00:20.858Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "includeNightMode": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "152",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-9KI7p57AKo41h92obIyARg==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-9KI7p57AKo41h92obIyARg==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:32:54 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "identity": {
+              "preferences": {
+                "isNightModeEnabled": true
+              }
+            }
+          },
+          "operation": "IdentityUserPreferences",
+          "duration": 31.465247999876738,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:00:21.148Z",
+        "responseTime": "289.80299999238923ms"
+      }
+    },
+    {
+      "request": {
+        "id": "451386.190",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/comments/",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\""
+        },
+        "body": {
+          "operation": "TrophyCategories",
+          "variables": {
+            "trophyImageMaxWidth": 100,
+            "name": "cleaverbranch",
+            "includeRepeatableAchievements": true
+          },
+          "csrf_token": "6685ea6dea1b174ae79761ad98f20e92"
+        },
+        "timestamp": "1970-01-03T14:00:20.870Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "trophyImageMaxWidth": 100,
+            "name": "cleaverbranch",
+            "includeRepeatableAchievements": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "4449",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-duTmsizeprosbp9NIcKOyg==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-duTmsizeprosbp9NIcKOyg==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:32:54 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "redditorInfoByName": {
+              "__typename": "Redditor",
+              "id": "t2_1vq5jmn64b",
+              "trophyCase": {
+                "totalUnlocked": 6,
+                "categories": {
+                  "edges": [
+                    {
+                      "cursor": "Mw==",
+                      "node": {
+                        "__typename": "AchievementTrophyCategory",
+                        "accessibilityLabel": "Reddit Streak with 0 of 17 achievements unlocked; your current streak is 1 day",
+                        "id": "3",
+                        "name": "Reddit Streak",
+                        "unlocked": 0,
+                        "total": 17,
+                        "pill": {
+                          "text": "1d",
+                          "icon": {
+                            "url": "https://preview.redd.it/97f4m7bj37gc1.png?auto=webp&s=f6c6e006d7c225b5fb4d3273a4c14ac1a38d9056",
+                            "dimensions": {
+                              "width": 64,
+                              "height": 64
+                            }
+                          }
+                        },
+                        "trophies": {
+                          "pageInfo": {
+                            "__typename": "PageInfo",
+                            "endCursor": "YmFzZW1lbnQtZHdlbGxlcg==",
+                            "startCursor": "MTQ=",
+                            "hasNextPage": false,
+                            "hasPreviousPage": false
+                          },
+                          "edges": [
+                            {
+                              "cursor": "MTQ=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "14",
+                                "name": "5-Day Streak",
+                                "shortDescription": "1/5 days",
+                                "unlockedAt": null,
+                                "progress": {
+                                  "done": 1,
+                                  "total": 5,
+                                  "unit": "DAY"
+                                },
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/bsyxm9h7d12d1.png?width=100&height=100&crop=smart&auto=webp&s=4fa41e0cba49b77e2646b640ea373e8e021f4e1f"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTU=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "15",
+                                "name": "10-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/9dvzprq7d12d1.png?width=100&height=100&crop=smart&auto=webp&s=01ba7fdff81818f00beeeb4afb1da01f798ea537"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTY=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "16",
+                                "name": "20-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/yutsz858d12d1.png?width=100&height=100&crop=smart&auto=webp&s=163eb4b6538469291cb8bb69e623dd02a84b92ec"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTc=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "17",
+                                "name": "30-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/dl7e18d8d12d1.png?width=100&height=100&crop=smart&auto=webp&s=cb57c9280036e785bfb7546c98e394ced995c4ac"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTg=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "18",
+                                "name": "40-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/yoagzen8d12d1.png?width=100&height=100&crop=smart&auto=webp&s=e5fd33c938b4b208740fe88244633c7dab34ad43"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTk=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "19",
+                                "name": "50-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/oxtaikv8d12d1.png?width=100&height=100&crop=smart&auto=webp&s=4ba6a8c8a2ce16262bcbfc8ded65b71b994e0b92"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NzUtZGF5LXN0cmVhaw==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "75-day-streak",
+                                "name": "75-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/wqd2qy29d12d1.png?width=100&height=100&crop=smart&auto=webp&s=8679f9b0545458ab431a9d6310ade3b203356bd1"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "100-day-streak",
+                                "name": "100-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/6877pva9d12d1.png?width=100&height=100&crop=smart&auto=webp&s=efab3a67568790c69e74a701c1242c16846c6d05"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTUwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "150-day-streak",
+                                "name": "150-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/5310thj9d12d1.png?width=100&height=100&crop=smart&auto=webp&s=b572e1dac415f8e722ac06b347a149413db2ac4c"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MjAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "200-day-streak",
+                                "name": "200-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/t0vrcwr9d12d1.png?width=100&height=100&crop=smart&auto=webp&s=7881ed8ac6bc67bdbbaf3d7ddde68cf83ce80151"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MzAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "300-day-streak",
+                                "name": "300-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/njmmy2dof12d1.png?width=100&height=100&crop=smart&auto=webp&s=dc65690002d28bca569170bda822fbdc46edf011"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MzY1LWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "365-day-streak",
+                                "name": "365-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/x41hizc8heid1.png?width=100&height=100&crop=smart&auto=webp&s=cf37126e65d0675d4ee20bd799ad15d9b2d5fb7e"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NDAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "400-day-streak",
+                                "name": "400-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/3iuxds72df3e1.png?width=100&height=100&crop=smart&auto=webp&s=2170200d61d1d1ab409f5d1a8d719361cdc1087e"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NTAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "500-day-streak",
+                                "name": "500-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/jn8c4ztwq4ke1.png?width=100&height=100&crop=smart&auto=webp&s=331dca48e68567582811aae1e0ba4d6cd80242a6"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NjAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "600-day-streak",
+                                "name": "600-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/0bapu6em3vqe1.png?width=100&height=100&crop=smart&auto=webp&s=81c6bc4fe9d2c9f07b5f7012b177860870fe4327"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NzAwLWRheS1zdHJlYWs=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "700-day-streak",
+                                "name": "700-Day Streak",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/jvffuetfa59f1.png?width=100&height=100&crop=smart&auto=webp&s=68a4f651d20dd5a5da53fc21005bec90bd8e983d"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFzZW1lbnQtZHdlbGxlcg==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "basement-dweller",
+                                "name": "Basement Dweller",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/ji10ukw7heid1.png?width=100&height=100&crop=smart&auto=webp&s=019236d1bd5e662eee54049d172b3c7847e93804"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "cursor": "Mg==",
+                      "node": {
+                        "__typename": "AchievementTrophyCategory",
+                        "accessibilityLabel": "Exploration with 2 of 22 achievements unlocked",
+                        "id": "2",
+                        "name": "Exploration",
+                        "unlocked": 2,
+                        "total": 22,
+                        "pill": null,
+                        "trophies": {
+                          "pageInfo": {
+                            "__typename": "PageInfo",
+                            "endCursor": "Y2FwdGl2YXRpbmctY29tbWVudA==",
+                            "startCursor": "YmFuYW5hLWJhYnk=",
+                            "hasNextPage": false,
+                            "hasPreviousPage": false
+                          },
+                          "edges": [
+                            {
+                              "cursor": "YmFuYW5hLWJhYnk=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-baby",
+                                "name": "Banana Baby",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-08-29T03:27:07.000000+0000",
+                                "progress": null,
+                                "isNew": true,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/fsx0sxlz96pd1.png?width=100&height=100&crop=smart&auto=webp&s=8c0fa355c102b7e66d6440183ae084b04ec74d77"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFuYW5hLWVudGh1c2lhc3Q=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-enthusiast",
+                                "name": "Banana Enthusiast",
+                                "shortDescription": "735/1,000 bananas",
+                                "unlockedAt": null,
+                                "progress": {
+                                  "done": 735,
+                                  "total": 1000,
+                                  "unit": "DAY"
+                                },
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/amr0syq4a6pd1.png?width=100&height=100&crop=smart&auto=webp&s=f9cc55119df4667824ba180b6ec76b5415cd9893"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFuYW5hLWJlZ2lubmVy",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-beginner",
+                                "name": "Banana Beginner",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-09-02T03:21:31.000000+0000",
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/bgq6nx92a6pd1.png?width=100&height=100&crop=smart&auto=webp&s=ae3a3cf7109a7b487e04d24899b3824da56ab4f8"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "OQ==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "9",
+                                "name": "Hometown Hero",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/v79teflxm12d1.png?width=100&height=100&crop=smart&auto=webp&s=03688cc04f2ec4472d8526737796dba8247b7494"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTA=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "10",
+                                "name": "New Share",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/e5zslblxm12d1.png?width=100&height=100&crop=smart&auto=webp&s=10737ba515b29b7c1e580d4ff37f630dd932e8aa"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "c2hhcmluZy1lbnRodXNpYXN0",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "sharing-enthusiast",
+                                "name": "Sharing Enthusiast",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/l7umc9tbe1hd1.png?width=100&height=100&crop=smart&auto=webp&s=1ab307a58a88bdfcdfcdf8f617c21f85cf802617"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "c2hhcmluZy1hZHZvY2F0ZQ==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "sharing-advocate",
+                                "name": "Sharing Advocate",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/fxayturfe1hd1.png?width=100&height=100&crop=smart&auto=webp&s=4e862d469b446db32d687292ba4f9c095f4d0779"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "c2hhcmluZy1wcm8=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "sharing-pro",
+                                "name": "Sharing Pro",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/ar633quje1hd1.png?width=100&height=100&crop=smart&auto=webp&s=69f606dbbfc5d55304cf1b83f8204e422c593392"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "c2hhcmluZy1sZWdlbmQ=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "sharing-legend",
+                                "name": "Sharing Legend",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/e8n082cme1hd1.png?width=100&height=100&crop=smart&auto=webp&s=b120a966c084121583b9434bc842e82d5bbf46d6"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFuYW5hLWFmaWNpb25hZG8=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-aficionado",
+                                "name": "Banana Aficionado",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/8phfod47a6pd1.png?width=100&height=100&crop=smart&auto=webp&s=14ddef8fbf78a3508baa8d4a58afbb08d6eb13e3"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFuYW5hLW1hc3Rlcg==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-master",
+                                "name": "Banana Master",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/gzoflafaa6pd1.png?width=100&height=100&crop=smart&auto=webp&s=d49f64ef75c6f86949f2bf48ebdb808bebdc5efa"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YmFuYW5hLWxlZ2VuZA==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "banana-legend",
+                                "name": "Banana Legend",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/z0l7fc7fa6pd1.png?width=100&height=100&crop=smart&auto=webp&s=4a24ea2e8149192f20d415c912f309dccab58756"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cG90YXNzaXVtLW92ZXJsb3Jk",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "potassium-overlord",
+                                "name": "Potassium Overlord",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/rxx6p1sga6pd1.png?width=100&height=100&crop=smart&auto=webp&s=9ddcc6679e157f0f38fb426db8ccd1d800c821c4"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTE=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "11",
+                                "name": "Conversation Starter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/as2j0clxm12d1.png?width=100&height=100&crop=smart&auto=webp&s=480bb2296196300cf6b3dc4b3afb83906a1e0ebc"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTI=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "12",
+                                "name": "Nice Post",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/zgdxadlxm12d1.png?width=100&height=100&crop=smart&auto=webp&s=e1c545b16696753c07b0b6680fdcea669a0d18f7"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YnV6ei13b3J0aHktcG9zdA==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "buzz-worthy-post",
+                                "name": "Buzz-Worthy Post",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/gcvkiprq21hd1.png?width=100&height=100&crop=smart&auto=webp&s=de5983e8571efcc9c25dbb2e69b13f1d70ba62d1"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cG9wdWxhci1wb3N0",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "popular-post",
+                                "name": "Popular Post",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/82tqgi2v21hd1.png?width=100&height=100&crop=smart&auto=webp&s=413e90873f62b0bba115f84c141b7cc3066f1d3a"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cHJlbWllcmUtcG9zdA==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "premiere-post",
+                                "name": "Premiere Post",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/htfk019y21hd1.png?width=100&height=100&crop=smart&auto=webp&s=502361a9e1f1ad6db722dfe898c61aedf166d030"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cGVhay1wb3N0",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "peak-post",
+                                "name": "Peak Post",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/mdest0n231hd1.png?width=100&height=100&crop=smart&auto=webp&s=d24c96665b9aff05ba7b91888cf9746a7d624254"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MTM=",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "13",
+                                "name": "Cool Comment",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/kdhvmblxm12d1.png?width=100&height=100&crop=smart&auto=webp&s=057e670cac375fb10cbc8d3ab564f72773b599be"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cXVhbGl0eS1jb21tZW50",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "quality-comment",
+                                "name": "Quality Comment",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/fzwapfbmd1hd1.png?width=100&height=100&crop=smart&auto=webp&s=444e74c633577aef0e74e07e6cdc545df867d7f3"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "Y2FwdGl2YXRpbmctY29tbWVudA==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "captivating-comment",
+                                "name": "Captivating Comment",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/04ask2mrd1hd1.png?width=100&height=100&crop=smart&auto=webp&s=e24da347e734a476a9be989e5a9b091a4d2f6903"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "cursor": "MQ==",
+                      "node": {
+                        "__typename": "AchievementTrophyCategory",
+                        "accessibilityLabel": "Getting Started with 4 of 7 achievements unlocked",
+                        "id": "1",
+                        "name": "Getting Started",
+                        "unlocked": 4,
+                        "total": 7,
+                        "pill": null,
+                        "trophies": {
+                          "pageInfo": {
+                            "__typename": "PageInfo",
+                            "endCursor": "NQ==",
+                            "startCursor": "Mw==",
+                            "hasNextPage": false,
+                            "hasPreviousPage": false
+                          },
+                          "edges": [
+                            {
+                              "cursor": "Mw==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "3",
+                                "name": "Newcomer",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-09-05T09:29:49.000000+0000",
+                                "progress": null,
+                                "isNew": true,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/qjb7gerohavc1.png?width=100&height=100&crop=smart&auto=webp&s=3d4294f2e2cf46a5cde34ea050cfe28efb02004d"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "Ng==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "6",
+                                "name": "Feed Finder",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-08-31T14:36:03.000000+0000",
+                                "progress": null,
+                                "isNew": true,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/1b6b7fsohavc1.png?width=100&height=100&crop=smart&auto=webp&s=cb6595d5aa9741ac2ed1fd509f5b4dc4a9d4ce97"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "MQ==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "1",
+                                "name": "Joined Reddit",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-08-27T07:13:50.000000+0000",
+                                "progress": null,
+                                "isNew": true,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/fpniflrohavc1.png?width=100&height=100&crop=smart&auto=webp&s=3715dbf286c349f8255a54add53f9d48de18c56d"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "Mg==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "2",
+                                "name": "Secured Account",
+                                "shortDescription": "",
+                                "unlockedAt": "2025-08-27T07:13:50.000000+0000",
+                                "progress": null,
+                                "isNew": true,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/t0unzkrohavc1.png?width=100&height=100&crop=smart&auto=webp&s=56d5a81210a834477d1b29f0984ce44a6bc3c7e7"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NA==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "4",
+                                "name": "Person of Interests",
+                                "shortDescription": "1/5 communities",
+                                "unlockedAt": null,
+                                "progress": {
+                                  "done": 1,
+                                  "total": 5,
+                                  "unit": "COMMUNITY"
+                                },
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/j2nvgdkuk12d1.png?width=100&height=100&crop=smart&auto=webp&s=4ba5769ca5dc09e53b166d111dd1bb5118aec088"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "Nw==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "7",
+                                "name": "Detective Doggo",
+                                "shortDescription": "1/10 results",
+                                "unlockedAt": null,
+                                "progress": {
+                                  "done": 1,
+                                  "total": 10,
+                                  "unit": "SEARCH_RESULT"
+                                },
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/5ce80j0tk12d1.png?width=100&height=100&crop=smart&auto=webp&s=57d64c7576bee9bb836688608f4ebf0db5e54a1d"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "NQ==",
+                              "node": {
+                                "__typename": "AchievementImageTrophy",
+                                "id": "5",
+                                "name": "Profile Perfectionist",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/61gy5nwuk12d1.png?width=100&height=100&crop=smart&auto=webp&s=f32c115e2ac52b431cea0dfb74508c9343ec8025"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "cursor": "Y29tbXVuaXR5",
+                      "node": {
+                        "__typename": "AchievementTrophyCategory",
+                        "accessibilityLabel": "Building Community with 0 of 16 achievements unlocked",
+                        "id": "community",
+                        "name": "Building Community",
+                        "unlocked": 0,
+                        "total": 16,
+                        "pill": null,
+                        "trophies": {
+                          "pageInfo": {
+                            "__typename": "PageInfo",
+                            "endCursor": "dGhhdHMtbWU=",
+                            "startCursor": "bW9udGhseS10b3AtMjUtY29tbWVudGVy",
+                            "hasNextPage": false,
+                            "hasPreviousPage": false
+                          },
+                          "edges": [
+                            {
+                              "cursor": "bW9udGhseS10b3AtMjUtY29tbWVudGVy",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-25-commenter",
+                                "name": "Top 25% Commenter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/bkxrrl04mnwd1.png?width=100&height=100&crop=smart&auto=webp&s=4d052f447ac4a8ab74887f32f025eaf283485688"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtMjUtcG9zdGVy",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-25-poster",
+                                "name": "Top 25% Poster",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/a75j49h3i3yd1.png?width=100&height=100&crop=smart&auto=webp&s=78b56d263d551292d0e0130c05ca59780f9b86e2"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtMTAtY29tbWVudGVy",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-10-commenter",
+                                "name": "Top 10% Commenter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/bkxrrl04mnwd1.png?width=100&height=100&crop=smart&auto=webp&s=4d052f447ac4a8ab74887f32f025eaf283485688"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtMTAtcG9zdGVy",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-10-poster",
+                                "name": "Top 10% Poster",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/a75j49h3i3yd1.png?width=100&height=100&crop=smart&auto=webp&s=78b56d263d551292d0e0130c05ca59780f9b86e2"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtNS1jb21tZW50ZXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-5-commenter",
+                                "name": "Top 5% Commenter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/bkxrrl04mnwd1.png?width=100&height=100&crop=smart&auto=webp&s=4d052f447ac4a8ab74887f32f025eaf283485688"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtNS1wb3N0ZXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-5-poster",
+                                "name": "Top 5% Poster",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/a75j49h3i3yd1.png?width=100&height=100&crop=smart&auto=webp&s=78b56d263d551292d0e0130c05ca59780f9b86e2"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtMS1jb21tZW50ZXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-1-commenter",
+                                "name": "Top 1% Commenter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/ozhr6tuimnwd1.png?width=100&height=100&crop=smart&auto=webp&s=310e8448934d267982761ca75054d56842509b65"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "bW9udGhseS10b3AtMS1wb3N0ZXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "monthly-top-1-poster",
+                                "name": "Top 1% Poster",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/2xkwyn9ci3yd1.png?width=100&height=100&crop=smart&auto=webp&s=bd1ee42c077d87aba9edf3be240a3787046fb8a2"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "c3VwZXItY29udHJpYnV0b3I=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "super-contributor",
+                                "name": "Super Contributor",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/lx9a8f4w34yd1.png?width=100&height=100&crop=smart&auto=webp&s=7e5db85cf62328afa05ed71b0b96527f946a5de4"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "ZnJlcXVlbnQtY29udHJpYnV0b3I=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "frequent-contributor",
+                                "name": "Repeat Contributor",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/l3ct2kzdo12d1.png?width=100&height=100&crop=smart&auto=webp&s=10c2dc72db4e12aff64c598b63ee0c14683f695a"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "YXZpZC1jdXJhdG9y",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "avid-curator",
+                                "name": "Content Connoisseur",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/cahzgjzdo12d1.png?width=100&height=100&crop=smart&auto=webp&s=2148dd3e01f891f313a539f147048280f0440951"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cG9zdC1leHBsb3Jlcg==",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "post-explorer",
+                                "name": "Flag Planter",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/t2h03jzdo12d1.png?width=100&height=100&crop=smart&auto=webp&s=4df4fe50efbb7afe042bffe07bcce5c18ff87a86"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "ZWxkZXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "elder",
+                                "name": "Elder",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/p9nutu38p12d1.png?width=100&height=100&crop=smart&auto=webp&s=e3b8e0b1f18e2705938877c6d61bd625cfcb3ed9"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cmlzaW5nLXN0YXI=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "rising-star",
+                                "name": "Rising Star",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/u780hppye1hd1.png?width=100&height=100&crop=smart&auto=webp&s=bc40fac43f6989bc502362c9f652ddca48eb7a66"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "cGljYXNzbw==",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "picasso",
+                                "name": "Picasso",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/xr3ez3dzhmmd1.png?width=100&height=100&crop=smart&auto=webp&s=714a00bb67267c4e3925583ce5f3d3340ef92278"
+                                }
+                              }
+                            },
+                            {
+                              "cursor": "dGhhdHMtbWU=",
+                              "node": {
+                                "__typename": "AchievementRepeatableImageTrophy",
+                                "id": "thats-me",
+                                "name": "That's Me",
+                                "shortDescription": "",
+                                "unlockedAt": null,
+                                "progress": null,
+                                "isNew": false,
+                                "numUnlocked": 0,
+                                "gridImage": {
+                                  "url": "https://preview.redd.it/cb4035l6dzmd1.png?width=100&height=100&crop=smart&auto=webp&s=8b39e2e44609795a03aa6020b432bfc039aa8bea"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "operation": "TrophyCategories",
+          "duration": 111.07370200002333,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:00:21.178Z",
+        "responseTime": "307.52099998062477ms"
+      }
+    },
+    {
+      "request": {
+        "id": "451386.258",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/comments/",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "baggage": "sentry-environment=production,sentry-release=1.0.0-v2230.sha.6d71803,sentry-public_key=112489a1da354154aa9116028b27ed7b,sentry-trace_id=975ad3a79008451e80a00933bdd0e89c",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\"",
+          "sentry-trace": "975ad3a79008451e80a00933bdd0e89c-a44fde92e03c1c3f"
+        },
+        "body": {
+          "operation": "CreateCaptchaToken",
+          "variables": {
+            "input": {
+              "token": "0cAFcWeA7ZE4mm782Rl1Ti0x2cBXbn17XMx7cegGDziecnkxomqr0IqkRefRdi2alqLL1zYrqVI63dUGPllnxGSQOCLC-fYzbOIz7gTk5BkCDV6kz3RSpqLHVTRWOSblDBPG5Ii4XRj4olhhReqV3fw4m6NAZO1V_ZyULXTWZJK8U4uJVQIMhNIVDjHMufRB71TP7_bnqtvhOvDufKdO6xSbkCQ1QlhZnl7eSfnwugppZFdJQGJ6_u63X2AkhNdnTSW-3K0lVskX0Ghpj-W5BsYjfxPZuvyNAvOiT1JtoTMGjY6zfTh_3McJsiP9f61VW3-P8y_O3S_u15eW7QMifJX_-MDMzHGxf-ERQF7I3ZcEsmUBJodYfovSRyPRNe3LHzqVM_E9XqBRrVo4yuBDWVkEQhZjpZ9JwYk0joXspXXc45vsSZL_7WG4tSav2fD7BcZYKG5GB4sCM5isVVesSoEqJ1ifoKFUT7E2RBYhmJ0dwQHbjg2bTb7ey6zbtq5fYvkrseyTjv7Pl-m1iuyJtjfhU8xAQoanIaHZdgknWLCq0RUDk1NBqn1t3ouDH1_FjHb8fl1y79FAzl8n2hBoBcVor3P6uXflArYl7mVmUzIRXvUDaJqd_Na8BpS9zHwzfWF6vf910aKHCum3g0xS2gUqBnsaqZoTu-SMUD17XeAFfKBuf0TFMrmD3dNttePA8ve46r01NAcmVZVDebnXvZpabilr5pZbj6JzHLEGeExX9R1SKUHSGofGLMP_BNZWqNY5vqb1HS8xgoEEvv06aJlNATqqB8ei2R28NNJuU1zpOKcoOiEy7qTkdtuwCxi-4aixpCewwoeGoZErGWEzXhhzii0qyu7yJk3moimTIiCTDxBxhkKBFtJe69dAml6cNDDn-BldyDMDcubHRuSBM3lVwycDgksflrb_o2n6fLzN1ZZtMhylRW51rbNBIRj5EqZ7bnEcwjCUXWAmXL9FxFNnkp-I1vWvLKsTUItnQXOzlkm80XajcOwgpVROMZFdy6w6XW5Pdb5E8Tlk4yzfZdRhi3FK48i7FjFMPcuFQVugltKsNF1fC_d7ZA9BdsHwyJmXOaeJUqE4Eb_I2cDwgEQvm07aQT9oOfyzgA2qoy-FhcBAgXLRp9zPyY8PUatKxHPIWWOA4YPWusovCFsNpLvoSRo2cdMFYGv4Zvra7McYP_5wbthLIOJV6g8uO_Wuc7G4oci_ijdJuDBF4aD4Mzad6zI2MeIjXbADM_cEt667nJxl3f1G4y7Pc6HyAyHowct19Lpo1SVpMxFh2JNlXy1b8sHPGU_xN643vpFsw74XKbxWqRA3_JmBSOQj17MaooyDduSM-D0-3vHNSG6ysgPWIjo58GHFK1P-mDk6jhfGQkSBpysom_vij-SxRndvyJ-hub2SPfZnM4B5qUgEKaz9pIN-Ul8QJHCYvKO3vYpisnTM37atWG1ssBh3SQ4fLAit_pJ6L8nG0e4wWjfGqhOdsy3wyGI37Eiko3wGs13KomvSUP_M0CmbUvNs2c60Xx6luv_T3W3NRWJohR2v3m7eRoGOop5aQwwJIMTEqKvGe_CFND97zXi7cvJ0IjOyTUJA8x7RfXTumRu082YwSau6W9WjDYy2-CNyuWQmuIFxmqodyruflezUo"
+            }
+          },
+          "csrf_token": "6685ea6dea1b174ae79761ad98f20e92"
+        },
+        "timestamp": "1970-01-03T14:00:22.056Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "input": {
+              "token": "0cAFcWeA7ZE4mm782Rl1Ti0x2cBXbn17XMx7cegGDziecnkxomqr0IqkRefRdi2alqLL1zYrqVI63dUGPllnxGSQOCLC-fYzbOIz7gTk5BkCDV6kz3RSpqLHVTRWOSblDBPG5Ii4XRj4olhhReqV3fw4m6NAZO1V_ZyULXTWZJK8U4uJVQIMhNIVDjHMufRB71TP7_bnqtvhOvDufKdO6xSbkCQ1QlhZnl7eSfnwugppZFdJQGJ6_u63X2AkhNdnTSW-3K0lVskX0Ghpj-W5BsYjfxPZuvyNAvOiT1JtoTMGjY6zfTh_3McJsiP9f61VW3-P8y_O3S_u15eW7QMifJX_-MDMzHGxf-ERQF7I3ZcEsmUBJodYfovSRyPRNe3LHzqVM_E9XqBRrVo4yuBDWVkEQhZjpZ9JwYk0joXspXXc45vsSZL_7WG4tSav2fD7BcZYKG5GB4sCM5isVVesSoEqJ1ifoKFUT7E2RBYhmJ0dwQHbjg2bTb7ey6zbtq5fYvkrseyTjv7Pl-m1iuyJtjfhU8xAQoanIaHZdgknWLCq0RUDk1NBqn1t3ouDH1_FjHb8fl1y79FAzl8n2hBoBcVor3P6uXflArYl7mVmUzIRXvUDaJqd_Na8BpS9zHwzfWF6vf910aKHCum3g0xS2gUqBnsaqZoTu-SMUD17XeAFfKBuf0TFMrmD3dNttePA8ve46r01NAcmVZVDebnXvZpabilr5pZbj6JzHLEGeExX9R1SKUHSGofGLMP_BNZWqNY5vqb1HS8xgoEEvv06aJlNATqqB8ei2R28NNJuU1zpOKcoOiEy7qTkdtuwCxi-4aixpCewwoeGoZErGWEzXhhzii0qyu7yJk3moimTIiCTDxBxhkKBFtJe69dAml6cNDDn-BldyDMDcubHRuSBM3lVwycDgksflrb_o2n6fLzN1ZZtMhylRW51rbNBIRj5EqZ7bnEcwjCUXWAmXL9FxFNnkp-I1vWvLKsTUItnQXOzlkm80XajcOwgpVROMZFdy6w6XW5Pdb5E8Tlk4yzfZdRhi3FK48i7FjFMPcuFQVugltKsNF1fC_d7ZA9BdsHwyJmXOaeJUqE4Eb_I2cDwgEQvm07aQT9oOfyzgA2qoy-FhcBAgXLRp9zPyY8PUatKxHPIWWOA4YPWusovCFsNpLvoSRo2cdMFYGv4Zvra7McYP_5wbthLIOJV6g8uO_Wuc7G4oci_ijdJuDBF4aD4Mzad6zI2MeIjXbADM_cEt667nJxl3f1G4y7Pc6HyAyHowct19Lpo1SVpMxFh2JNlXy1b8sHPGU_xN643vpFsw74XKbxWqRA3_JmBSOQj17MaooyDduSM-D0-3vHNSG6ysgPWIjo58GHFK1P-mDk6jhfGQkSBpysom_vij-SxRndvyJ-hub2SPfZnM4B5qUgEKaz9pIN-Ul8QJHCYvKO3vYpisnTM37atWG1ssBh3SQ4fLAit_pJ6L8nG0e4wWjfGqhOdsy3wyGI37Eiko3wGs13KomvSUP_M0CmbUvNs2c60Xx6luv_T3W3NRWJohR2v3m7eRoGOop5aQwwJIMTEqKvGe_CFND97zXi7cvJ0IjOyTUJA8x7RfXTumRu082YwSau6W9WjDYy2-CNyuWQmuIFxmqodyruflezUo"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "127",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-xhMBCZXwsdV8n1iQTn1h4A==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-xhMBCZXwsdV8n1iQTn1h4A==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:32:55 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "createCaptchaToken": {
+              "ok": true
+            }
+          },
+          "operation": "CreateCaptchaToken",
+          "duration": 20.65690700011328,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:00:22.267Z",
+        "responseTime": "210.8060000173282ms"
+      }
+    }
+  ]
+}

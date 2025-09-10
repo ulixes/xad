@@ -1,0 +1,231 @@
+{
+  "session": {
+    "id": "session_1757511668777_u6ecd2eyy",
+    "url": "https://www.reddit.com/user/cleaverbranch/performance/account/?t=month#engagement",
+    "startTime": "2025-09-10T13:41:08.777Z",
+    "endTime": "2025-09-10T13:41:26.779Z",
+    "duration": 18002,
+    "status": "completed"
+  },
+  "requestCount": 3,
+  "requests": [
+    {
+      "request": {
+        "id": "451965.144",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/performance/account/?t=month",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\""
+        },
+        "body": {
+          "operation": "IdentityUserPreferences",
+          "variables": {
+            "includeNightMode": true
+          },
+          "csrf_token": "7512718c26e98788d79384137357a977"
+        },
+        "timestamp": "1970-01-03T14:08:36.241Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "includeNightMode": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "150",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-PekjT65ofD2Nl2XzEj/oKg==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-PekjT65ofD2Nl2XzEj/oKg==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:41:10 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "identity": {
+              "preferences": {
+                "isNightModeEnabled": true
+              }
+            }
+          },
+          "operation": "IdentityUserPreferences",
+          "duration": 29.50977099989541,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:08:36.476Z",
+        "responseTime": "234.86599998432212ms"
+      }
+    },
+    {
+      "request": {
+        "id": "451965.143",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/performance/account/?t=month",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\""
+        },
+        "body": {
+          "operation": "ExposeVariant",
+          "variables": {
+            "input": {
+              "experimentName": "web3x_search_dynamic_scoped_typeahead",
+              "variant": "enabled",
+              "experimentVersion": "6"
+            }
+          },
+          "csrf_token": "7512718c26e98788d79384137357a977"
+        },
+        "timestamp": "1970-01-03T14:08:36.225Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "input": {
+              "experimentName": "web3x_search_dynamic_scoped_typeahead",
+              "variant": "enabled",
+              "experimentVersion": "6"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "136",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-mok91E3UXLgzI2LxYAZgfw==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-mok91E3UXLgzI2LxYAZgfw==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:41:10 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "exposeExperiment": {
+              "ok": true,
+              "errors": null
+            }
+          },
+          "operation": "ExposeVariant",
+          "duration": 13.457027000375092,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:08:36.868Z",
+        "responseTime": "642.3010000144131ms"
+      }
+    },
+    {
+      "request": {
+        "id": "451965.214",
+        "method": "POST",
+        "url": "https://www.reddit.com/svc/shreddit/graphql",
+        "headers": {
+          "Referer": "https://www.reddit.com/user/cleaverbranch/performance/account/?t=month",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "baggage": "sentry-environment=production,sentry-release=1.0.0-v2230.sha.6d71803,sentry-public_key=112489a1da354154aa9116028b27ed7b,sentry-trace_id=1f956621b690474fb9af562424ddf07e",
+          "content-type": "application/json",
+          "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Brave\";v=\"139\", \"Chromium\";v=\"139\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Linux\"",
+          "sentry-trace": "1f956621b690474fb9af562424ddf07e-a01c013996fadda1"
+        },
+        "body": {
+          "operation": "CreateCaptchaToken",
+          "variables": {
+            "input": {
+              "token": "0cAFcWeA4u9wf16qZ34GWSBA3txU6DwHjimdRIK3A700J7C4kChcX2NZUMOan3EICe-D7DJV4pqab-sMK0dU6Q7Cu_iZNeSu_imzYBT-G5v6GdQNvOtIoTR-faHhSVlM2-TXzJ-m5Ks-4TVgG1MuXc11TfuDLUb2X-fk4F9Ie8IAwnkcCdSqCM3FHB7BZr_-5h-n6t7NXSIsak4shlbZr1FgRcHsxx0wcxvMXx5vpQPBOvTF3ybsxxZSr--ASX_svDvA-CCMypMAW1VWgJCCvSzs6vCs_slOLivuJhVPUEg6QeN3RV6bzU4ynubMeq2Zz3-ytV4Od6CiHtVXBzCQ_TyTHk2NSVMW6HbIofz-UjTYq1KJ5MhQaKHpVjii04rK0seSy4pp-v0cROLcPSZGZ61f47B8AP-hpjgrLVe4bua09BdxHN8NNKoWBThwhfsJLJ4MgWhKgPZkoDthuBeMDWri59Ao2r9yx8Pyiyz7W0LcxQqH_GuN1-RFO2heQONH59pGrF2MsUJpu_UW5_ZSwfKGHGOJgddJq4ZIwazKOP5VZ4JL0TBbrCbZJ-hHtKULyKRJNYns4ASH0LrjH0bRjdkYHNWHiWlZseb1f015kg-Uur9Af4dvRo39oE4f8BDf_LmyKs-sC5WR9SlH8r3EtaeizU6xPVNnx7jwx6MuNFV08pPAR1pDo25D5wHdMxwrB3nAQGZI14aklOFjuynL7z7FcjG1ApURyaQRZKrXWm9gl9UoMI-bqw-k7ANyVqnO_5sfY-wJEH1qP-57w4rKHvLaZ5r-ux7yad7l6BJI9CnjZetcYU2_PvZh-brjA4MSJN0kV3ksb4hfPXLd2V2qU4p3Iz5ihXXDeGXgJ9LfiyuHXp17FqujN8qknDi_lntpsUY7vLBwAIX1E8J7DKeC7C_FYYYwR7bm8ulWr75vV45LAMEAjA15dxI1sT94mtambBUYsvfCYyJrjjJzjdR26Ckp0Yldo7VmIfpbjAyyhXDGtXeUL2YQIdokoZaH7POM7mLl06s5dglu-OLUx8G0UqRrUx5uoJzeE_Pn8N_79JR-MKIlJTRYm7x598vx74073tkghApPCk65jeFE-jKCfZVVpXmZ5AUTUgV7SzPvwStQE6qx7i8WByiY2-HV5DTte6uuCeFxN8-kVBPNFzGY-JzpuQukqRgjsetBt9vvREMFLJ_mjRRR1usn0lD36BVj4AdqoyDsWUBP1LSrc2K-kDaFxR5mCs2vWQVq8RlQgAi3XSW1sQthxwfCaYiay820FK79K9TRaER3LgcjqMz6EQ1Lme_cSgtRO2Nuir4BaK0aiU8Xf_tctkEi4pTWv6Aqx_Aj9THSl8tu6D_z98KuYI2j2YPc_OY-OaMQMEVaU5KG-WyK3-lq0PnbYQDuNAwNku23KgfsmTd81WdgXDnBfyANmZw1GqTP55mw3swJleSTJathRkwCSu4yAJTJ2PJVdCMtWkuCK327B43V5IeEp8xCelsFs6EcYAQhcGf4x_Uund0VSCVNVRamTiAVORetas-r0i_iXUqHEszXKWH0XolFgSpudNSpDz7qWoQE8XCfwyopYZ5f-x3ycg7uU9X-ZMsfXTe-5F0DWSg_qug0C3f3lF-n1Cc96EOThvamGcmI7MrsdoB0WJgM_y2kb7iN2KFKF4lUwd5bGg"
+            }
+          },
+          "csrf_token": "7512718c26e98788d79384137357a977"
+        },
+        "timestamp": "1970-01-03T14:08:37.183Z",
+        "type": "GraphQL",
+        "graphql": {
+          "variables": {
+            "input": {
+              "token": "0cAFcWeA4u9wf16qZ34GWSBA3txU6DwHjimdRIK3A700J7C4kChcX2NZUMOan3EICe-D7DJV4pqab-sMK0dU6Q7Cu_iZNeSu_imzYBT-G5v6GdQNvOtIoTR-faHhSVlM2-TXzJ-m5Ks-4TVgG1MuXc11TfuDLUb2X-fk4F9Ie8IAwnkcCdSqCM3FHB7BZr_-5h-n6t7NXSIsak4shlbZr1FgRcHsxx0wcxvMXx5vpQPBOvTF3ybsxxZSr--ASX_svDvA-CCMypMAW1VWgJCCvSzs6vCs_slOLivuJhVPUEg6QeN3RV6bzU4ynubMeq2Zz3-ytV4Od6CiHtVXBzCQ_TyTHk2NSVMW6HbIofz-UjTYq1KJ5MhQaKHpVjii04rK0seSy4pp-v0cROLcPSZGZ61f47B8AP-hpjgrLVe4bua09BdxHN8NNKoWBThwhfsJLJ4MgWhKgPZkoDthuBeMDWri59Ao2r9yx8Pyiyz7W0LcxQqH_GuN1-RFO2heQONH59pGrF2MsUJpu_UW5_ZSwfKGHGOJgddJq4ZIwazKOP5VZ4JL0TBbrCbZJ-hHtKULyKRJNYns4ASH0LrjH0bRjdkYHNWHiWlZseb1f015kg-Uur9Af4dvRo39oE4f8BDf_LmyKs-sC5WR9SlH8r3EtaeizU6xPVNnx7jwx6MuNFV08pPAR1pDo25D5wHdMxwrB3nAQGZI14aklOFjuynL7z7FcjG1ApURyaQRZKrXWm9gl9UoMI-bqw-k7ANyVqnO_5sfY-wJEH1qP-57w4rKHvLaZ5r-ux7yad7l6BJI9CnjZetcYU2_PvZh-brjA4MSJN0kV3ksb4hfPXLd2V2qU4p3Iz5ihXXDeGXgJ9LfiyuHXp17FqujN8qknDi_lntpsUY7vLBwAIX1E8J7DKeC7C_FYYYwR7bm8ulWr75vV45LAMEAjA15dxI1sT94mtambBUYsvfCYyJrjjJzjdR26Ckp0Yldo7VmIfpbjAyyhXDGtXeUL2YQIdokoZaH7POM7mLl06s5dglu-OLUx8G0UqRrUx5uoJzeE_Pn8N_79JR-MKIlJTRYm7x598vx74073tkghApPCk65jeFE-jKCfZVVpXmZ5AUTUgV7SzPvwStQE6qx7i8WByiY2-HV5DTte6uuCeFxN8-kVBPNFzGY-JzpuQukqRgjsetBt9vvREMFLJ_mjRRR1usn0lD36BVj4AdqoyDsWUBP1LSrc2K-kDaFxR5mCs2vWQVq8RlQgAi3XSW1sQthxwfCaYiay820FK79K9TRaER3LgcjqMz6EQ1Lme_cSgtRO2Nuir4BaK0aiU8Xf_tctkEi4pTWv6Aqx_Aj9THSl8tu6D_z98KuYI2j2YPc_OY-OaMQMEVaU5KG-WyK3-lq0PnbYQDuNAwNku23KgfsmTd81WdgXDnBfyANmZw1GqTP55mw3swJleSTJathRkwCSu4yAJTJ2PJVdCMtWkuCK327B43V5IeEp8xCelsFs6EcYAQhcGf4x_Uund0VSCVNVRamTiAVORetas-r0i_iXUqHEszXKWH0XolFgSpudNSpDz7qWoQE8XCfwyopYZ5f-x3ycg7uU9X-ZMsfXTe-5F0DWSg_qug0C3f3lF-n1Cc96EOThvamGcmI7MrsdoB0WJgM_y2kb7iN2KFKF4lUwd5bGg"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "cache-control": "private, s-maxage=1, max-age=1, must-revalidate",
+          "content-encoding": "gzip",
+          "content-length": "127",
+          "content-security-policy": "child-src 'self' blob: accounts.google.com;connect-src 'self' events.redditmedia.com o418887.ingest.sentry.io *.redd.it *.reddit.com www.redditstatic.com vimeo.com alb.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ w3-reporting.reddit.com reddit-uploaded-emoji.s3-accelerate.amazonaws.com reddit-uploaded-media.s3-accelerate.amazonaws.com reddit-uploaded-video.s3-accelerate.amazonaws.com reddit-subreddit-uploaded-media.s3-accelerate.amazonaws.com wss://*.wss.redditmedia.com wss://gql-realtime.reddit.com *.giphy.com js.stripe.com support.reddithelp.com matrix.redditspace.com www.google.com/ccm/ styles.redditmedia.com a.thumbs.redditmedia.com b.thumbs.redditmedia.com;default-src 'self';font-src 'self' data:;form-action 'none';frame-ancestors 'self' *.reddit.com *.snooguts.net;frame-src 'self' www.reddit.com www.youtube.com www.youtube-nocookie.com player.vimeo.com *.redditmedia.com cdn.embedly.com redgifs.com www.redgifs.com embed.reddit.com accounts.google.com/gsi/ www.google.com/recaptcha/ recaptcha.google.com/recaptcha/ js.stripe.com hooks.stripe.com *.devvit.net td.doubleclick.net/ www.googletagmanager.com/ https://www.tiktok.com/;img-src 'self' data: blob: https:;manifest-src 'self' www.redditstatic.com;media-src 'self' blob: data: *.redd.it www.redditstatic.com matrix.redditspace.com;object-src 'none';script-src 'self' 'strict-dynamic' 'report-sample' 'unsafe-inline' 'unsafe-eval' 'nonce-0saADi40t6Rn5P95IJyXQw==';style-src 'self' 'unsafe-inline' www.redditstatic.com *.reddit.com accounts.google.com/gsi/style;style-src-attr 'unsafe-inline';worker-src 'self' blob:;report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-security-policy-report-only": "object-src 'none';script-src 'nonce-0saADi40t6Rn5P95IJyXQw==' 'report-sample' 'unsafe-eval' 'strict-dynamic' https:;frame-ancestors 'self' *.reddit.com *.snooguts.net;base-uri 'self';report-to csp;report-uri https://w3-reporting-csp.reddit.com/reports",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 10 Sep 2025 13:41:10 GMT",
+          "nel": "{\"report_to\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": false, \"success_fraction\": 1.0, \"failure_fraction\": 1.0}",
+          "report-to": "{\"group\": \"w3-reporting-nel\", \"max_age\": 14400, \"include_subdomains\": true,  \"endpoints\": [{ \"url\": \"https://w3-reporting-nel.reddit.com/reports\" }]}, {\"group\": \"w3-reporting\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting.reddit.com/reports\" }]}, {\"group\": \"w3-reporting-csp\", \"max_age\": 14400, \"include_subdomains\": true, \"endpoints\": [{ \"url\": \"https://w3-reporting-csp.reddit.com/reports\" }]}",
+          "server": "snooserv",
+          "strict-transport-security": "max-age=31536000; includeSubdomains",
+          "vary": "Accept-Encoding,accept-language",
+          "via": "1.1 varnish",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-is-wrs": "false",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": {
+          "data": {
+            "createCaptchaToken": {
+              "ok": true
+            }
+          },
+          "operation": "CreateCaptchaToken",
+          "duration": 18.354623999999603,
+          "errors": [],
+          "servedBy": "local"
+        },
+        "timestamp": "1970-01-03T14:08:37.399Z",
+        "responseTime": "216.66000000550412ms"
+      }
+    }
+  ]
+}

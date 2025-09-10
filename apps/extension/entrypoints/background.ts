@@ -1,275 +1,1048 @@
-// Import the config to get parsers
-import { twitterLikesConfig } from '../src/lib/configs/twitter-likes';
-import { twitterCommentsConfig } from '../src/lib/configs/twitter-comments';
-import { twitterFollowsConfig } from '../src/lib/configs/twitter-follows';
-import { twitterRetweetsConfig } from '../src/lib/configs/twitter-retweets';
+import { InstagramVerifier } from '../src/services/InstagramVerifier';
+import { VerificationMessage } from '../src/types/verification';
+import { TabManager } from '../src/utils/tabManager';
+import { DebuggerManager } from '../src/utils/debuggerManager';
 
-// Generic Proof Detection Engine
-export default defineBackground(() => {
-  const attachedTabs = new Set<number>();
-  const activeProofSessions = new Map<string, any>();
+// Strong typing based on CSV IG field mapping
+interface IGProfileData {
+  followerCount: number;           // ig-follower-count
+  accountType: 1 | 2 | 3;          // ig-account-type (1=personal, 2=business, 3=creator)
+  isVerified: boolean;             // ig-is-verified
+  category: string;                // ig-category
+}
 
-  // Config registry for parsers
-  const configRegistry: Record<string, any> = {
-    'X_LIKE': twitterLikesConfig,
-    'X_COMMENT': twitterCommentsConfig,
-    'X_FOLLOW': twitterFollowsConfig,
-    'X_RETWEET': twitterRetweetsConfig
+interface IGBusinessInsights {
+  profileVisits7d: number;         // ig-profile-visits-7d
+  profileVisits30d: number;        // ig-profile-visits-30d
+  profileVisits90d: number;        // ig-profile-visits-90d
+  accountsReached7d: number;       // ig-accounts-reached-7d
+  accountsReached30d: number;      // ig-accounts-reached-30d
+  accountsEngaged7d: number;       // ig-accounts-engaged-7d
+  accountsEngaged30d: number;      // ig-accounts-engaged-30d
+  followerGrowth7d: number;        // ig-follower-growth-7d (percentage)
+  followerGrowth30d: number;       // ig-follower-growth-30d (percentage)
+  followerGrowth90d: number;       // ig-follower-growth-90d (percentage)
+  engagementRate: number;          // ig-engagement-rate
+}
+
+interface IGAudienceData {
+  genderDistribution: {
+    male: number;
+    female: number;
+    other: number;
+  };                               // ig-audience-gender
+  ageDistribution: {
+    '13-17': number;
+    '18-24': number;
+    '25-34': number;
+    '35-44': number;
+    '45-54': number;
+    '55-64': number;
+    '65+': number;
+  };                               // ig-audience-age
+  topLocation: string;             // ig-top-location
+}
+
+interface IGContentMetrics {
+  engagementTrend: 'increasing' | 'stable' | 'decreasing'; // ig-content-engagement-trend
+}
+
+interface IGAccountCenterData {
+  linkedIdentities: Array<{
+    canonicalId: string;
+    accountType: 'INSTAGRAM';
+    username: string;
+    fullName: string;
+    identityType: 'IG_USER' | 'IG_PROFESSIONAL';
+    detailedIdentityType: 'IG_PERSONAL' | 'IG_CREATOR' | 'IG_BUSINESS';
+  }>;
+  businessIdentities: Array<{
+    canonicalId: string;
+    username: string;
+    fullName: string;
+    identityType: 'IG_PROFESSIONAL';
+    detailedIdentityType: 'IG_CREATOR' | 'IG_BUSINESS';
+  }>;
+}
+
+interface IGProfileSession {
+  sessionId: string;
+  userId: string;
+  username: string;
+  stage: 'account_center' | 'basic_profile' | 'insights' | 'audience' | 'completed' | 'failed';
+  tabId?: number;
+  collectedData: {
+    accountCenterData: IGAccountCenterData | null;
+    profileData: IGProfileData | null;
+    insightsData: IGBusinessInsights | null;
+    audienceData: IGAudienceData | null;
+    contentMetrics: IGContentMetrics | null;
   };
+  startTime: number;
+  callbacks: ((result: any) => void)[];
+}
 
-  // Check if debugger API is available
-  const debuggerAvailable = typeof browser !== 'undefined' && browser.debugger;
-  
-  if (!debuggerAvailable) {
-    console.warn('Debugger API not available - proof detection will not work');
-  }
+export default defineBackground(() => {
+  const instagramVerifier = new InstagramVerifier();
+  const verifiers = new Map([
+    ['instagram', instagramVerifier],
+  ]);
 
-  // Extension action - open side panel
+  // IG Profile Building State Management
+  const igProfileSessions = new Map<string, IGProfileSession>();
+
+  // Extension icon click handler
   browser.action.onClicked.addListener((tab) => {
     browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
   });
 
-  // Listen for proof session commands from state machine
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'START_PROOF_SESSION') {
-      const { sessionId, proofType, targetUrl, config, targetId } = message;
-      
-      // Reconstruct the full config with RegExp and parsers
-      const fullConfig = configRegistry[proofType];
-      const reconstructedConfig = config ? {
-        ...config,
-        urlRegex: new RegExp(config.urlRegex), // Reconstruct RegExp from string
-        context: {
-          endpointIdentifier: config.context?.endpointIdentifier,
-          parser: fullConfig?.context?.parser // Get parser from registry
-        },
-        action: {
-          endpointIdentifier: config.action?.endpointIdentifier,
-          parser: fullConfig?.action?.parser // Get parser from registry
-        }
-      } : fullConfig; // Fallback to full config if no config provided
-      
-      activeProofSessions.set(sessionId, {
-        proofType,
-        config: reconstructedConfig,
-        targetUrl,
-        targetId,
-        contextData: null,
-        actionData: null,
-        status: 'waiting_for_navigation'
-      });
-      console.log(`Started proof session: ${sessionId} for type: ${proofType}, target: ${targetId}`);
-      console.log('Original config:', config);
-      console.log('Full config from registry:', fullConfig);
-      console.log('Reconstructed config:', reconstructedConfig);
-      console.log('URL RegExp:', reconstructedConfig?.urlRegex, typeof reconstructedConfig?.urlRegex);
-      sendResponse({ success: true, type: 'START_PROOF_SESSION' });
-      
-      // Also emit a SESSION_STARTED event
-      emitEvent('SESSION_STARTED', { sessionId });
-      return true; // Keep the message channel open for async response
-    }
+  // Message handler for verification requests
+  browser.runtime.onMessage.addListener((message: VerificationMessage, sender, sendResponse) => {
+    console.log(`📨 [Background] Received message:`, message.type);
     
-    if (message.type === 'END_PROOF_SESSION') {
-      const { sessionId } = message;
-      activeProofSessions.delete(sessionId);
-      console.log(`Ended proof session: ${sessionId}`);
-      sendResponse({ success: true });
-      return true;
+    try {
+      switch (message.type) {
+        case 'START_VERIFICATION':
+          handleLegacyVerificationRequest(message.platform, message.username, sendResponse);
+          return true; // Keep message channel open for async response
+          
+        case 'CREATE_VERIFICATION_TAB':
+          handleTabCreationRequest(message.platform, message.username, sendResponse);
+          return true;
+          
+        case 'ATTACH_DEBUGGER':
+          handleDebuggerAttachRequest(message.tabId, message.username, sendResponse);
+          return true;
+          
+        case 'CLEANUP_VERIFICATION':
+          handleCleanupRequest(message.tabId, sendResponse);
+          return true;
+
+        case 'BUILD_IG_PROFILE_COMPLETE':
+          handleIGProfileBuildingRequest(message.username, message.userId, sendResponse);
+          return true;
+          
+        default:
+          console.warn(`⚠️ [Background] Unknown message type: ${message.type}`);
+          sendResponse({ type: 'VERIFICATION_ERROR', error: 'Unknown message type' });
+          return false;
+      }
+    } catch (error) {
+      console.error(`💥 [Background] Error handling message:`, error);
+      sendResponse({ type: 'VERIFICATION_ERROR', error: `Message handling failed: ${error}` });
+      return false;
     }
   });
 
-  // Generic tab monitoring for all active sessions
-  browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status !== "complete" || !tab.url) return;
+  // Legacy verification handler (fallback)
+  async function handleLegacyVerificationRequest(platform: string, username: string, sendResponse: (response: any) => void) {
+    console.log(`🚀 [Background] Starting legacy verification request for ${platform}:"${username}"`);
     
-    console.log(`Tab updated: ${tab.url}`);
-    console.log('Active sessions:', activeProofSessions.size);
-    
-    // Check which active sessions match this URL
-    for (const [sessionId, session] of activeProofSessions) {
-      console.log(`Checking session ${sessionId}:`, {
-        configExists: !!session.config,
-        urlRegexExists: !!session.config?.urlRegex,
-        urlRegexType: typeof session.config?.urlRegex,
-        urlRegex: session.config?.urlRegex
-      });
-      
-      try {
-        if (session.config?.urlRegex && typeof session.config.urlRegex.test === 'function') {
-          const matches = session.config.urlRegex.test(tab.url);
-          console.log(`URL ${tab.url} matches pattern: ${matches}`);
-          
-          if (matches) {
-            console.log('✅ Navigation detected!');
-            
-            // Extract username from URL as fallback context
-            const usernameMatch = tab.url.match(/x\.com\/([^/]+)\/(likes|with_replies|following)/);
-            const username = usernameMatch ? usernameMatch[1] : 'unknown';
-            
-            // Set basic context from URL if we don't have it
-            if (!session.contextData) {
-              session.contextData = {
-                id: 'url_extracted',
-                name: username,
-                handle: username,
-                source: 'url'
-              };
-              console.log('📝 Set fallback context from URL:', session.contextData);
-            }
-            
-            attachDebugger(tabId, sessionId, session);
-            emitEvent('NAVIGATION_DETECTED', { sessionId, url: tab.url });
-          }
-        } else {
-          console.warn('Invalid urlRegex for session:', sessionId);
-        }
-      } catch (error) {
-        console.error('Error testing URL pattern:', error);
+    try {
+      const verifier = verifiers.get(platform.toLowerCase());
+      if (!verifier) {
+        sendResponse({
+          type: 'VERIFICATION_ERROR',
+          error: `Unsupported platform: ${platform}`
+        });
+        return;
       }
-    }
-  });
 
-  function attachDebugger(tabId: number, sessionId: string, session: any) {
-    if (!debuggerAvailable) {
-      console.warn('Cannot attach debugger - API not available');
-      emitEvent('PROOF_ERROR', { sessionId, error: 'Debugger API not available' });
-      return;
-    }
-    
-    if (!attachedTabs.has(tabId)) {
-      browser.debugger.attach({ tabId }, "1.3", () => {
-        if (browser.runtime.lastError) {
-          console.error("Debugger attach failed:", browser.runtime.lastError.message);
-          emitEvent('PROOF_ERROR', { sessionId, error: browser.runtime.lastError.message });
-          return;
-        }
-        attachedTabs.add(tabId);
-        browser.debugger.sendCommand({ tabId }, "Network.enable");
-        console.log(`Debugger attached to tab ${tabId} for session: ${sessionId}`);
+      // Create verification tab
+      const tabId = await TabManager.createVerificationTab(platform, username);
+      
+      // Start verification process before waiting for tab to load
+      const verificationPromise = verifier.verifyAccount(username, tabId);
+      
+      // Wait for tab to load
+      await TabManager.waitForTabToLoad(tabId);
+      
+      // Wait for verification to complete
+      const result = await verificationPromise;
+      
+      // Cleanup
+      await Promise.all([
+        TabManager.closeTab(tabId),
+        DebuggerManager.detachFromTab(tabId)
+      ]);
+
+      if (result.success && result.profileData) {
+        sendResponse({
+          type: 'VERIFICATION_COMPLETE',
+          profileData: result.profileData
+        });
+      } else {
+        sendResponse({
+          type: 'VERIFICATION_ERROR',
+          error: result.error || 'Unknown verification error'
+        });
+      }
+    } catch (error) {
+      console.error(`💥 [Background] Legacy verification failed:`, error);
+      sendResponse({
+        type: 'VERIFICATION_ERROR',
+        error: `Verification failed: ${error}`
       });
     }
   }
 
-  // Generic GraphQL response interceptor
-  if (debuggerAvailable) {
-    browser.debugger.onEvent.addListener((source, method, params: any) => {
-      if (method !== "Network.responseReceived" || !source.tabId) return;
-      
-      const url = params.response.url;
-      
-      // Check all active sessions for matching endpoints
-      for (const [sessionId, session] of activeProofSessions) {
-        const { config } = session;
-        
-        if (!config) continue;
-        
-        // Context endpoint (user profile data)
-        if (url.includes(config.context?.endpointIdentifier)) {
-          extractAndEmitData(source.tabId, params.requestId, sessionId, 'context', config.context.parser);
-        }
-        
-        // Action endpoint (proof data)  
-        if (url.includes(config.action?.endpointIdentifier)) {
-          extractAndEmitData(source.tabId, params.requestId, sessionId, 'action', config.action.parser);
-        }
-      }
-    });
-  }
-
-  function extractAndEmitData(tabId: number, requestId: string, sessionId: string, dataType: string, parser: Function) {
-    if (!debuggerAvailable) {
-      console.warn('Cannot extract data - debugger not available');
-      return;
-    }
+  // New hierarchical verification handlers
+  async function handleTabCreationRequest(platform: string, username: string, sendResponse: (response: any) => void) {
+    console.log(`🚀 [Background] Creating verification tab for ${platform}:"${username}"`);
     
-    browser.debugger.sendCommand(
-      { tabId },
-      "Network.getResponseBody", 
-      { requestId },
-      (response) => {
-        if (!response?.body) return;
-        
-        try {
-          const rawData = JSON.parse(response.body);
-          const session = activeProofSessions.get(sessionId);
-          const parsedData = parser ? 
-            (dataType === 'action' ? parser(rawData, session?.targetId) : parser(rawData)) 
-            : rawData;
-          
-          // Update session
-          if (session) {
-            if (dataType === 'context') {
-              session.contextData = parsedData;
-            } else {
-              session.actionData = parsedData;
-            }
-            
-            // Emit structured event to verification state machine
-            emitEvent('PROOF_DATA_EXTRACTED', {
-              sessionId,
-              dataType,
-              data: parsedData,
-              isComplete: session.contextData && session.actionData
-            });
-            
-            // Complete the proof if we have action data with a result
-            // Context is nice-to-have but not required for proof verification
-            const canComplete = session.actionData && 
-              (session.actionData.proofResult !== undefined || session.contextData);
-            
-            if (canComplete) {
-              console.log('🎉 Completing proof with available data');
-              emitEvent('PROOF_COMPLETED', {
-                sessionId,
-                proof: {
-                  type: session.proofType,
-                  context: session.contextData || { id: 'unknown', name: 'User', handle: 'unknown' },
-                  action: session.actionData,
-                  timestamp: Date.now()
-                }
-              });
-              activeProofSessions.delete(sessionId);
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing response:', error);
-          emitEvent('PROOF_ERROR', { sessionId, error: error instanceof Error ? error.message : 'Parse error' });
-        }
-      }
-    );
+    try {
+      const tabId = await TabManager.createVerificationTab(platform, username);
+      
+      // Wait for tab to load
+      await TabManager.waitForTabToLoad(tabId);
+      
+      sendResponse({
+        type: 'TAB_CREATED',
+        tabId
+      });
+    } catch (error) {
+      console.error(`💥 [Background] Tab creation failed:`, error);
+      sendResponse({
+        type: 'TAB_CREATION_ERROR',
+        error: (error as Error).message || 'Failed to create verification tab'
+      });
+    }
   }
 
-  function emitEvent(eventType: string, payload: any) {
-    browser.runtime.sendMessage({
-      type: 'BACKGROUND_EVENT',
-      eventType,
-      payload,
-      timestamp: Date.now()
-    }).catch(error => {
-      // Side panel may not be open - this is normal
-      console.debug(`Background event not delivered: ${eventType}`, error.message);
-    });
+  async function handleDebuggerAttachRequest(tabId: number, username: string, sendResponse: (response: any) => void) {
+    console.log(`🚀 [Background] Attaching debugger to tab ${tabId} for "${username}"`);
+    
+    try {
+      await DebuggerManager.attachToTab(tabId, username);
+      
+      sendResponse({
+        type: 'DEBUGGER_ATTACHED'
+      });
+    } catch (error) {
+      console.error(`💥 [Background] Debugger attachment failed:`, error);
+      sendResponse({
+        type: 'DEBUGGER_ATTACHMENT_ERROR',
+        error: (error as Error).message || 'Failed to attach debugger'
+      });
+    }
   }
 
-  // Cleanup on tab removal
+  async function handleCleanupRequest(tabId: number, sendResponse: (response: any) => void) {
+    console.log(`🚀 [Background] Cleaning up verification resources for tab ${tabId}`);
+    
+    try {
+      await Promise.all([
+        TabManager.closeTab(tabId),
+        DebuggerManager.detachFromTab(tabId)
+      ]);
+      
+      sendResponse({
+        type: 'CLEANUP_COMPLETE'
+      });
+    } catch (error) {
+      console.warn(`⚠️ [Background] Cleanup completed with warnings:`, error);
+      // Don't fail cleanup - just log and continue
+      sendResponse({
+        type: 'CLEANUP_COMPLETE'
+      });
+    }
+  }
+
+  // Cleanup on tab close to prevent memory leaks
   browser.tabs.onRemoved.addListener((tabId) => {
-    if (attachedTabs.has(tabId) && debuggerAvailable) {
-      browser.debugger.detach({ tabId }, () => {
-        attachedTabs.delete(tabId);
-        console.log(`Debugger detached from removed tab: ${tabId}`);
-      });
-    }
+    console.log(`🗑️ [Background] Tab ${tabId} closed, cleaning up resources`);
+    
+    // Use try-finally to ensure cleanup happens
+    (async () => {
+      try {
+        await DebuggerManager.detachFromTab(tabId);
+      } finally {
+        // Always clean up tab tracking even if debugger detach fails
+        TabManager.closeTab(tabId).catch(() => {
+          // Tab already closed, ignore error
+        });
+      }
+    })();
   });
 
   // Cleanup on extension shutdown
   browser.runtime.onSuspend?.addListener(() => {
-    if (debuggerAvailable) {
-      for (const tabId of attachedTabs) {
-        browser.debugger.detach({ tabId });
-      }
+    console.log(`🛑 [Background] Extension suspending, cleaning up all resources`);
+    
+    try {
+      TabManager.cleanup();
+    } finally {
+      DebuggerManager.cleanup();
     }
-    attachedTabs.clear();
-    activeProofSessions.clear();
   });
+
+  // Complete IG Profile Building Handler
+  async function handleIGProfileBuildingRequest(username: string, userId: string, sendResponse: (response: any) => void) {
+    const sessionId = `${userId}_${username}_${Date.now()}`;
+    console.log(`🚀 [Background] Starting complete IG profile building for "${username}" (Session: ${sessionId})`);
+    
+    try {
+      // Initialize session
+      const session: IGProfileSession = {
+        sessionId,
+        userId,
+        username,
+        stage: 'account_center',
+        collectedData: {
+          accountCenterData: null,
+          profileData: null,
+          insightsData: null,
+          audienceData: null,
+          contentMetrics: null,
+        },
+        startTime: Date.now(),
+        callbacks: [sendResponse],
+      };
+      
+      igProfileSessions.set(sessionId, session);
+      
+      // Stage 1: Account Center Profile Collection
+      await executeStage1AccountCenter(session);
+      
+    } catch (error) {
+      console.error(`💥 [Background] IG profile building failed:`, error);
+      sendResponse({
+        type: 'IG_PROFILE_ERROR',
+        error: `Profile building failed: ${error}`
+      });
+      igProfileSessions.delete(sessionId);
+    }
+  }
+  
+  // Stage 1: Account Center Profile Collection
+  async function executeStage1AccountCenter(session: IGProfileSession) {
+    console.log(`📊 [Background] Stage 1: Collecting Account Center data for ${session.username}`);
+    
+    try {
+      // Create tab for account center
+      const tabId = await TabManager.createTab('https://accountscenter.instagram.com/profiles/');
+      session.tabId = tabId;
+      session.stage = 'account_center';
+      
+      // Wait for tab to load
+      await TabManager.waitForTabToLoad(tabId);
+      
+      // Set up debugger to capture FXAccountsCenterProfilesPageV2Query
+      await setupAccountCenterDebugger(session);
+      
+    } catch (error) {
+      console.error(`❌ [Background] Stage 1 failed:`, error);
+      session.stage = 'failed';
+      throw error;
+    }
+  }
+  
+  // Stage 2: Basic Profile Data Collection  
+  async function executeStage2BasicProfile(session: IGProfileSession) {
+    console.log(`📊 [Background] Stage 2: Collecting basic profile data for ${session.username}`);
+    
+    try {
+      // Navigate to profile page
+      const profileUrl = `https://instagram.com/${session.username}`;
+      await browser.tabs.update(session.tabId!, { url: profileUrl });
+      await TabManager.waitForTabToLoad(session.tabId!);
+      
+      session.stage = 'basic_profile';
+      
+      // Set up debugger to capture PolarisProfilePageContentQuery
+      await setupProfileDebugger(session);
+      
+    } catch (error) {
+      console.error(`❌ [Background] Stage 2 failed:`, error);
+      session.stage = 'failed';
+      throw error;
+    }
+  }
+  
+  // Stage 3: Business Insights Collection
+  async function executeStage3BusinessInsights(session: IGProfileSession) {
+    console.log(`📊 [Background] Stage 3: Collecting business insights for ${session.username}`);
+    
+    // Only for professional accounts
+    if (!session.collectedData.profileData || 
+        session.collectedData.profileData.accountType === 1) {
+      console.log(`⏭️ [Background] Skipping insights - personal account`);
+      await executeStage4AudienceData(session);
+      return;
+    }
+    
+    try {
+      // Navigate to insights page
+      await browser.tabs.update(session.tabId!, { url: 'https://instagram.com/accounts/insights/' });
+      await TabManager.waitForTabToLoad(session.tabId!);
+      
+      session.stage = 'insights';
+      
+      // Set up debugger to capture PolarisAccountInsightsProfileQuery
+      await setupInsightsDebugger(session);
+      
+    } catch (error) {
+      console.error(`❌ [Background] Stage 3 failed:`, error);
+      session.stage = 'failed';
+      throw error;
+    }
+  }
+  
+  // Stage 4: Audience Demographics Collection
+  async function executeStage4AudienceData(session: IGProfileSession) {
+    console.log(`📊 [Background] Stage 4: Collecting audience data for ${session.username}`);
+    
+    // Only for professional accounts
+    if (!session.collectedData.profileData || 
+        session.collectedData.profileData.accountType === 1) {
+      console.log(`⏭️ [Background] Skipping audience data - personal account`);
+      await completeProfileBuilding(session);
+      return;
+    }
+    
+    try {
+      // Navigate to audience insights
+      await browser.tabs.update(session.tabId!, { url: 'https://instagram.com/accounts/insights/audience/' });
+      await TabManager.waitForTabToLoad(session.tabId!);
+      
+      session.stage = 'audience';
+      
+      // Set up debugger to capture PolarisAccountInsightsFollowersQuery
+      await setupAudienceDebugger(session);
+      
+    } catch (error) {
+      console.error(`❌ [Background] Stage 4 failed:`, error);
+      session.stage = 'failed';
+      throw error;
+    }
+  }
+  
+  // Complete Profile Building - Store in Database
+  async function completeProfileBuilding(session: IGProfileSession) {
+    console.log(`✅ [Background] Completing profile building for ${session.username}`);
+    
+    try {
+      session.stage = 'completed';
+      
+      // Structure the complete profile data
+      const completeProfileData = {
+        profileData: session.collectedData.profileData,
+        businessInsights: session.collectedData.insightsData,
+        audienceData: session.collectedData.audienceData,
+        accountCenterData: session.collectedData.accountCenterData,
+        contentMetrics: session.collectedData.contentMetrics,
+        collectionTimestamp: Date.now(),
+        processingDuration: Date.now() - session.startTime,
+      };
+      
+      // Send success response with complete data
+      session.callbacks.forEach(callback => {
+        callback({
+          type: 'IG_PROFILE_COMPLETE',
+          username: session.username,
+          userId: session.userId,
+          profileData: completeProfileData
+        });
+      });
+      
+      // Cleanup
+      await cleanup(session);
+      
+    } catch (error) {
+      console.error(`❌ [Background] Profile completion failed:`, error);
+      session.stage = 'failed';
+      throw error;
+    }
+  }
+  
+  // Cleanup session resources
+  async function cleanup(session: IGProfileSession) {
+    console.log(`🧹 [Background] Cleaning up IG profile session: ${session.sessionId}`);
+    
+    try {
+      if (session.tabId) {
+        await Promise.all([
+          TabManager.closeTab(session.tabId),
+          DebuggerManager.detachFromTab(session.tabId)
+        ]);
+      }
+    } finally {
+      igProfileSessions.delete(session.sessionId);
+    }
+  }
+  
+  // Stage 1: Account Center GraphQL Query Capture
+  async function setupAccountCenterDebugger(session: IGProfileSession) {
+    console.log(`🔗 [Background] Setting up Account Center debugger for session: ${session.sessionId}`);
+    
+    return new Promise<void>((resolve, reject) => {
+      let isResolved = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      
+      const cleanup = async () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        try {
+          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
+          await browser.debugger.detach({ tabId: session.tabId! });
+        } catch (error) {
+          console.warn(`⚠️ [Background] Cleanup warning:`, error);
+        }
+      };
+
+      const handleDebuggerEvent = (source: any, method: string, params: any) => {
+        if (source.tabId !== session.tabId || isResolved) return;
+        
+        if (method === 'Network.requestWillBeSent') {
+          const url = params.request.url;
+          // Target: https://accountscenter.instagram.com/api/graphql/
+          if (url.includes('accountscenter.instagram.com/api/graphql/')) {
+            const postData = params.request.postData;
+            if (postData && postData.includes('FXAccountsCenterProfilesPageV2Query')) {
+              console.log(`📤 [Background] Account Center GraphQL request detected`);
+            }
+          }
+        }
+        
+        if (method === 'Network.responseReceived') {
+          const requestId = params.requestId;
+          const url = params.response.url;
+          
+          if (url.includes('accountscenter.instagram.com/api/graphql/')) {
+            setTimeout(() => {
+              if (isResolved) return;
+              
+              browser.debugger.sendCommand(
+                { tabId: session.tabId! },
+                'Network.getResponseBody',
+                { requestId },
+                async (response: any) => {
+                  if (isResolved || !response?.body) return;
+                  
+                  try {
+                    const data = JSON.parse(response.body);
+                    
+                    // Extract FXAccountsCenterProfilesPageV2Query response
+                    if (data?.data?.fx_identity_management?.identities_and_central_identities) {
+                      console.log(`✅ [Background] Account Center data captured`);
+                      
+                      const accountCenterData: IGAccountCenterData = {
+                        linkedIdentities: extractLinkedIdentities(data.data.fx_identity_management.identities_and_central_identities),
+                        businessIdentities: extractBusinessIdentities(data.data.fx_identity_management.business_identities || [])
+                      };
+                      
+                      session.collectedData.accountCenterData = accountCenterData;
+                      isResolved = true;
+                      await cleanup();
+                      
+                      // Proceed to Stage 2
+                      await executeStage2BasicProfile(session);
+                      resolve();
+                    }
+                  } catch (error) {
+                    console.error(`💥 [Background] Account Center data parsing failed:`, error);
+                  }
+                }
+              );
+            }, 100);
+          }
+        }
+      };
+
+      // Set up timeout
+      timeoutId = setTimeout(async () => {
+        if (isResolved) return;
+        console.log(`⏰ [Background] Account Center capture timeout`);
+        isResolved = true;
+        await cleanup();
+        reject(new Error('Account Center data capture timeout'));
+      }, 30000);
+
+      // Attach debugger
+      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
+        if (browser.runtime.lastError) {
+          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
+          return;
+        }
+
+        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
+          if (browser.runtime.lastError) {
+            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
+            return;
+          }
+          
+          console.log(`📡 [Background] Account Center network monitoring enabled`);
+          browser.debugger.onEvent.addListener(handleDebuggerEvent);
+        });
+      });
+    });
+  }
+
+  // Helper function to extract linked identities
+  function extractLinkedIdentities(identitiesData: any): IGAccountCenterData['linkedIdentities'] {
+    const linkedIdentities = identitiesData.linked_identities_to_pci || [];
+    return linkedIdentities
+      .filter((identity: any) => identity.account_type === 'INSTAGRAM')
+      .map((identity: any) => ({
+        canonicalId: identity.canonical_id,
+        accountType: 'INSTAGRAM' as const,
+        username: identity.username,
+        fullName: identity.full_name,
+        identityType: identity.identity_type,
+        detailedIdentityType: identity.detailed_identity_type
+      }));
+  }
+
+  // Helper function to extract business identities  
+  function extractBusinessIdentities(businessData: any[]): IGAccountCenterData['businessIdentities'] {
+    return businessData
+      .filter((identity: any) => identity.identity_type === 'IG_PROFESSIONAL')
+      .map((identity: any) => ({
+        canonicalId: identity.canonical_id,
+        username: identity.username,
+        fullName: identity.full_name,
+        identityType: 'IG_PROFESSIONAL' as const,
+        detailedIdentityType: identity.detailed_identity_type
+      }));
+  }
+  
+  // Stage 2: Basic Profile GraphQL Query Capture
+  async function setupProfileDebugger(session: IGProfileSession) {
+    console.log(`🔗 [Background] Setting up Profile debugger for session: ${session.sessionId}`);
+    
+    return new Promise<void>((resolve, reject) => {
+      let isResolved = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      
+      const cleanup = async () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        try {
+          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
+          await browser.debugger.detach({ tabId: session.tabId! });
+        } catch (error) {
+          console.warn(`⚠️ [Background] Profile cleanup warning:`, error);
+        }
+      };
+
+      const handleDebuggerEvent = (source: any, method: string, params: any) => {
+        if (source.tabId !== session.tabId || isResolved) return;
+        
+        if (method === 'Network.requestWillBeSent') {
+          const url = params.request.url;
+          // Target: https://instagram.com/graphql/query
+          if (url.includes('instagram.com/graphql/query')) {
+            const postData = params.request.postData;
+            if (postData && postData.includes('PolarisProfilePageContentQuery')) {
+              console.log(`📤 [Background] Profile GraphQL request detected for ${session.username}`);
+            }
+          }
+        }
+        
+        if (method === 'Network.responseReceived') {
+          const requestId = params.requestId;
+          const url = params.response.url;
+          
+          if (url.includes('instagram.com/graphql/query')) {
+            setTimeout(() => {
+              if (isResolved) return;
+              
+              browser.debugger.sendCommand(
+                { tabId: session.tabId! },
+                'Network.getResponseBody',
+                { requestId },
+                async (response: any) => {
+                  if (isResolved || !response?.body) return;
+                  
+                  try {
+                    const data = JSON.parse(response.body);
+                    
+                    // Extract PolarisProfilePageContentQuery response
+                    const user = data?.data?.user || data?.data?.xdt_api__v1__users__web_profile_info?.user;
+                    if (user && user.username) {
+                      // Verify this is the correct user
+                      const normalizedExpected = session.username.toLowerCase().trim();
+                      const normalizedReceived = user.username.toLowerCase().trim();
+                      
+                      if (normalizedExpected === normalizedReceived) {
+                        console.log(`✅ [Background] Profile data captured for ${session.username}`);
+                        
+                        const profileData: IGProfileData = {
+                          followerCount: user.follower_count || user.edge_followed_by?.count || 0,
+                          accountType: user.account_type || (user.is_business ? 2 : 1),
+                          isVerified: user.is_verified || false,
+                          category: user.category || user.category_name || ''
+                        };
+                        
+                        session.collectedData.profileData = profileData;
+                        isResolved = true;
+                        await cleanup();
+                        
+                        // Proceed to Stage 3
+                        await executeStage3BusinessInsights(session);
+                        resolve();
+                      }
+                    }
+                  } catch (error) {
+                    console.error(`💥 [Background] Profile data parsing failed:`, error);
+                  }
+                }
+              );
+            }, 100);
+          }
+        }
+      };
+
+      // Set up timeout
+      timeoutId = setTimeout(async () => {
+        if (isResolved) return;
+        console.log(`⏰ [Background] Profile capture timeout for ${session.username}`);
+        isResolved = true;
+        await cleanup();
+        reject(new Error('Profile data capture timeout'));
+      }, 30000);
+
+      // Attach debugger
+      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
+        if (browser.runtime.lastError) {
+          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
+          return;
+        }
+
+        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
+          if (browser.runtime.lastError) {
+            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
+            return;
+          }
+          
+          console.log(`📡 [Background] Profile network monitoring enabled`);
+          browser.debugger.onEvent.addListener(handleDebuggerEvent);
+        });
+      });
+    });
+  }
+  
+  // Stage 3: Business Insights GraphQL Query Capture
+  async function setupInsightsDebugger(session: IGProfileSession) {
+    console.log(`🔗 [Background] Setting up Insights debugger for session: ${session.sessionId}`);
+    
+    return new Promise<void>((resolve, reject) => {
+      let isResolved = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let collectedInsights: Partial<IGBusinessInsights> = {};
+      
+      const cleanup = async () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        try {
+          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
+          await browser.debugger.detach({ tabId: session.tabId! });
+        } catch (error) {
+          console.warn(`⚠️ [Background] Insights cleanup warning:`, error);
+        }
+      };
+
+      const handleDebuggerEvent = (source: any, method: string, params: any) => {
+        if (source.tabId !== session.tabId || isResolved) return;
+        
+        if (method === 'Network.requestWillBeSent') {
+          const url = params.request.url;
+          if (url.includes('instagram.com/graphql/query')) {
+            const postData = params.request.postData;
+            if (postData && (
+                postData.includes('PolarisAccountInsightsProfileQuery') ||
+                postData.includes('PolarisAccountInsightsTopContentByViewsQuery')
+            )) {
+              console.log(`📤 [Background] Insights GraphQL request detected`);
+            }
+          }
+        }
+        
+        if (method === 'Network.responseReceived') {
+          const requestId = params.requestId;
+          const url = params.response.url;
+          
+          if (url.includes('instagram.com/graphql/query')) {
+            setTimeout(() => {
+              if (isResolved) return;
+              
+              browser.debugger.sendCommand(
+                { tabId: session.tabId! },
+                'Network.getResponseBody',
+                { requestId },
+                async (response: any) => {
+                  if (isResolved || !response?.body) return;
+                  
+                  try {
+                    const data = JSON.parse(response.body);
+                    
+                    // Extract insights from various query responses
+                    const insights = data?.data?.business_manager?.account_insights_node;
+                    if (insights) {
+                      console.log(`📊 [Background] Processing insights data`);
+                      
+                      // Profile actions data
+                      if (insights.profile_actions) {
+                        collectedInsights.profileVisits7d = insights.profile_actions.profile_visits_7d || 0;
+                        collectedInsights.profileVisits30d = insights.profile_actions.profile_visits_30d || 0;
+                        collectedInsights.profileVisits90d = insights.profile_actions.profile_visits_90d || 0;
+                        collectedInsights.accountsReached7d = insights.profile_actions.accounts_reached_7d || 0;
+                        collectedInsights.accountsReached30d = insights.profile_actions.accounts_reached_30d || 0;
+                        collectedInsights.accountsEngaged7d = insights.profile_actions.accounts_engaged_7d || 0;
+                        collectedInsights.accountsEngaged30d = insights.profile_actions.accounts_engaged_30d || 0;
+                      }
+                      
+                      // Follower growth data
+                      const followerGrowth = data?.data?.business_manager?.follower_growth;
+                      if (followerGrowth) {
+                        collectedInsights.followerGrowth7d = followerGrowth.growth_7d?.percentage || 0;
+                        collectedInsights.followerGrowth30d = followerGrowth.growth_30d?.percentage || 0;
+                        collectedInsights.followerGrowth90d = followerGrowth.growth_90d?.percentage || 0;
+                      }
+                      
+                      // Engagement metrics
+                      const engagementMetrics = data?.data?.business_manager?.engagement_metrics;
+                      if (engagementMetrics) {
+                        collectedInsights.engagementRate = engagementMetrics.overall_engagement_rate || 0;
+                      }
+                      
+                      // Check if we have sufficient insights data
+                      const hasBasicInsights = collectedInsights.profileVisits30d !== undefined &&
+                                             collectedInsights.accountsReached30d !== undefined;
+                      
+                      if (hasBasicInsights) {
+                        console.log(`✅ [Background] Business insights data captured`);
+                        
+                        const businessInsights: IGBusinessInsights = {
+                          profileVisits7d: collectedInsights.profileVisits7d || 0,
+                          profileVisits30d: collectedInsights.profileVisits30d || 0,
+                          profileVisits90d: collectedInsights.profileVisits90d || 0,
+                          accountsReached7d: collectedInsights.accountsReached7d || 0,
+                          accountsReached30d: collectedInsights.accountsReached30d || 0,
+                          accountsEngaged7d: collectedInsights.accountsEngaged7d || 0,
+                          accountsEngaged30d: collectedInsights.accountsEngaged30d || 0,
+                          followerGrowth7d: collectedInsights.followerGrowth7d || 0,
+                          followerGrowth30d: collectedInsights.followerGrowth30d || 0,
+                          followerGrowth90d: collectedInsights.followerGrowth90d || 0,
+                          engagementRate: collectedInsights.engagementRate || 0
+                        };
+                        
+                        session.collectedData.insightsData = businessInsights;
+                        isResolved = true;
+                        await cleanup();
+                        
+                        // Proceed to Stage 4
+                        await executeStage4AudienceData(session);
+                        resolve();
+                      }
+                    }
+                  } catch (error) {
+                    console.error(`💥 [Background] Insights data parsing failed:`, error);
+                  }
+                }
+              );
+            }, 100);
+          }
+        }
+      };
+
+      // Set up timeout
+      timeoutId = setTimeout(async () => {
+        if (isResolved) return;
+        console.log(`⏰ [Background] Insights capture timeout`);
+        isResolved = true;
+        await cleanup();
+        
+        // Continue with partial data or skip insights
+        console.log(`⏭️ [Background] Continuing without complete insights data`);
+        await executeStage4AudienceData(session);
+        resolve();
+      }, 45000); // Longer timeout for insights
+
+      // Attach debugger
+      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
+        if (browser.runtime.lastError) {
+          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
+          return;
+        }
+
+        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
+          if (browser.runtime.lastError) {
+            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
+            return;
+          }
+          
+          console.log(`📡 [Background] Insights network monitoring enabled`);
+          browser.debugger.onEvent.addListener(handleDebuggerEvent);
+        });
+      });
+    });
+  }
+  
+  // Stage 4: Audience Demographics GraphQL Query Capture
+  async function setupAudienceDebugger(session: IGProfileSession) {
+    console.log(`🔗 [Background] Setting up Audience debugger for session: ${session.sessionId}`);
+    
+    return new Promise<void>((resolve, reject) => {
+      let isResolved = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let collectedAudience: Partial<IGAudienceData> = {};
+      
+      const cleanup = async () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        try {
+          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
+          await browser.debugger.detach({ tabId: session.tabId! });
+        } catch (error) {
+          console.warn(`⚠️ [Background] Audience cleanup warning:`, error);
+        }
+      };
+
+      const handleDebuggerEvent = (source: any, method: string, params: any) => {
+        if (source.tabId !== session.tabId || isResolved) return;
+        
+        if (method === 'Network.requestWillBeSent') {
+          const url = params.request.url;
+          if (url.includes('instagram.com/graphql/query')) {
+            const postData = params.request.postData;
+            if (postData && postData.includes('PolarisAccountInsightsFollowersQuery')) {
+              console.log(`📤 [Background] Audience demographics GraphQL request detected`);
+            }
+          }
+        }
+        
+        if (method === 'Network.responseReceived') {
+          const requestId = params.requestId;
+          const url = params.response.url;
+          
+          if (url.includes('instagram.com/graphql/query')) {
+            setTimeout(() => {
+              if (isResolved) return;
+              
+              browser.debugger.sendCommand(
+                { tabId: session.tabId! },
+                'Network.getResponseBody',
+                { requestId },
+                async (response: any) => {
+                  if (isResolved || !response?.body) return;
+                  
+                  try {
+                    const data = JSON.parse(response.body);
+                    
+                    // Extract audience demographics from follower insights
+                    const insightsNode = data?.data?.business_manager?.account_insights_node;
+                    const followerDemographics = insightsNode?.follower_demographics;
+                    
+                    if (followerDemographics) {
+                      console.log(`👥 [Background] Processing audience demographics`);
+                      
+                      // Gender distribution
+                      if (followerDemographics.gender) {
+                        const genderData = followerDemographics.gender;
+                        collectedAudience.genderDistribution = {
+                          male: genderData.find((g: any) => g.gender === 'male')?.percentage || 0,
+                          female: genderData.find((g: any) => g.gender === 'female')?.percentage || 0,
+                          other: genderData.find((g: any) => g.gender === 'other')?.percentage || 0
+                        };
+                      }
+                      
+                      // Age distribution
+                      if (followerDemographics.age_ranges) {
+                        const ageData = followerDemographics.age_ranges;
+                        collectedAudience.ageDistribution = {
+                          '13-17': ageData.find((a: any) => a.age_range === '13-17')?.percentage || 0,
+                          '18-24': ageData.find((a: any) => a.age_range === '18-24')?.percentage || 0,
+                          '25-34': ageData.find((a: any) => a.age_range === '25-34')?.percentage || 0,
+                          '35-44': ageData.find((a: any) => a.age_range === '35-44')?.percentage || 0,
+                          '45-54': ageData.find((a: any) => a.age_range === '45-54')?.percentage || 0,
+                          '55-64': ageData.find((a: any) => a.age_range === '55-64')?.percentage || 0,
+                          '65+': ageData.find((a: any) => a.age_range === '65+')?.percentage || 0
+                        };
+                      }
+                      
+                      // Top location
+                      if (followerDemographics.top_locations && followerDemographics.top_locations.length > 0) {
+                        collectedAudience.topLocation = followerDemographics.top_locations[0].location_name || '';
+                      }
+                      
+                      // Check if we have sufficient audience data
+                      const hasBasicDemographics = collectedAudience.genderDistribution !== undefined ||
+                                                  collectedAudience.ageDistribution !== undefined;
+                      
+                      if (hasBasicDemographics) {
+                        console.log(`✅ [Background] Audience demographics captured`);
+                        
+                        const audienceData: IGAudienceData = {
+                          genderDistribution: collectedAudience.genderDistribution || {
+                            male: 0, female: 0, other: 0
+                          },
+                          ageDistribution: collectedAudience.ageDistribution || {
+                            '13-17': 0, '18-24': 0, '25-34': 0, '35-44': 0,
+                            '45-54': 0, '55-64': 0, '65+': 0
+                          },
+                          topLocation: collectedAudience.topLocation || ''
+                        };
+                        
+                        session.collectedData.audienceData = audienceData;
+                        isResolved = true;
+                        await cleanup();
+                        
+                        // Complete the profile building process
+                        await completeProfileBuilding(session);
+                        resolve();
+                      }
+                    }
+                  } catch (error) {
+                    console.error(`💥 [Background] Audience data parsing failed:`, error);
+                  }
+                }
+              );
+            }, 100);
+          }
+        }
+      };
+
+      // Set up timeout
+      timeoutId = setTimeout(async () => {
+        if (isResolved) return;
+        console.log(`⏰ [Background] Audience demographics capture timeout`);
+        isResolved = true;
+        await cleanup();
+        
+        // Complete without audience data
+        console.log(`⏭️ [Background] Completing without audience demographics`);
+        await completeProfileBuilding(session);
+        resolve();
+      }, 45000); // Longer timeout for audience data
+
+      // Attach debugger
+      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
+        if (browser.runtime.lastError) {
+          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
+          return;
+        }
+
+        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
+          if (browser.runtime.lastError) {
+            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
+            return;
+          }
+          
+          console.log(`📡 [Background] Audience demographics network monitoring enabled`);
+          browser.debugger.onEvent.addListener(handleDebuggerEvent);
+        });
+      });
+    });
+  }
+
+  console.log('🚀 [Background] Instagram verification background script initialized with MV3 support');
 });

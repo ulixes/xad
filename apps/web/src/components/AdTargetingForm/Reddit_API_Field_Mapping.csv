@@ -1,0 +1,13 @@
+Ad Form Field,Primary Request Source,JSON Path (Primary),Alternative Sources / Paths,Validation Logic,Coverage
+reddit-account-age,Profile API endpoint (needs identification),calculated: (Date.now() - createdAt) / (1000*60*60*24),User creation date from profile data,≥ target_age_days,70%
+reddit-top-commenter,TrophyCategories GraphQL,data.redditorInfoByName.trophyCase.categories.edges[].node.trophies.edges[].node,Filter by achievement ID matching tier (monthly-top-25-commenter etc.),has_achievement OR ≥ min_unlocked_count,90%
+reddit-top-poster,TrophyCategories GraphQL,data.redditorInfoByName.trophyCase.categories.edges[].node.trophies.edges[].node,Filter by achievement ID matching tier (monthly-top-25-poster etc.),has_achievement OR ≥ min_unlocked_count,90%
+reddit-total-achievements,TrophyCategories GraphQL,data.redditorInfoByName.trophyCase.totalUnlocked,—,≥ target_achievement_count,95%
+reddit-streak-days,TrophyCategories GraphQL,categories.edges[].node where name="Reddit Streak" → trophies.edges[].node.pill.text,Parse numeric value from streak text (e.g. "1d"),≥ target_streak_days,80%
+reddit-karma-score,Profile API endpoint (needs identification),Profile data → comment_karma + link_karma,Separate comment and link karma fields,≥ target_karma,70%
+reddit-community-engagement,TrophyCategories GraphQL,Calculated from achievement diversity and counts,Cross-category achievement analysis,≥ engagement_threshold,85%
+reddit-content-quality-score,TrophyCategories GraphQL,Achievement nodes with "Quality" or "Captivating" in name,Filter achievements by quality indicators,≥ quality_threshold,75%
+reddit-username,Profile API endpoint,Profile data → username,—,equals/contains target_username,95%
+reddit-account-verified,Profile API endpoint,Profile verification status,—,true/false,60%
+reddit-banana-achievements,TrophyCategories GraphQL,Achievement nodes with "Banana" in name or category,High-engagement content indicators,≥ banana_count,85%
+reddit-sharing-achievements,TrophyCategories GraphQL,Achievement nodes related to sharing/viral content,Viral content creation indicators,≥ sharing_count,80%

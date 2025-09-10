@@ -1,0 +1,19 @@
+Ad Form Field,Primary Request Source,JSON Path (Primary),Alternative Sources / Paths,Validation Logic,Coverage
+tiktok-followers,/api/user/detail/self/,userInfo.stats.followerCount,/api/ba/business/suite/analytics/query/insights → followers.uv.number.follower,≥ target_value,100%
+tiktok-video-views,/api/ba/business/suite/analytics/query/insights,metrics[].value where metric_name = "self.pv.number.profile_views",/api/ba/business/suite/analytics/insights/video → video-specific views,≥ target_views,85%
+tiktok-profile-views,/api/ba/business/suite/analytics/query/insights,metrics[].value where metric_name = "self.pv.number.profile_views",/api/user/detail/self/ → userInfo.stats.heart (proxy),≥ target_views,90%
+tiktok-likes,/api/user/detail/self/,userInfo.stats.diggCount,userInfo.stats.heart (alternative total engagement),≥ target_likes,100%
+tiktok-comments,/api/ba/business/suite/analytics/insights/video,video-level data aggregation required,—,≥ target_comments,60%
+tiktok-shares,/api/ba/business/suite/analytics/insights/video,video-level data aggregation required,—,≥ target_shares,60%
+tiktok-audience-age,/api/ba/business/suite/analytics/query/insights,metrics[].value_map where metric_name = "followers.uv.list_string_number.age_distribution",—,≥ age_range_threshold,85%
+tiktok-audience-gender,/api/ba/business/suite/analytics/query/insights,metrics[].value_map where metric_name = "followers.uv.list_string_number.gender_distribution",—,≥ gender_threshold,85%
+tiktok-audience-location,/api/ba/business/suite/analytics/query/insights,metrics[].value_map where metric_name = "followers.uv.list_string_number.top10_country",—,≥ location_percentage_threshold,85%
+tiktok-viewer-type,/api/ba/business/suite/analytics/query/insights,metrics[].value_map where metric_name contains "audience_type",followers.uv.list_daily.active_audience (temporal analysis),match viewer_type,70%
+tiktok-active-time,/api/ba/business/suite/analytics/query/insights,metrics[].value_map where metric_name = "followers.uv.list_hourly.active_audience",followers.uv.list_daily.active_audience (daily patterns),during time_range,80%
+tiktok-video-count,/api/user/detail/self/,userInfo.stats.videoCount,—,≥ target_video_count,100%
+tiktok-following-count,/api/user/detail/self/,userInfo.stats.followingCount,—,≥ target_following,100%
+tiktok-is-verified,/api/user/detail/self/,userInfo.user.verified,—,true/false,100%
+tiktok-username,/api/user/detail/self/,userInfo.user.uniqueId,userInfo.user.nickname (display name),equals/contains target_username,100%
+tiktok-follower-growth,/api/ba/business/suite/analytics/query/insights,metrics[].value where metric_name = "followers.uv.number.follower_increment",followers.uv.number.follower_increment_value (absolute growth),≥ growth_threshold,80%
+tiktok-engagement-rate,Calculated from multiple sources,"(diggCount / followerCount) * 100",profile_views + likes ratio calculations,≥ engagement_rate_threshold,75%
+tiktok-business-account,/api/ba/business/suite/bs/account/info/,account binding status check,/api/ba/business/suite/index/ → business suite access,true/false (business features available),90%

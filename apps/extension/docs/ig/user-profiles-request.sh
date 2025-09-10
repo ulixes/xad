@@ -1,0 +1,24 @@
+curl 'https://accountscenter.instagram.com/api/graphql/' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.8' \
+  -H 'content-type: application/x-www-form-urlencoded' \
+  -b 'csrftoken=voNzBSlfWhbwWWUzXM_pwA; datr=H_OeaJaoH0i7ThdVg1I5nGO9; ig_did=A4295C23-78EB-448A-9B29-1709095133D0; ig_nrcb=1; mid=aJ7zIAAEAAEbZ_cFgTJVgjIyDWFv; ds_user_id=650864995; ps_l=1; ps_n=1; sessionid=650864995%3AXWiKgqzx2Uhfbb%3A0%3AAYh4OsHMFRUQtSndgGFlYp3laFJG9qv2UqylQXumYA; rur="CLN\054650864995\0541789020851:01fe121329172c19e3fff7b6178dc5334a6ee901fb9de52911cea1fe9e244eab971691fe"; wd=430x1045' \
+  -H 'origin: https://accountscenter.instagram.com' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://accountscenter.instagram.com/?entry_point=app_settings' \
+  -H 'sec-ch-ua: "Not;A=Brand";v="99", "Brave";v="139", "Chromium";v="139"' \
+  -H 'sec-ch-ua-full-version-list: "Not;A=Brand";v="99.0.0.0", "Brave";v="139.0.0.0", "Chromium";v="139.0.0.0"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-model: ""' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  -H 'sec-ch-ua-platform-version: "6.8.0"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'sec-gpc: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  -H 'x-asbd-id: 359341' \
+  -H 'x-fb-friendly-name: FXAccountsCenterProfilesPageV2Query' \
+  -H 'x-fb-lsd: oZxex6l3pL4xEoixAnSjLh' \
+  -H 'x-ig-app-id: 936619743392459' \
+  --data-raw 'av=17841401469860169&__user=0&__a=1&__req=i&__hs=20341.HYP%3Aaccounts_center_pkg.2.1...0&dpr=1&__ccg=GOOD&__rev=1026927524&__s=z0c01c%3Asea17w%3Aiyhw7d&__hsi=7548340852587368688&__dyn=7xeUmwlEnwn8K2Wmh0no6u5U4e0yoW3q32360CEbo1nEhw2nVE4W099w8G1Dz81s8hwnU2lwv89k2C1Fwc60D82IzXwae4UaEW0Loco5G0zK1swa-0raazo7u0zEiwaG1LwTwNw4mwr86C1nw4xxW1owLwHwea095w&__csr=gjNGsItOhj64nIzqpbbjrEBK_veHihFmOfRWR4nntdHrhnQrX8ALiqZHqQmBGUWWaOrlrmJAhuriSlWyBBriaiBmEB2nhrJyrOkqaLmHjFal5mAXCCKuHhaj8LiCACCWAzExqjhWyEO9iVbpFAnAl1dDo8VTzXzEy4EO9W-imUxbK9x7xJ1ijybG7GyUXQiu-00mvC2x5izpotwAy8N03zrw2cUpwHxiGGeV-WwYxt1-A8AxumiU0tAw3DUnw30-mqF9bxx4C-aKXKi8KVp99bGewZgswUwlJi5GE4dotwQzGBz89zwKw5BwSy86KE3VwHwhbxG3yiiFUiDKfKbwWWaXd4G1ng5C1ujzeVqx29V1VrwTUK1wg4K4sh4a4Q5hAgi68ybBCpXLK0BXwdyuiczki_BKXK3CWw2MG82dfhet5gnjAHyEbHhemE&__hsdp=gmih3533nJcq12_ypoAql3Fzau4V7wwwFxdAcfcGabla2aoEg4j3E9bkUyb51y4hwmxqqbHFwZx64UCfum68O3u2qifgy4olxXDUoz8iyuu22325ay8crwExG2q10gpzA7E28wMxi1uU3Ioa88Ekp89E18E1kE4i1jwYxO322F0gE4K4bDxO3SieBgqwWwoEW223G5of8dfx7zUf9Xgb9U9rghzEO329USim2a3S0BESdwanyUpjw&__hblp=0nFo5l2FA78y6Q1-zqCDCyuq4A6UO8DwkoaU4yubxK5EW4ohBxyq48a84G7E4q328xW0iK0iS0uO680FO1vwfG13wAwMwda2vzU5O6UeEqz8J38vxu2mi1kwZwg83ywRwVx2u1AxO6k&__sjsp=gmttxMzK86wh898aorAu221Aa1KwEkMdUhwUCyWWo4-4UCfu7EO1zzQ6ElwwDUoz8iyu2y325Uy36Ua823wi828who5Xw4nwyxi0l20la0YE2vwiUsw4KzE5K1iwQ-1wwVwJJ16ez8eK3K3S0F82PUaE&__comet_req=24&fb_dtsg=NAftZfCRPLm_cAxPm1uYRZ_B5n_qnWvUUraUv2ls5MSOd8ECTUD3vYQ%3A17865145036029998%3A1757269824&jazoest=26372&lsd=oZxex6l3pL4xEoixAnSjLh&__spin_r=1026927524&__spin_b=trunk&__spin_t=1757485059&fb_api_caller_class=RelayModern&fb_api_req_friendly_name=FXAccountsCenterProfilesPageV2Query&variables=%7B%22device_id%22%3A%22device_id_fetch_ig_did%22%2C%22flow%22%3A%22IG_WEB_SETTINGS%22%2C%22interface%22%3A%22IG_WEB%22%2C%22platform%22%3A%22INSTAGRAM%22%2C%22scale%22%3A1%7D&server_timestamps=true&doc_id=24572852515686331'
