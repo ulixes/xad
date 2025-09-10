@@ -134,7 +134,6 @@ export function Home({
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
-<<<<<<< HEAD
           {/* Earnings Section */}
           <div className="bg-card rounded-lg p-6 space-y-4">
             <div className="flex items-center justify-around">
@@ -164,14 +163,6 @@ export function Home({
               }
             </Button>
           </div>
-=======
-          {/* Earnings Widget */}
-          <EarningsWidget
-            pending={pendingEarnings}
-            available={availableEarnings}
-            onWithdraw={onCashOut}
-          />
->>>>>>> 2e65cf2 (Add XState-based state management architecture for social accounts)
 
           <div className="pt-4">
             <h2 className="text-xl font-semibold tracking-tight">

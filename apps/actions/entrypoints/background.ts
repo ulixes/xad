@@ -22,10 +22,10 @@ export default defineBackground(() => {
 
   async function handleVerificationRequest(platform: string, username: string, sendResponse: (response: any) => void) {
     console.log(`🚀 [Background] Starting verification request for ${platform}:${username}`);
-    
+
     try {
       const verifier = verifiers.get(platform.toLowerCase());
-      
+
       if (!verifier) {
         console.error(`❌ [Background] Unsupported platform: ${platform}`);
         sendResponse({
@@ -40,8 +40,8 @@ export default defineBackground(() => {
       // Create new tab for the verification - must be active for Instagram to load properly
       const profileUrl = getProfileUrl(platform, username);
       console.log(`🌐 [Background] Creating tab for URL: ${profileUrl}`);
-      
-      const tab = await browser.tabs.create({ 
+
+      const tab = await browser.tabs.create({
         url: profileUrl,
         active: true // Instagram requires active tab to load GraphQL requests
       });
