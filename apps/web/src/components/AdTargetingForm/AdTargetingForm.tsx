@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
-import { calculateCampaignPrice, MARKET_PRICING } from '../../utils/pricing-calculator';
+import { calculateCampaignPrice } from '../../utils/pricing-calculator';
 
 type Platform = 'tiktok' | 'reddit' | 'x' | 'instagram' | 'facebook' | 'farcaster';
 
