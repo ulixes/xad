@@ -5,6 +5,7 @@ import type { Env } from '../types';
 import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { verifyPaymentTransaction } from '../services/paymentVerification';
+import { authMiddleware, requireWalletOwnership } from '../middleware/auth';
 
 const campaignRoutes = new Hono<{ Bindings: Env }>();
 
@@ -24,27 +25,33 @@ const createCampaignSchema = z.object({
   brandWalletAddress: z.string()
 });
 
-// Create new campaign
-campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => {
+// Create new campaign (requires authentication)
+campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema), async (c) => {
   const db = c.get('db');
   const data = c.req.valid('json');
-  
-  console.log('=== CAMPAIGN CREATION REQUEST ===');
-  console.log('Request data:', JSON.stringify(data, null, 2));
 
   try {
-    // Create or get user by wallet address
-    let user = await db.select().from(users)
-      .where(eq(users.walletAddress, data.brandWalletAddress))
+    // Get authenticated user from session
+    const session = c.get('authSession');
+    
+    // Verify the wallet address matches the authenticated user
+    if (session.address.toLowerCase() !== data.brandWalletAddress.toLowerCase()) {
+      return c.json({ 
+        success: false, 
+        error: 'Wallet address mismatch with authenticated session' 
+      }, 403);
+    }
+
+    // Get user from session
+    const [user] = await db.select().from(users)
+      .where(eq(users.id, session.userId))
       .limit(1);
 
-    if (user.length === 0) {
-      const newUser = await db.insert(users).values({
-        walletAddress: data.brandWalletAddress,
-        status: 'active',
-        metadata: {}
-      }).returning();
-      user = newUser;
+    if (!user) {
+      return c.json({ 
+        success: false, 
+        error: 'User not found' 
+      }, 404);
     }
 
     // Calculate total budget in cents
@@ -52,7 +59,7 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
 
     // Create campaign
     const [campaign] = await db.insert(campaigns).values({
-      userId: user[0].id,
+      userId: user.id,
       brandWalletAddress: data.brandWalletAddress, // Keep for backward compatibility
       name: data.name,
       description: data.description,
@@ -81,7 +88,7 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
     
     return c.json({ 
       success: true, 
-      campaign,
+      campaign: campaign,
       message: 'Campaign created successfully. Proceed with payment.' 
     });
 
@@ -244,25 +251,26 @@ campaignRoutes.get('/actions/available', async (c) => {
 
   try {
     // Get user's social accounts for eligibility checking
-    let userSocialAccounts = [];
+    let userSocialAccounts: any[] = [];
     if (userId) {
       userSocialAccounts = await db.select().from(socialAccounts)
         .where(eq(socialAccounts.userId, userId));
     }
 
     // Get available actions
-    let query = db.select().from(actions)
+    const baseQuery = db.select().from(actions)
       .where(and(
         eq(actions.isActive, true),
         eq(actions.currentVolume, 0) // Not yet completed
       ))
       .orderBy(desc(actions.price));
 
+    let availableActions;
     if (platform) {
-      query = query.where(eq(actions.platform, platform));
+      availableActions = await baseQuery.where(eq(actions.platform, platform as any));
+    } else {
+      availableActions = await baseQuery;
     }
-
-    const availableActions = await query;
 
     // TODO: Filter by eligibility criteria based on user's social accounts
     // This would check actions.eligibilityCriteria against userSocialAccounts data
@@ -282,23 +290,15 @@ campaignRoutes.get('/actions/available', async (c) => {
   }
 });
 
-// Get campaigns for brand dashboard
-campaignRoutes.get('/brand/:walletAddress', async (c) => {
+// Get campaigns for brand dashboard (requires authentication and wallet ownership)
+campaignRoutes.get('/brand/:walletAddress', authMiddleware, requireWalletOwnership('walletAddress'), async (c) => {
   const db = c.get('db');
   const walletAddress = c.req.param('walletAddress');
 
   try {
-    const brandCampaigns = await db.select({
-      campaign: campaigns,
-      totalActions: 'COUNT(campaign_actions.id)',
-      totalCompletions: 'COUNT(action_runs.id)',
-      totalSpent: 'SUM(payments.amount)'
-    })
+    const brandCampaigns = await db.select()
     .from(campaigns)
-    .leftJoin(campaignActions, eq(campaigns.id, campaignActions.campaignId))
-    .leftJoin(payments, eq(campaigns.id, payments.campaignId))
     .where(eq(campaigns.brandWalletAddress, walletAddress))
-    .groupBy(campaigns.id)
     .orderBy(desc(campaigns.createdAt));
 
     return c.json({ 

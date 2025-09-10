@@ -25,18 +25,73 @@ export class PaymentFlowService {
   static async createDraftCampaign(formData: any, walletAddress: string) {
     console.log('Creating campaign:', { ...formData, brandWalletAddress: walletAddress })
     
+    // Get JWT token for authentication
+    let token = localStorage.getItem('auth_token')
+    
+    // Fallback: check for SIWX session if no token
+    if (!token) {
+      const siwxSessionKeys = Object.keys(localStorage).filter(k => k.startsWith('siwx-session'))
+      if (siwxSessionKeys.length > 0) {
+        const sessionData = JSON.parse(localStorage.getItem(siwxSessionKeys[0]) || '{}')
+        if (sessionData.message && sessionData.signature) {
+          try {
+            const response = await fetch('/api/auth/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                message: sessionData.data?.message, 
+                signature: sessionData.signature 
+              })
+            })
+            
+            if (response.ok) {
+              const { success, token: verifiedToken } = await response.json()
+              if (success && verifiedToken) {
+                localStorage.setItem('auth_token', verifiedToken)
+                token = verifiedToken
+              }
+            }
+          } catch (error) {
+            console.error('SIWX verification error:', error)
+          }
+        }
+      }
+    }
+    
+    // Development bypass if still no token
+    if (!token && walletAddress && process.env.NODE_ENV === 'development') {
+      try {
+        const bypassResponse = await fetch('/api/auth/bypass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: walletAddress })
+        })
+        
+        if (bypassResponse.ok) {
+          const { token: bypassToken } = await bypassResponse.json()
+          localStorage.setItem('auth_token', bypassToken)
+          token = bypassToken
+        }
+      } catch (error) {
+        console.error('Development bypass failed:', error)
+      }
+    }
+    
+    if (!token) {
+      throw new Error('Please sign in with your wallet first')
+    }
+    
     const response = await fetch('/api/campaigns', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({ ...formData, brandWalletAddress: walletAddress })
     })
     
-    console.log('Response status:', response.status)
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-    
     // Get response text first
     const responseText = await response.text()
-    console.log('Response text:', responseText)
     
     if (!response.ok) {
       let errorData
@@ -82,7 +137,6 @@ export class PaymentFlowService {
     try {
       // Option A: Simple USDC transfer to escrow contract
       if (config.escrowContract && config.paymentToken) {
-        console.log(`Transferring ${dollarAmount} USDC to escrow contract...`)
         
         // First check USDC balance
         const balance = await publicClient.readContract({
@@ -112,14 +166,13 @@ export class PaymentFlowService {
         }
       } else {
         // Option B: Fallback to ETH transfer (for demo purposes)
-        console.log(`Transferring ${campaignData.totalAmount} ETH equivalent...`)
         
         // Convert USD to ETH (rough estimate: $2000/ETH for demo)
         const ethAmount = parseEther((dollarAmount / 2000).toString())
         
         // Simple ETH transfer
         const hash = await walletClient.sendTransaction({
-          to: '0x1234567890123456789012345678901234567890', // Demo address
+          to: config.escrowContract || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b', // Use config or fallback
           value: ethAmount,
           data: `0x${Buffer.from(campaignData.campaignId).toString('hex')}`
         })
@@ -150,39 +203,64 @@ export class PaymentFlowService {
   }
 
   /**
-   * Step 3: Update campaign with payment details
+   * Step 3: Update campaign with payment details (async for better UX)
    */
   static async confirmPayment(campaignId: string, paymentData: any) {
-    const response = await fetch(`/api/campaigns/${campaignId}/payment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        transactionHash: paymentData.transactionHash,
-        amount: paymentData.amount,
-        blockNumber: paymentData.blockNumber,
-        gasUsed: paymentData.gasUsed,
-        status: 'completed'
-      })
-    })
+    // Start confirmation in background but don't wait for it
+    const confirmationPromise = this.confirmPaymentBackground(campaignId, paymentData)
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to confirm payment: ${errorText}`)
+    // Return immediately with transaction data - user doesn't need to wait
+    return {
+      success: true,
+      transactionHash: paymentData.transactionHash,
+      campaignId,
+      confirmation: confirmationPromise // Background promise for monitoring
     }
-    
-    // Safely parse JSON response
-    const text = await response.text()
-    if (!text) {
-      throw new Error('Empty response from payment confirmation')
-    }
-    
+  }
+
+  /**
+   * Background payment confirmation that happens async
+   */
+  private static async confirmPaymentBackground(campaignId: string, paymentData: any) {
     try {
-      return JSON.parse(text)
-    } catch (parseError) {
-      console.error('Failed to parse payment response:', text)
-      throw new Error('Invalid response format from server')
+      const response = await fetch(`/api/campaigns/${campaignId}/payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactionHash: paymentData.transactionHash,
+          amount: paymentData.amount,
+          blockNumber: paymentData.blockNumber,
+          gasUsed: paymentData.gasUsed,
+          status: 'completed'
+        })
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Background payment confirmation failed: ${errorText}`)
+        return { success: false, error: errorText }
+      }
+      
+      // Safely parse JSON response
+      const text = await response.text()
+      if (!text) {
+        console.error('Empty response from payment confirmation')
+        return { success: false, error: 'Empty response' }
+      }
+      
+      try {
+        const result = JSON.parse(text)
+        console.log('Payment confirmation completed in background:', result)
+        return { success: true, data: result }
+      } catch (parseError) {
+        console.error('Failed to parse payment response:', text)
+        return { success: false, error: 'Invalid response format' }
+      }
+    } catch (error) {
+      console.error('Background payment confirmation error:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -220,11 +298,9 @@ export function usePaymentFlow() {
 
     try {
       // Step 1: Create draft campaign
-      console.log('Step 1: Creating draft campaign...')
       const campaign = await PaymentFlowService.createDraftCampaign(formData, walletAddress)
       
       // Step 2: Process blockchain payment
-      console.log('Step 2: Processing blockchain payment...')
       const paymentResult = await PaymentFlowService.processPayment(
         {
           campaignId: campaign.id,
@@ -237,24 +313,16 @@ export function usePaymentFlow() {
         publicClient
       )
       
-      console.log('Payment transaction submitted:', paymentResult.transactionHash)
-      
       // Step 3: Wait for transaction confirmation
-      console.log('Step 3: Waiting for transaction confirmation...')
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: paymentResult.transactionHash,
         timeout: 60_000 // 60 second timeout
       })
       
       if (receipt.status === 'success') {
-        console.log('Transaction confirmed!', {
-          blockNumber: receipt.blockNumber,
-          gasUsed: receipt.gasUsed
-        })
         
-        // Step 4: Confirm payment in backend and create individual actions
-        console.log('Step 4: Confirming payment and creating actions...')
-        await PaymentFlowService.confirmPayment(campaign.id, {
+        // Step 4: Start payment confirmation in background (don't wait)
+        const confirmationResult = await PaymentFlowService.confirmPayment(campaign.id, {
           ...paymentResult,
           blockNumber: receipt.blockNumber.toString(),
           gasUsed: receipt.gasUsed.toString()
@@ -267,7 +335,8 @@ export function usePaymentFlow() {
           blockNumber: receipt.blockNumber.toString(),
           gasUsed: receipt.gasUsed.toString(),
           currency: paymentResult.currency,
-          network: paymentResult.network
+          network: paymentResult.network,
+          backgroundConfirmation: confirmationResult.confirmation
         }
       } else {
         throw new Error('Transaction failed on blockchain')

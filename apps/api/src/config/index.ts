@@ -9,11 +9,17 @@ export interface Config {
     admin: {
       token: string;
     };
+    jwt: {
+      secret: string;
+    };
   };
   app: {
     environment: string;
     serviceName: string;
     version: string;
+  };
+  payment: {
+    escrowWalletAddress: string;
   };
 }
 
@@ -31,8 +37,6 @@ export class ConfigManager {
   }
 
   initialize(env: Env): Config {
-    console.log("Environment being passed:", env);
-    console.log("ENVIRONMENT value:", env?.ENVIRONMENT);
     if (!env.ENVIRONMENT) {
       throw new Error("ENVIRONMENT is required");
     }
@@ -41,6 +45,12 @@ export class ConfigManager {
     }
     if (!env.ADMIN_AUTH_TOKEN) {
       throw new Error("ADMIN_AUTH_TOKEN is required");
+    }
+    if (!env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is required");
+    }
+    if (!env.ESCROW_WALLET_ADDRESS) {
+      throw new Error("ESCROW_WALLET_ADDRESS is required");
     }
 
     this.config = {
@@ -51,11 +61,17 @@ export class ConfigManager {
         admin: {
           token: env.ADMIN_AUTH_TOKEN,
         },
+        jwt: {
+          secret: env.JWT_SECRET,
+        },
       },
       app: {
         environment: env.ENVIRONMENT,
         serviceName: "xad-api",
         version: "1.0.0",
+      },
+      payment: {
+        escrowWalletAddress: env.ESCROW_WALLET_ADDRESS,
       },
     };
 
