@@ -17,13 +17,13 @@ export const getNetworkConfig = () => {
     
     // Payment token (USDC)
     paymentToken: isProduction
-      ? import.meta.env.VITE_PAYMENT_TOKEN_MAINNET
-      : import.meta.env.VITE_PAYMENT_TOKEN_SEPOLIA,
+      ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // Base mainnet USDC
+      : '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base sepolia USDC
     
-    // RPC URLs
+    // RPC URLs (using free Base RPCs)
     rpcUrl: isProduction
-      ? import.meta.env.BASE_MAINNET_RPC_URL || 'https://mainnet.base.org'
-      : import.meta.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
+      ? 'https://mainnet.base.org'
+      : 'https://sepolia.base.org',
       
     // Chain IDs  
     chainId: isProduction ? 8453 : 84532,

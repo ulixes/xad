@@ -57,8 +57,10 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull().unique(),
+  walletAddress: text('wallet_address').unique(),
+  email: text('email').unique(),
   status: userStatusEnum('status').notNull().default('pending_verification'),
+  metadata: jsonb('metadata').notNull().default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -76,23 +78,11 @@ export const socialAccounts = pgTable('social_accounts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Wallet users table (for brands using wallet-based auth)
-export const walletUsers = pgTable('wallet_users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  walletAddress: text('wallet_address').notNull().unique(),
-  ens: text('ens'),
-  email: text('email'),
-  isBrand: boolean('is_brand').notNull().default(false),
-  status: userStatusEnum('status').notNull().default('active'),
-  metadata: jsonb('metadata').notNull().default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
 // Campaigns table (form submissions from brands)
 export const campaigns = pgTable('campaigns', {
   id: uuid('id').primaryKey().defaultRandom(),
-  brandWalletAddress: text('brand_wallet_address').notNull(),
+  userId: uuid('user_id').references(() => users.id),
+  brandWalletAddress: text('brand_wallet_address').notNull(), // Keep for backward compatibility
   name: text('name').notNull(),
   description: text('description'),
   platform: platformEnum('platform').notNull(),

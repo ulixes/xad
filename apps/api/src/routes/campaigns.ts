@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { Env } from '../types';
-import { campaigns, payments, walletUsers, campaignActions, actions, actionRuns, socialAccounts, users } from '../db/schema';
+import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { verifyPaymentTransaction } from '../services/paymentVerification';
 
 const campaignRoutes = new Hono<{ Bindings: Env }>();
 
@@ -27,19 +28,23 @@ const createCampaignSchema = z.object({
 campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => {
   const db = c.get('db');
   const data = c.req.valid('json');
+  
+  console.log('=== CAMPAIGN CREATION REQUEST ===');
+  console.log('Request data:', JSON.stringify(data, null, 2));
 
   try {
-    // Create or get wallet user
-    let walletUser = await db.select().from(walletUsers)
-      .where(eq(walletUsers.walletAddress, data.brandWalletAddress))
+    // Create or get user by wallet address
+    let user = await db.select().from(users)
+      .where(eq(users.walletAddress, data.brandWalletAddress))
       .limit(1);
 
-    if (walletUser.length === 0) {
-      [walletUser[0]] = await db.insert(walletUsers).values({
+    if (user.length === 0) {
+      const newUser = await db.insert(users).values({
         walletAddress: data.brandWalletAddress,
-        isBrand: true,
-        status: 'active'
+        status: 'active',
+        metadata: {}
       }).returning();
+      user = newUser;
     }
 
     // Calculate total budget in cents
@@ -47,7 +52,8 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
 
     // Create campaign
     const [campaign] = await db.insert(campaigns).values({
-      brandWalletAddress: data.brandWalletAddress,
+      userId: user[0].id,
+      brandWalletAddress: data.brandWalletAddress, // Keep for backward compatibility
       name: data.name,
       description: data.description,
       platform: data.platform,
@@ -58,9 +64,12 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
     }).returning();
 
     // Create campaign actions
+    const validActionTypes = ['like', 'comment', 'share', 'follow', 'retweet', 'upvote', 'award'] as const;
     const campaignActionsData = data.actions.map(action => ({
       campaignId: campaign.id,
-      actionType: action.type,
+      actionType: validActionTypes.includes(action.type as any) 
+        ? action.type as typeof validActionTypes[number]
+        : 'like', // Default fallback
       target: action.target,
       pricePerAction: Math.round(action.price * 100), // Convert to cents
       maxVolume: action.maxVolume
@@ -68,6 +77,8 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
 
     await db.insert(campaignActions).values(campaignActionsData);
 
+    console.log('Campaign created successfully:', campaign);
+    
     return c.json({ 
       success: true, 
       campaign,
@@ -75,15 +86,19 @@ campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => 
     });
 
   } catch (error) {
-    console.error('Campaign creation error:', error);
+    console.error('=== CAMPAIGN CREATION ERROR ===');
+    console.error('Error details:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
     return c.json({ 
       success: false, 
-      error: 'Failed to create campaign' 
+      error: 'Failed to create campaign',
+      details: error instanceof Error ? error.message : String(error)
     }, 500);
   }
 });
 
-// Confirm payment
+// Confirm payment with blockchain verification
 campaignRoutes.post('/:id/payment', async (c) => {
   const db = c.get('db');
   const campaignId = c.req.param('id');
@@ -99,15 +114,44 @@ campaignRoutes.post('/:id/payment', async (c) => {
       return c.json({ success: false, error: 'Campaign not found' }, 404);
     }
 
-    // Record payment
+    // Verify transaction on blockchain using RPC
+    const verificationResult = await verifyPaymentTransaction({
+      transactionHash: body.transactionHash,
+      expectedAmount: campaign.totalBudget, // Amount in cents
+      expectedFromAddress: campaign.brandWalletAddress,
+      expectedToAddress: process.env.ESCROW_CONTRACT_ADDRESS || process.env.ESCROW_WALLET_ADDRESS || '0x1234567890123456789012345678901234567890', // Our escrow address
+      network: process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia'
+    });
+
+    if (!verificationResult.valid) {
+      return c.json({ 
+        success: false, 
+        error: `Payment verification failed: ${verificationResult.reason}` 
+      }, 400);
+    }
+
+    // Check if transaction was already used
+    const existingPayment = await db.select().from(payments)
+      .where(eq(payments.transactionHash, body.transactionHash))
+      .limit(1);
+    
+    if (existingPayment.length > 0) {
+      return c.json({ 
+        success: false, 
+        error: 'Transaction hash already used' 
+      }, 400);
+    }
+
+    // Record verified payment
     await db.insert(payments).values({
       campaignId: campaignId,
-      fromAddress: campaign.brandWalletAddress,
-      amount: (parseFloat(body.amount) * 1e18).toString(), // Convert to wei
-      currency: 'ETH',
+      fromAddress: verificationResult.fromAddress!,
+      toAddress: verificationResult.toAddress!,
+      amount: verificationResult.actualAmount!,
+      currency: verificationResult.currency!,
       transactionHash: body.transactionHash,
-      blockNumber: body.blockNumber,
-      gasUsed: body.gasUsed,
+      blockNumber: verificationResult.blockNumber?.toString(),
+      gasUsed: verificationResult.gasUsed?.toString(),
       status: 'completed'
     });
 

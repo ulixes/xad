@@ -31,12 +31,36 @@ export class PaymentFlowService {
       body: JSON.stringify({ ...formData, brandWalletAddress: walletAddress })
     })
     
+    console.log('Response status:', response.status)
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+    
+    // Get response text first
+    const responseText = await response.text()
+    console.log('Response text:', responseText)
+    
     if (!response.ok) {
-      const errorData = await response.json()
+      let errorData
+      try {
+        errorData = responseText ? JSON.parse(responseText) : { error: 'Unknown error' }
+      } catch (parseError) {
+        console.error('Failed to parse error response:', parseError)
+        throw new Error(`Server error: ${response.status} - ${responseText}`)
+      }
       throw new Error(errorData.error || 'Failed to create campaign')
     }
     
-    const result = await response.json()
+    if (!responseText) {
+      throw new Error('Empty response from server')
+    }
+    
+    let result
+    try {
+      result = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('Failed to parse success response:', parseError)
+      throw new Error(`Invalid JSON response: ${responseText}`)
+    }
+    
     return result.campaign
   }
 

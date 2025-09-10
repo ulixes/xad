@@ -174,7 +174,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
         description: rule.description || '',
         platform: selectedPlatform,
         targetingRules: rule,
-        totalAmount: (estimatedCost.totalCost / 100).toString(), // Convert cents to ETH equivalent
+        totalAmount: estimatedCost.totalCost.toString(), // Already in dollars from pricing calculator
         actions: Object.entries(actionPricing)
           .filter(([_, config]: [string, any]) => config.enabled)
           .map(([key, config]: [string, any]) => {

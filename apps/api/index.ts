@@ -39,7 +39,6 @@ app.use("*", async (c, next) => {
       "Content-Type",
       "Authorization",
       "X-Request-Id",
-      "X-Privy-Token",
     ],
     exposeHeaders: ["X-Request-Id"],
     maxAge: 86400,

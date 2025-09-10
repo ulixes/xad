@@ -55,7 +55,7 @@ export function usePaymentIntegration() {
         description: targetingRule.description || '',
         platform,
         targetingRules: targetingRule,
-        totalAmount: (estimatedCost.totalCost / 100).toString(), // Convert cents to dollars
+        totalAmount: estimatedCost.totalCost.toString(), // Already in dollars from pricing calculator
         actions: Object.entries(actionPricing)
           .filter(([_, config]: [string, any]) => config.enabled)
           .map(([key, config]: [string, any]) => {

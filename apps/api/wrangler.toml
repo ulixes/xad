@@ -6,7 +6,5 @@ compatibility_flags = ["nodejs_compat"]
 # Non-sensitive vars can go here
 [vars]
 ENVIRONMENT="dev"
-DATABASE_URL="postgresql://neondb_owner:npg_3IxotuDr1jUJ@ep-mute-mountain-adq8u4m2-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-PRIVY_APP_ID="cmf6izaj6006mld0brhfx9u7d"
-PRIVY_APP_SECRET="2Jw1FNC1QtpMq9ZgVrrdoeZrfaQmJ7JRTNFUZzD37yQmi4oG8D15tha7mv2zn6C8nrhAn8Tipu5Qcq3hcmawabFP"
-ADMIN_AUTH_TOKEN="afcff0a5-329a-4fd7-b37c-67921e49bff9"
+DATABASE_URL="postgresql://neondb_owner:npg_4U5PwkBWZRcf@ep-crimson-glitter-adykpome-pooler.c-2.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require"
+ADMIN_AUTH_TOKEN="xad-admin-token-2025-early-poc"
