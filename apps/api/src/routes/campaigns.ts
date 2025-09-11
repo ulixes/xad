@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { Env } from '../types';
-import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, users } from '../db/schema';
+import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, users, brands } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { verifyPaymentTransaction } from '../services/paymentVerification';
 import { authMiddleware, requireWalletOwnership } from '../middleware/auth';
@@ -11,8 +11,6 @@ const campaignRoutes = new Hono<{ Bindings: Env }>();
 
 // Schema for campaign creation
 const createCampaignSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
   platform: z.enum(['tiktok', 'x', 'instagram', 'reddit', 'facebook', 'farcaster']),
   targetingRules: z.any(),
   totalAmount: z.string(),
@@ -42,16 +40,16 @@ campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema
       }, 403);
     }
 
-    // Get user from session
-    const [user] = await db.select().from(users)
-      .where(eq(users.id, session.userId))
+    // Find or create brand by wallet address
+    let [brand] = await db.select().from(brands)
+      .where(eq(brands.walletAddress, data.brandWalletAddress.toLowerCase()))
       .limit(1);
 
-    if (!user) {
-      return c.json({ 
-        success: false, 
-        error: 'User not found' 
-      }, 404);
+    if (!brand) {
+      // Create new brand
+      [brand] = await db.insert(brands).values({
+        walletAddress: data.brandWalletAddress.toLowerCase(),
+      }).returning();
     }
 
     // Calculate total budget in cents
@@ -59,10 +57,8 @@ campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema
 
     // Create campaign
     const [campaign] = await db.insert(campaigns).values({
-      userId: user.id,
+      brandId: brand.id,
       brandWalletAddress: data.brandWalletAddress, // Keep for backward compatibility
-      name: data.name,
-      description: data.description,
       platform: data.platform,
       targetingRules: data.targetingRules,
       totalBudget: totalBudgetCents,
@@ -182,8 +178,8 @@ campaignRoutes.post('/:id/payment', async (c) => {
           platform: campaign.platform,
           actionType: campaignAction.actionType,
           target: campaignAction.target,
-          title: `${campaign.name} - ${campaignAction.actionType}`,
-          description: campaign.description,
+          title: `${campaign.platform} ${campaignAction.actionType}`,
+          description: `${campaignAction.actionType} on ${campaign.platform}`,
           price: campaignAction.pricePerAction,
           maxVolume: 1, // Each action is for 1 completion
           eligibilityCriteria: campaign.targetingRules,

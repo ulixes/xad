@@ -1,5 +1,6 @@
 import { setup, assign, sendTo, fromPromise, ActorRefFrom, enqueueActions, assertEvent } from 'xstate';
 import { accountMachine } from './accountMachine';
+import { portoWallet } from '../services/PortoWallet';
 
 // Types
 export interface UserProfile {
@@ -39,6 +40,8 @@ type UserEvent =
   | { type: 'REMOVE_ACCOUNT'; accountId: string }
   | { type: 'CASH_OUT' }
   | { type: 'CLICK_WALLET' }
+  | { type: 'CONNECT_WALLET' }
+  | { type: 'DISCONNECT_WALLET' }
   | { type: 'RETRY_LOAD' }
   // Verification queue events
   | { type: 'QUEUE_VERIFICATION'; platform: string; handle: string }
@@ -54,15 +57,15 @@ type UserEvent =
 
 // Services
 const loadUserDataService = fromPromise(async () => {
-  // Simulate API call
+  // TODO: Replace with actual API call to get user data
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   return {
     profile: {
-      walletAddress: '0x1234...5678',
-      pendingEarnings: 25.75,
-      availableEarnings: 89.50,
-      dailyActionsCompleted: 2,
+      walletAddress: null, // Will be set when wallet is connected
+      pendingEarnings: 0,
+      availableEarnings: 0,
+      dailyActionsCompleted: 0,
       dailyActionsRequired: 5,
     },
     // Start with no accounts - they'll be added through the flow
@@ -118,6 +121,23 @@ const cashOutService = fromPromise(async ({ input }: { input: { amount: number }
   return { success: true, transactionId: `tx_${Date.now()}` };
 });
 
+const connectWalletService = fromPromise(async () => {
+  try {
+    const address = await portoWallet.connect();
+    if (!address) {
+      throw new Error('Failed to connect wallet');
+    }
+    return { address };
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Failed to connect wallet');
+  }
+});
+
+const disconnectWalletService = fromPromise(async () => {
+  await portoWallet.disconnect();
+  return { success: true };
+});
+
 // Machine definition
 export const userMachine = setup({
   types: {
@@ -128,6 +148,8 @@ export const userMachine = setup({
     loadUserData: loadUserDataService,
     validateAccount: validateAccountService,
     cashOut: cashOutService,
+    connectWallet: connectWalletService,
+    disconnectWallet: disconnectWalletService,
     account: accountMachine,
   },
   guards: {
@@ -290,6 +312,37 @@ export const userMachine = setup({
         };
       },
     }),
+    
+    setWalletAddress: assign({
+      profile: ({ context, event }) => {
+        if (!context.profile) return null;
+        // Don't use assertEvent here as the event type includes the actor ID
+        if (event.type.includes('xstate.done.actor')) {
+          let address = (event as any).output.address;
+          
+          // Ensure address is always a string, not an object
+          if (address && typeof address === 'object') {
+            address = address.address || JSON.stringify(address);
+          }
+          
+          return {
+            ...context.profile,
+            walletAddress: address,
+          };
+        }
+        return context.profile;
+      },
+    }),
+    
+    clearWalletAddress: assign({
+      profile: ({ context }) => {
+        if (!context.profile) return null;
+        return {
+          ...context.profile,
+          walletAddress: null,
+        };
+      },
+    }),
   },
 }).createMachine({
   id: 'user',
@@ -449,6 +502,44 @@ export const userMachine = setup({
                 CLICK_WALLET: {
                   // Could open wallet modal, for now just log
                   actions: () => console.log('Wallet clicked'),
+                },
+                CONNECT_WALLET: {
+                  target: 'connecting',
+                },
+                DISCONNECT_WALLET: {
+                  target: 'disconnecting',
+                },
+              },
+            },
+            
+            connecting: {
+              invoke: {
+                src: 'connectWallet',
+                onDone: {
+                  target: 'idle',
+                  actions: 'setWalletAddress',
+                },
+                onError: {
+                  target: 'idle',
+                  actions: ({ event }) => {
+                    console.error('Wallet connection failed:', event.error);
+                  },
+                },
+              },
+            },
+            
+            disconnecting: {
+              invoke: {
+                src: 'disconnectWallet',
+                onDone: {
+                  target: 'idle',
+                  actions: 'clearWalletAddress',
+                },
+                onError: {
+                  target: 'idle',
+                  actions: ({ event }) => {
+                    console.error('Wallet disconnection failed:', event.error);
+                  },
                 },
               },
             },

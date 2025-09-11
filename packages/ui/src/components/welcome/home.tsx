@@ -58,6 +58,7 @@ export function Home({
   connectedAccounts = [],
   className
 }: HomeProps) {
+  console.log('Home component mounted with walletAddress:', walletAddress)
   // State for adding new accounts
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null)
   const [handleInput, setHandleInput] = useState('')
@@ -99,6 +100,13 @@ export function Home({
     return () => clearInterval(timer)
   }, [])
 
+  // Helper function to abbreviate wallet address
+  const abbreviateAddress = (address: string) => {
+    if (!address || address === '0x1234...5678') return 'Connect Wallet'
+    if (address.length < 10) return address
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
+
   return (
     <div className={cn(
       "flex flex-col h-full min-h-screen w-full max-w-sm mx-auto",
@@ -107,27 +115,18 @@ export function Home({
     )}>
       {/* Header */}
       <div className="border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          {/* Lottery info */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onJackpotClick}
-            className="h-8"
-          >
-            <span className="text-sm">
-              ${Math.round(jackpotAmount/1000)}k in {timeLeft.hours}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-            </span>
-          </Button>
-
+        <div className="flex items-center justify-end p-4">
           {/* Wallet button */}
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
-            onClick={onWalletClick}
+            onClick={() => {
+              console.log('Wallet button clicked - walletAddress:', walletAddress)
+              onWalletClick?.()
+            }}
             className="h-8"
           >
-            {walletAddress}
+            {abbreviateAddress(walletAddress)}
           </Button>
         </div>
       </div>

@@ -60,6 +60,8 @@ export const users = pgTable('users', {
   walletAddress: text('wallet_address').unique(),
   email: text('email').unique(),
   status: userStatusEnum('status').notNull().default('pending_verification'),
+  totalEarned: integer('total_earned').notNull().default(0),
+  availableBalance: integer('available_balance').notNull().default(0),
   metadata: jsonb('metadata').notNull().default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -78,17 +80,27 @@ export const socialAccounts = pgTable('social_accounts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Add brands table 
+export const brands = pgTable('brands', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  walletAddress: text('wallet_address').notNull().unique(),
+  contactEmail: text('contact_email'),
+  totalSpent: integer('total_spent').notNull().default(0),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Campaigns table (form submissions from brands)
 export const campaigns = pgTable('campaigns', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').references(() => users.id),
+  brandId: uuid('brand_id').notNull().references(() => brands.id, { onDelete: 'cascade' }),
   brandWalletAddress: text('brand_wallet_address').notNull(), // Keep for backward compatibility
-  name: text('name').notNull(),
-  description: text('description'),
   platform: platformEnum('platform').notNull(),
   targetingRules: jsonb('targeting_rules').notNull(),
   totalBudget: integer('total_budget').notNull(),
   remainingBudget: integer('remaining_budget').notNull(),
+  rewardPerAction: integer('reward_per_action').notNull().default(100),
   status: campaignStatusEnum('status').notNull().default('draft'),
   isActive: boolean('is_active').notNull().default(false),
   expiresAt: timestamp('expires_at'),
@@ -111,17 +123,21 @@ export const campaignActions = pgTable('campaign_actions', {
 });
 
 // Payment tracking table
+// Two types of payments:
+// 1. Campaign Funding: brand -> escrow (brandId populated, userId null)
+// 2. User Rewards: escrow -> user (brandId null, userId populated) 
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  brandId: uuid('brand_id').references(() => brands.id, { onDelete: 'cascade' }), // For campaign funding payments
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }), // For user reward payments
   fromAddress: text('from_address').notNull(),
   toAddress: text('to_address'),
-  amount: text('amount').notNull(),
+  amount: integer('amount').notNull(),
   currency: text('currency').notNull().default('ETH'),
   transactionHash: text('transaction_hash').unique(),
   blockNumber: integer('block_number'),
   gasUsed: text('gas_used'),
-  gasPrice: text('gas_price'),
   status: paymentStatusEnum('status').notNull().default('pending'),
   metadata: jsonb('metadata').notNull().default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -150,6 +166,8 @@ export const actionRuns = pgTable('action_runs', {
   actionId: uuid('action_id').notNull().references(() => actions.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   socialAccountId: uuid('social_account_id').notNull().references(() => socialAccounts.id, { onDelete: 'cascade' }),
+  brandId: uuid('brand_id').references(() => brands.id, { onDelete: 'cascade' }),
+  rewardAmount: integer('reward_amount'),
   status: actionRunStatusEnum('status').notNull().default('pending_verification'),
   proof: jsonb('proof').notNull().default({}),
   verificationData: jsonb('verification_data'),

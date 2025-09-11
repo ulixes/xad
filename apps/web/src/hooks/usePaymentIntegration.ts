@@ -51,8 +51,6 @@ export function usePaymentIntegration() {
     try {
       // Prepare campaign data
       const campaignData = {
-        name: targetingRule.name || `${platform} Campaign`,
-        description: targetingRule.description || '',
         platform,
         targetingRules: targetingRule,
         totalAmount: estimatedCost.totalCost.toString(), // Already in dollars from pricing calculator

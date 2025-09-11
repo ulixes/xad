@@ -1,4 +1,4 @@
-@import '@xad/ui/styles';
+@import './globals.css';
 
 /* Extension-specific styles */
 html, body, #root {

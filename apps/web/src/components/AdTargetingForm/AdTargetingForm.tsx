@@ -131,15 +131,13 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     setPaymentError(null)
     setPaymentSuccess(null)
     
+    // Debug wallet connection state
+    console.log('Wallet connection state:', { isConnected, address, hasWalletClient: !!walletClient })
+    
     // Check wallet connection
-    if (!isConnected) {
+    if (!isConnected || !address) {
       setPaymentError('Please connect your wallet first')
       open()
-      return
-    }
-
-    if (!address) {
-      setPaymentError('Wallet address not found')
       return
     }
 
@@ -170,8 +168,6 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     try {
       // Prepare campaign data
       const campaignData = {
-        name: rule.name || `${selectedPlatform} Campaign ${new Date().toLocaleDateString()}`,
-        description: rule.description || '',
         platform: selectedPlatform,
         targetingRules: rule,
         totalAmount: estimatedCost.totalCost.toString(), // Already in dollars from pricing calculator

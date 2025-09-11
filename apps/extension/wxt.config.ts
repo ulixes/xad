@@ -1,4 +1,6 @@
 import { defineConfig } from 'wxt';
+import path from 'path';
+import { mergeConfig } from 'vite';
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -7,18 +9,35 @@ export default defineConfig({
     action: {},
     permissions: ['sidePanel', 'tabs', 'debugger']
   },
-  vite: () => ({
-    css: {
-      postcss: './postcss.config.js'
-    },
-    optimizeDeps: {
-      include: ['@xad/ui'],
-      exclude: ['@xad/ui/src']
-    },
-    server: {
-      fs: {
-        allow: ['..']
-      }
-    }
-  })
+  vite: (inlineConfig) => {
+    return mergeConfig(inlineConfig, {
+      css: {
+        postcss: './postcss.config.js',
+      },
+      resolve: {
+        alias: {
+          // Map the package name to source for direct imports
+          '@xad/ui': path.resolve(__dirname, '../../packages/ui/src'),
+          // Map styles specifically  
+          '@xad/ui/styles': path.resolve(__dirname, '../../packages/ui/src/styles/globals.css'),
+          // Map UI package internal paths to resolve @ aliases within UI components
+          '@/lib': path.resolve(__dirname, '../../packages/ui/src/lib'),
+          '@/components': path.resolve(__dirname, '../../packages/ui/src/components'),
+        },
+      },
+      optimizeDeps: {
+        include: ['@xad/ui'],
+      },
+      server: {
+        fs: {
+          // Allow serving files from parent dirs (UI package)
+          allow: ['.', '..', '../..', '../../packages'],
+        },
+        // Enable HMR polling for external dirs if needed (fallback for file watchers)
+        watch: {
+          usePolling: true,  // Helps in some FS setups (e.g., Docker/WSL)
+        },
+      },
+    });
+  },
 });

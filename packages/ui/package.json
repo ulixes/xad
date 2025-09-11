@@ -12,6 +12,7 @@
       "import": "./dist/index.es.js",
       "require": "./dist/index.umd.js"
     },
+    "./src/*": "./src/*",
     "./styles": "./src/styles/globals.css"
   },
   "files": [

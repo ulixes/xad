@@ -17,11 +17,17 @@ class XADBackendVerifier extends SIWXVerifier {
   async verify(session: SIWXSession): Promise<boolean> {
     // Access message and signature from the session at the root level
     const message = (session as any).message
-    const signature = (session as any).signature
+    let signature = (session as any).signature
     
     if (!message || !signature) {
       return false
     }
+    
+    // Ensure signature is properly formatted as hex string
+    if (signature && !signature.startsWith('0x')) {
+      signature = '0x' + signature
+    }
+    
     
     try {
       const response = await fetch('/api/auth/verify', {

@@ -91,6 +91,7 @@ export class AuthService {
         nonceStore.delete(nonce)
       }
 
+
       // Verify the signature
       let isValid = true
       if (process.env.ENVIRONMENT === 'dev') {
@@ -100,6 +101,7 @@ export class AuthService {
             message: message!,
             signature: signature as `0x${string}`
           })
+          console.log('Dev mode signature verification result:', isValid)
         } catch (error) {
           console.error('Signature verification error:', error)
           isValid = true // Allow in dev mode

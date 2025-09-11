@@ -2,12 +2,19 @@ import { Button } from './ui/button'
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount } from 'wagmi'
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react'
 
 export default function Header() {
   const location = useLocation()
   const { isConnected, address } = useAccount()
+  const { isConnected: appKitConnected, address: appKitAddress } = useAppKitAccount()
+  const { open } = useAppKit()
   const [currentLang, setCurrentLang] = useState<'en' | 'zh'>('en')
   const [hasAuthToken, setHasAuthToken] = useState(false)
+  
+  // Use AppKit connection state as primary, fallback to wagmi
+  const walletConnected = appKitConnected || isConnected
+  const walletAddress = appKitAddress || address
   
   // Read the current locale from cookie and check auth token
   useEffect(() => {
@@ -37,7 +44,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('storage', checkAuthToken)
     }
-  }, [isConnected])
+  }, [walletConnected])
   
   const toggleLanguage = () => {
     const newLang = currentLang === 'en' ? 'zh' : 'en'
@@ -78,7 +85,7 @@ export default function Header() {
               >
                 Blog
               </Link>
-              {isConnected && hasAuthToken && (
+              {walletConnected && hasAuthToken && (
                 <Link 
                   to="/dashboard" 
                   className={`text-sm font-medium transition-colors hover:text-primary ${
@@ -109,8 +116,20 @@ export default function Header() {
               {currentLang === 'en' ? 'EN' : '中文'}
             </Button>
             
-            {/* AppKit Wallet Connect Button */}
-            <appkit-button />
+            {/* Custom Wallet Connect Button */}
+            <Button
+              onClick={() => open()}
+              variant="outline"
+              className="bg-background border-border hover:bg-accent/10"
+            >
+              {walletConnected ? (
+                <span className="text-sm">
+                  {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+                </span>
+              ) : (
+                'Connect Wallet'
+              )}
+            </Button>
           </div>
         </div>
       </div>
@@ -118,11 +137,3 @@ export default function Header() {
   )
 }
 
-// TypeScript declaration for AppKit web components
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'appkit-button': any
-    }
-  }
-}

@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Home } from '@xad/ui';
+import { Home } from '@xad/ui/components/welcome/home';
 import { useUserMachine } from '../../src/hooks/useUserMachine';
-import '@xad/ui/styles';
+import './globals.css';
 import './style.css';
 
 const App = () => {
@@ -48,8 +48,8 @@ const App = () => {
       dailyActionsCompleted={user.dailyActionsCompleted}
       dailyActionsRequired={user.dailyActionsRequired}
       
-      // Wallet
-      walletAddress={user.walletAddress}
+      // Wallet  
+      walletAddress={user.walletAddress || null}
       
       // Transform accounts data to match expected format
       connectedAccounts={user.accounts.map(account => ({
@@ -81,7 +81,7 @@ const App = () => {
         user.clickAccount(accountId);
       }}
       
-      onWalletClick={user.clickWallet}
+      onWalletClick={user.walletAddress ? user.disconnectWallet : user.connectWallet}
       onJackpotClick={() => console.log('Jackpot clicked')}
       onCashOut={user.cashOut}
     />

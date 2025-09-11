@@ -189,6 +189,14 @@ export function useUserMachine() {
   const retryLoad = useCallback(() => {
     send({ type: 'RETRY_LOAD' });
   }, [send]);
+
+  const connectWallet = useCallback(() => {
+    send({ type: 'CONNECT_WALLET' });
+  }, [send]);
+
+  const disconnectWallet = useCallback(() => {
+    send({ type: 'DISCONNECT_WALLET' });
+  }, [send]);
   
   // Account actions - send events to specific account actors
   const retryAccountVerification = useCallback((accountId: string) => {
@@ -257,6 +265,8 @@ export function useUserMachine() {
     removeAccount,
     cashOut,
     clickWallet,
+    connectWallet,
+    disconnectWallet,
     retryLoad,
     
     // Account actions

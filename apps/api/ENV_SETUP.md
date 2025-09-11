@@ -15,9 +15,9 @@ For local development, Wrangler can read from `.dev.vars` file:
 1. Create a `.dev.vars` file in the root directory:
 ```bash
 DATABASE_URL=your_dev_database_url
-PRIVY_APP_ID=your_dev_privy_app_id
-PRIVY_APP_SECRET=your_dev_privy_app_secret
+JWT_SECRET=your_jwt_secret_key_at_least_32_chars
 ADMIN_AUTH_TOKEN=your_dev_admin_token
+ESCROW_WALLET_ADDRESS=your_escrow_wallet_address
 ```
 
 2. Run the development server:
@@ -34,15 +34,15 @@ For production, sensitive values should be set as Cloudflare secrets:
 ```bash
 # Set secrets for development environment
 echo "your_database_url" | bun run secrets:set:dev DATABASE_URL
-echo "your_privy_app_id" | bun run secrets:set:dev PRIVY_APP_ID
-echo "your_privy_app_secret" | bun run secrets:set:dev PRIVY_APP_SECRET
+echo "your_jwt_secret_key" | bun run secrets:set:dev JWT_SECRET
 echo "your_admin_token" | bun run secrets:set:dev ADMIN_AUTH_TOKEN
+echo "your_escrow_wallet_address" | bun run secrets:set:dev ESCROW_WALLET_ADDRESS
 
 # Set secrets for production environment
 echo "your_database_url" | bun run secrets:set:prod DATABASE_URL
-echo "your_privy_app_id" | bun run secrets:set:prod PRIVY_APP_ID
-echo "your_privy_app_secret" | bun run secrets:set:prod PRIVY_APP_SECRET
+echo "your_jwt_secret_key" | bun run secrets:set:prod JWT_SECRET
 echo "your_admin_token" | bun run secrets:set:prod ADMIN_AUTH_TOKEN
+echo "your_escrow_wallet_address" | bun run secrets:set:prod ESCROW_WALLET_ADDRESS
 ```
 
 ### List Current Secrets
@@ -66,9 +66,9 @@ bun run deploy:prod
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `DATABASE_URL` | PostgreSQL connection string for Neon database | Yes |
-| `PRIVY_APP_ID` | Privy application ID for authentication | Yes |
-| `PRIVY_APP_SECRET` | Privy application secret for authentication | Yes |
+| `JWT_SECRET` | Secret key for signing JWT tokens (SIWX authentication) | Yes |
 | `ADMIN_AUTH_TOKEN` | Bearer token for admin API endpoints | Yes |
+| `ESCROW_WALLET_ADDRESS` | Wallet address for receiving payments | Yes |
 | `ENVIRONMENT` | Environment name (development/production) | Auto-set by wrangler |
 
 ## How It Works
