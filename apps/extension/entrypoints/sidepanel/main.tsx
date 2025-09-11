@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Home } from '@xad/ui';
-import '@xad/ui/styles';
 import './style.css';
 import { Platform, SocialAccount, User, UserStatus } from '@/src/types';
 import { adaptSocialAccountsForUI } from '@/src/utils/adapters';
+import { portoWallet } from '@/src/services/PortoWallet';
 
 const App = () => {
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  
   const [mockUser] = useState<User>(() => ({
     id: crypto.randomUUID(),
     email: 'user@example.com',
     status: UserStatus.VERIFIED,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    wallet_address: '0x1234...5678',
+    wallet_address: null,
     metadata: { preferences: { notifications: true } },
     pendingEarnings: 12.45,
     availableEarnings: 67.89,
@@ -46,6 +49,17 @@ const App = () => {
   }));
 
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>(mockUser.socialAccounts);
+
+  // Check wallet connection on mount
+  useEffect(() => {
+    const checkWallet = async () => {
+      const account = await portoWallet.getAccount();
+      if (account?.isConnected) {
+        setWalletAddress(account.address);
+      }
+    };
+    checkWallet();
+  }, []);
 
   // Listen for messages from background script
   useEffect(() => {
@@ -90,7 +104,7 @@ const App = () => {
       dailyActionsRequired={mockUser.dailyActionsRequired}
 
       // Wallet
-      walletAddress={mockUser.wallet_address}
+      walletAddress={walletAddress}
 
       // Connected accounts
       connectedAccounts={adaptSocialAccountsForUI(socialAccounts)}
@@ -127,8 +141,25 @@ const App = () => {
         console.log('Mock account clicked:', account);
       }}
 
-      onWalletClick={() => {
-        console.log('Mock wallet clicked');
+      onWalletClick={async () => {
+        if (walletAddress) {
+          // Disconnect
+          await portoWallet.disconnect();
+          setWalletAddress(null);
+        } else {
+          // Connect
+          setIsConnecting(true);
+          try {
+            const address = await portoWallet.connect();
+            if (address) {
+              setWalletAddress(address);
+            }
+          } catch (error) {
+            console.error('Failed to connect wallet:', error);
+          } finally {
+            setIsConnecting(false);
+          }
+        }
       }}
 
       onJackpotClick={() => {
