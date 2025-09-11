@@ -1,1048 +1,438 @@
-import { InstagramVerifier } from '../src/services/InstagramVerifier';
-import { VerificationMessage } from '../src/types/verification';
-import { TabManager } from '../src/utils/tabManager';
-import { DebuggerManager } from '../src/utils/debuggerManager';
+ import { InstagramMetadata, InstagramAccountType } from '@/src/types';
+  import editPageMapping from './ig/edit-page.json';
 
-// Strong typing based on CSV IG field mapping
-interface IGProfileData {
-  followerCount: number;           // ig-follower-count
-  accountType: 1 | 2 | 3;          // ig-account-type (1=personal, 2=business, 3=creator)
-  isVerified: boolean;             // ig-is-verified
-  category: string;                // ig-category
-}
-
-interface IGBusinessInsights {
-  profileVisits7d: number;         // ig-profile-visits-7d
-  profileVisits30d: number;        // ig-profile-visits-30d
-  profileVisits90d: number;        // ig-profile-visits-90d
-  accountsReached7d: number;       // ig-accounts-reached-7d
-  accountsReached30d: number;      // ig-accounts-reached-30d
-  accountsEngaged7d: number;       // ig-accounts-engaged-7d
-  accountsEngaged30d: number;      // ig-accounts-engaged-30d
-  followerGrowth7d: number;        // ig-follower-growth-7d (percentage)
-  followerGrowth30d: number;       // ig-follower-growth-30d (percentage)
-  followerGrowth90d: number;       // ig-follower-growth-90d (percentage)
-  engagementRate: number;          // ig-engagement-rate
-}
-
-interface IGAudienceData {
-  genderDistribution: {
-    male: number;
-    female: number;
-    other: number;
-  };                               // ig-audience-gender
-  ageDistribution: {
-    '13-17': number;
-    '18-24': number;
-    '25-34': number;
-    '35-44': number;
-    '45-54': number;
-    '55-64': number;
-    '65+': number;
-  };                               // ig-audience-age
-  topLocation: string;             // ig-top-location
-}
-
-interface IGContentMetrics {
-  engagementTrend: 'increasing' | 'stable' | 'decreasing'; // ig-content-engagement-trend
-}
-
-interface IGAccountCenterData {
-  linkedIdentities: Array<{
-    canonicalId: string;
-    accountType: 'INSTAGRAM';
-    username: string;
-    fullName: string;
-    identityType: 'IG_USER' | 'IG_PROFESSIONAL';
-    detailedIdentityType: 'IG_PERSONAL' | 'IG_CREATOR' | 'IG_BUSINESS';
-  }>;
-  businessIdentities: Array<{
-    canonicalId: string;
-    username: string;
-    fullName: string;
-    identityType: 'IG_PROFESSIONAL';
-    detailedIdentityType: 'IG_CREATOR' | 'IG_BUSINESS';
-  }>;
-}
-
-interface IGProfileSession {
-  sessionId: string;
-  userId: string;
-  username: string;
-  stage: 'account_center' | 'basic_profile' | 'insights' | 'audience' | 'completed' | 'failed';
-  tabId?: number;
-  collectedData: {
-    accountCenterData: IGAccountCenterData | null;
-    profileData: IGProfileData | null;
-    insightsData: IGBusinessInsights | null;
-    audienceData: IGAudienceData | null;
-    contentMetrics: IGContentMetrics | null;
-  };
-  startTime: number;
-  callbacks: ((result: any) => void)[];
-}
-
-export default defineBackground(() => {
-  const instagramVerifier = new InstagramVerifier();
-  const verifiers = new Map([
-    ['instagram', instagramVerifier],
-  ]);
-
-  // IG Profile Building State Management
-  const igProfileSessions = new Map<string, IGProfileSession>();
-
-  // Extension icon click handler
-  browser.action.onClicked.addListener((tab) => {
-    browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
-  });
-
-  // Message handler for verification requests
-  browser.runtime.onMessage.addListener((message: VerificationMessage, sender, sendResponse) => {
-    console.log(`📨 [Background] Received message:`, message.type);
-    
-    try {
-      switch (message.type) {
-        case 'START_VERIFICATION':
-          handleLegacyVerificationRequest(message.platform, message.username, sendResponse);
-          return true; // Keep message channel open for async response
-          
-        case 'CREATE_VERIFICATION_TAB':
-          handleTabCreationRequest(message.platform, message.username, sendResponse);
-          return true;
-          
-        case 'ATTACH_DEBUGGER':
-          handleDebuggerAttachRequest(message.tabId, message.username, sendResponse);
-          return true;
-          
-        case 'CLEANUP_VERIFICATION':
-          handleCleanupRequest(message.tabId, sendResponse);
-          return true;
-
-        case 'BUILD_IG_PROFILE_COMPLETE':
-          handleIGProfileBuildingRequest(message.username, message.userId, sendResponse);
-          return true;
-          
-        default:
-          console.warn(`⚠️ [Background] Unknown message type: ${message.type}`);
-          sendResponse({ type: 'VERIFICATION_ERROR', error: 'Unknown message type' });
-          return false;
-      }
-    } catch (error) {
-      console.error(`💥 [Background] Error handling message:`, error);
-      sendResponse({ type: 'VERIFICATION_ERROR', error: `Message handling failed: ${error}` });
-      return false;
-    }
-  });
-
-  // Legacy verification handler (fallback)
-  async function handleLegacyVerificationRequest(platform: string, username: string, sendResponse: (response: any) => void) {
-    console.log(`🚀 [Background] Starting legacy verification request for ${platform}:"${username}"`);
-    
-    try {
-      const verifier = verifiers.get(platform.toLowerCase());
-      if (!verifier) {
-        sendResponse({
-          type: 'VERIFICATION_ERROR',
-          error: `Unsupported platform: ${platform}`
-        });
-        return;
-      }
-
-      // Create verification tab
-      const tabId = await TabManager.createVerificationTab(platform, username);
-      
-      // Start verification process before waiting for tab to load
-      const verificationPromise = verifier.verifyAccount(username, tabId);
-      
-      // Wait for tab to load
-      await TabManager.waitForTabToLoad(tabId);
-      
-      // Wait for verification to complete
-      const result = await verificationPromise;
-      
-      // Cleanup
-      await Promise.all([
-        TabManager.closeTab(tabId),
-        DebuggerManager.detachFromTab(tabId)
-      ]);
-
-      if (result.success && result.profileData) {
-        sendResponse({
-          type: 'VERIFICATION_COMPLETE',
-          profileData: result.profileData
-        });
-      } else {
-        sendResponse({
-          type: 'VERIFICATION_ERROR',
-          error: result.error || 'Unknown verification error'
-        });
-      }
-    } catch (error) {
-      console.error(`💥 [Background] Legacy verification failed:`, error);
-      sendResponse({
-        type: 'VERIFICATION_ERROR',
-        error: `Verification failed: ${error}`
-      });
-    }
+  // Raw captured data interface
+  interface RawInstagramData {
+    id?: string;
+    username?: string;
+    full_name?: string;
+    biography?: string;
+    profile_pic_url?: string;
+    is_private?: boolean;
+    is_verified?: boolean;
+    is_business_account?: boolean;
+    account_type?: string;
   }
 
-  // New hierarchical verification handlers
-  async function handleTabCreationRequest(platform: string, username: string, sendResponse: (response: any) => void) {
-    console.log(`🚀 [Background] Creating verification tab for ${platform}:"${username}"`);
-    
-    try {
-      const tabId = await TabManager.createVerificationTab(platform, username);
-      
-      // Wait for tab to load
-      await TabManager.waitForTabToLoad(tabId);
-      
-      sendResponse({
-        type: 'TAB_CREATED',
-        tabId
-      });
-    } catch (error) {
-      console.error(`💥 [Background] Tab creation failed:`, error);
-      sendResponse({
-        type: 'TAB_CREATION_ERROR',
-        error: (error as Error).message || 'Failed to create verification tab'
-      });
-    }
+  // Insights data interface
+  interface RawInsightsData {
+    follower_count?: number;
+    profile_visits_count?: number;
+    bio_link_clicks?: number;
+    views_current_period?: number;
+    views_by_follow_type?: Array<{ value: number; dimension_values: string[] }>;
+    reach_current_period?: number;
+    total_interactions?: number;
+    interacted_accounts_by_follow_type?: Array<{ value: number; dimension_values: string[] }>;
+    accounts_engaged?: number;
+    hourly_30_day?: Array<{ dimension_values: string[]; value: number }>;
+    total_interactions_by_media_type?: Array<{ dimension_values: string[]; value: number }>;
+    views_by_media_and_follow_types?: Array<{ dimension_values: string[]; value: number }>;
+    messages_total_connections_unique?: number;
+    messages_conversations_started?: number;
+    daily_response_rate?: number;
+    daily_response_time?: number;
+    top_views_media?: any[];
+    top_interacted_media?: any[];
+    instagram_user_id?: string;
   }
 
-  async function handleDebuggerAttachRequest(tabId: number, username: string, sendResponse: (response: any) => void) {
-    console.log(`🚀 [Background] Attaching debugger to tab ${tabId} for "${username}"`);
-    
-    try {
-      await DebuggerManager.attachToTab(tabId, username);
-      
-      sendResponse({
-        type: 'DEBUGGER_ATTACHED'
-      });
-    } catch (error) {
-      console.error(`💥 [Background] Debugger attachment failed:`, error);
-      sendResponse({
-        type: 'DEBUGGER_ATTACHMENT_ERROR',
-        error: (error as Error).message || 'Failed to attach debugger'
-      });
-    }
-  }
-
-  async function handleCleanupRequest(tabId: number, sendResponse: (response: any) => void) {
-    console.log(`🚀 [Background] Cleaning up verification resources for tab ${tabId}`);
-    
-    try {
-      await Promise.all([
-        TabManager.closeTab(tabId),
-        DebuggerManager.detachFromTab(tabId)
-      ]);
-      
-      sendResponse({
-        type: 'CLEANUP_COMPLETE'
-      });
-    } catch (error) {
-      console.warn(`⚠️ [Background] Cleanup completed with warnings:`, error);
-      // Don't fail cleanup - just log and continue
-      sendResponse({
-        type: 'CLEANUP_COMPLETE'
-      });
-    }
-  }
-
-  // Cleanup on tab close to prevent memory leaks
-  browser.tabs.onRemoved.addListener((tabId) => {
-    console.log(`🗑️ [Background] Tab ${tabId} closed, cleaning up resources`);
-    
-    // Use try-finally to ensure cleanup happens
-    (async () => {
-      try {
-        await DebuggerManager.detachFromTab(tabId);
-      } finally {
-        // Always clean up tab tracking even if debugger detach fails
-        TabManager.closeTab(tabId).catch(() => {
-          // Tab already closed, ignore error
-        });
-      }
-    })();
-  });
-
-  // Cleanup on extension shutdown
-  browser.runtime.onSuspend?.addListener(() => {
-    console.log(`🛑 [Background] Extension suspending, cleaning up all resources`);
-    
-    try {
-      TabManager.cleanup();
-    } finally {
-      DebuggerManager.cleanup();
-    }
-  });
-
-  // Complete IG Profile Building Handler
-  async function handleIGProfileBuildingRequest(username: string, userId: string, sendResponse: (response: any) => void) {
-    const sessionId = `${userId}_${username}_${Date.now()}`;
-    console.log(`🚀 [Background] Starting complete IG profile building for "${username}" (Session: ${sessionId})`);
-    
-    try {
-      // Initialize session
-      const session: IGProfileSession = {
-        sessionId,
-        userId,
-        username,
-        stage: 'account_center',
-        collectedData: {
-          accountCenterData: null,
-          profileData: null,
-          insightsData: null,
-          audienceData: null,
-          contentMetrics: null,
-        },
-        startTime: Date.now(),
-        callbacks: [sendResponse],
-      };
-      
-      igProfileSessions.set(sessionId, session);
-      
-      // Stage 1: Account Center Profile Collection
-      await executeStage1AccountCenter(session);
-      
-    } catch (error) {
-      console.error(`💥 [Background] IG profile building failed:`, error);
-      sendResponse({
-        type: 'IG_PROFILE_ERROR',
-        error: `Profile building failed: ${error}`
-      });
-      igProfileSessions.delete(sessionId);
-    }
-  }
-  
-  // Stage 1: Account Center Profile Collection
-  async function executeStage1AccountCenter(session: IGProfileSession) {
-    console.log(`📊 [Background] Stage 1: Collecting Account Center data for ${session.username}`);
-    
-    try {
-      // Create tab for account center
-      const tabId = await TabManager.createTab('https://accountscenter.instagram.com/profiles/');
-      session.tabId = tabId;
-      session.stage = 'account_center';
-      
-      // Wait for tab to load
-      await TabManager.waitForTabToLoad(tabId);
-      
-      // Set up debugger to capture FXAccountsCenterProfilesPageV2Query
-      await setupAccountCenterDebugger(session);
-      
-    } catch (error) {
-      console.error(`❌ [Background] Stage 1 failed:`, error);
-      session.stage = 'failed';
-      throw error;
-    }
-  }
-  
-  // Stage 2: Basic Profile Data Collection  
-  async function executeStage2BasicProfile(session: IGProfileSession) {
-    console.log(`📊 [Background] Stage 2: Collecting basic profile data for ${session.username}`);
-    
-    try {
-      // Navigate to profile page
-      const profileUrl = `https://instagram.com/${session.username}`;
-      await browser.tabs.update(session.tabId!, { url: profileUrl });
-      await TabManager.waitForTabToLoad(session.tabId!);
-      
-      session.stage = 'basic_profile';
-      
-      // Set up debugger to capture PolarisProfilePageContentQuery
-      await setupProfileDebugger(session);
-      
-    } catch (error) {
-      console.error(`❌ [Background] Stage 2 failed:`, error);
-      session.stage = 'failed';
-      throw error;
-    }
-  }
-  
-  // Stage 3: Business Insights Collection
-  async function executeStage3BusinessInsights(session: IGProfileSession) {
-    console.log(`📊 [Background] Stage 3: Collecting business insights for ${session.username}`);
-    
-    // Only for professional accounts
-    if (!session.collectedData.profileData || 
-        session.collectedData.profileData.accountType === 1) {
-      console.log(`⏭️ [Background] Skipping insights - personal account`);
-      await executeStage4AudienceData(session);
-      return;
-    }
-    
-    try {
-      // Navigate to insights page
-      await browser.tabs.update(session.tabId!, { url: 'https://instagram.com/accounts/insights/' });
-      await TabManager.waitForTabToLoad(session.tabId!);
-      
-      session.stage = 'insights';
-      
-      // Set up debugger to capture PolarisAccountInsightsProfileQuery
-      await setupInsightsDebugger(session);
-      
-    } catch (error) {
-      console.error(`❌ [Background] Stage 3 failed:`, error);
-      session.stage = 'failed';
-      throw error;
-    }
-  }
-  
-  // Stage 4: Audience Demographics Collection
-  async function executeStage4AudienceData(session: IGProfileSession) {
-    console.log(`📊 [Background] Stage 4: Collecting audience data for ${session.username}`);
-    
-    // Only for professional accounts
-    if (!session.collectedData.profileData || 
-        session.collectedData.profileData.accountType === 1) {
-      console.log(`⏭️ [Background] Skipping audience data - personal account`);
-      await completeProfileBuilding(session);
-      return;
-    }
-    
-    try {
-      // Navigate to audience insights
-      await browser.tabs.update(session.tabId!, { url: 'https://instagram.com/accounts/insights/audience/' });
-      await TabManager.waitForTabToLoad(session.tabId!);
-      
-      session.stage = 'audience';
-      
-      // Set up debugger to capture PolarisAccountInsightsFollowersQuery
-      await setupAudienceDebugger(session);
-      
-    } catch (error) {
-      console.error(`❌ [Background] Stage 4 failed:`, error);
-      session.stage = 'failed';
-      throw error;
-    }
-  }
-  
-  // Complete Profile Building - Store in Database
-  async function completeProfileBuilding(session: IGProfileSession) {
-    console.log(`✅ [Background] Completing profile building for ${session.username}`);
-    
-    try {
-      session.stage = 'completed';
-      
-      // Structure the complete profile data
-      const completeProfileData = {
-        profileData: session.collectedData.profileData,
-        businessInsights: session.collectedData.insightsData,
-        audienceData: session.collectedData.audienceData,
-        accountCenterData: session.collectedData.accountCenterData,
-        contentMetrics: session.collectedData.contentMetrics,
-        collectionTimestamp: Date.now(),
-        processingDuration: Date.now() - session.startTime,
-      };
-      
-      // Send success response with complete data
-      session.callbacks.forEach(callback => {
-        callback({
-          type: 'IG_PROFILE_COMPLETE',
-          username: session.username,
-          userId: session.userId,
-          profileData: completeProfileData
-        });
-      });
-      
-      // Cleanup
-      await cleanup(session);
-      
-    } catch (error) {
-      console.error(`❌ [Background] Profile completion failed:`, error);
-      session.stage = 'failed';
-      throw error;
-    }
-  }
-  
-  // Cleanup session resources
-  async function cleanup(session: IGProfileSession) {
-    console.log(`🧹 [Background] Cleaning up IG profile session: ${session.sessionId}`);
-    
-    try {
-      if (session.tabId) {
-        await Promise.all([
-          TabManager.closeTab(session.tabId),
-          DebuggerManager.detachFromTab(session.tabId)
-        ]);
-      }
-    } finally {
-      igProfileSessions.delete(session.sessionId);
-    }
-  }
-  
-  // Stage 1: Account Center GraphQL Query Capture
-  async function setupAccountCenterDebugger(session: IGProfileSession) {
-    console.log(`🔗 [Background] Setting up Account Center debugger for session: ${session.sessionId}`);
-    
-    return new Promise<void>((resolve, reject) => {
-      let isResolved = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      
-      const cleanup = async () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        try {
-          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
-          await browser.debugger.detach({ tabId: session.tabId! });
-        } catch (error) {
-          console.warn(`⚠️ [Background] Cleanup warning:`, error);
-        }
-      };
-
-      const handleDebuggerEvent = (source: any, method: string, params: any) => {
-        if (source.tabId !== session.tabId || isResolved) return;
-        
-        if (method === 'Network.requestWillBeSent') {
-          const url = params.request.url;
-          // Target: https://accountscenter.instagram.com/api/graphql/
-          if (url.includes('accountscenter.instagram.com/api/graphql/')) {
-            const postData = params.request.postData;
-            if (postData && postData.includes('FXAccountsCenterProfilesPageV2Query')) {
-              console.log(`📤 [Background] Account Center GraphQL request detected`);
-            }
-          }
-        }
-        
-        if (method === 'Network.responseReceived') {
-          const requestId = params.requestId;
-          const url = params.response.url;
-          
-          if (url.includes('accountscenter.instagram.com/api/graphql/')) {
-            setTimeout(() => {
-              if (isResolved) return;
-              
-              browser.debugger.sendCommand(
-                { tabId: session.tabId! },
-                'Network.getResponseBody',
-                { requestId },
-                async (response: any) => {
-                  if (isResolved || !response?.body) return;
-                  
-                  try {
-                    const data = JSON.parse(response.body);
-                    
-                    // Extract FXAccountsCenterProfilesPageV2Query response
-                    if (data?.data?.fx_identity_management?.identities_and_central_identities) {
-                      console.log(`✅ [Background] Account Center data captured`);
-                      
-                      const accountCenterData: IGAccountCenterData = {
-                        linkedIdentities: extractLinkedIdentities(data.data.fx_identity_management.identities_and_central_identities),
-                        businessIdentities: extractBusinessIdentities(data.data.fx_identity_management.business_identities || [])
-                      };
-                      
-                      session.collectedData.accountCenterData = accountCenterData;
-                      isResolved = true;
-                      await cleanup();
-                      
-                      // Proceed to Stage 2
-                      await executeStage2BasicProfile(session);
-                      resolve();
-                    }
-                  } catch (error) {
-                    console.error(`💥 [Background] Account Center data parsing failed:`, error);
-                  }
-                }
-              );
-            }, 100);
-          }
-        }
-      };
-
-      // Set up timeout
-      timeoutId = setTimeout(async () => {
-        if (isResolved) return;
-        console.log(`⏰ [Background] Account Center capture timeout`);
-        isResolved = true;
-        await cleanup();
-        reject(new Error('Account Center data capture timeout'));
-      }, 30000);
-
-      // Attach debugger
-      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
-        if (browser.runtime.lastError) {
-          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
-          return;
-        }
-
-        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
-          if (browser.runtime.lastError) {
-            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
-            return;
-          }
-          
-          console.log(`📡 [Background] Account Center network monitoring enabled`);
-          browser.debugger.onEvent.addListener(handleDebuggerEvent);
-        });
-      });
+  export default defineBackground(() => {
+    // Extension icon click handler
+    browser.action.onClicked.addListener((tab) => {
+      browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
     });
-  }
 
-  // Helper function to extract linked identities
-  function extractLinkedIdentities(identitiesData: any): IGAccountCenterData['linkedIdentities'] {
-    const linkedIdentities = identitiesData.linked_identities_to_pci || [];
-    return linkedIdentities
-      .filter((identity: any) => identity.account_type === 'INSTAGRAM')
-      .map((identity: any) => ({
-        canonicalId: identity.canonical_id,
-        accountType: 'INSTAGRAM' as const,
-        username: identity.username,
-        fullName: identity.full_name,
-        identityType: identity.identity_type,
-        detailedIdentityType: identity.detailed_identity_type
-      }));
-  }
+    // Message listener for adding Instagram accounts
+    browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+      if (message.type === "addIgAccount") {
+        const { handle } = message;
+        console.log("Adding Instagram account:", handle);
 
-  // Helper function to extract business identities  
-  function extractBusinessIdentities(businessData: any[]): IGAccountCenterData['businessIdentities'] {
-    return businessData
-      .filter((identity: any) => identity.identity_type === 'IG_PROFESSIONAL')
-      .map((identity: any) => ({
-        canonicalId: identity.canonical_id,
-        username: identity.username,
-        fullName: identity.full_name,
-        identityType: 'IG_PROFESSIONAL' as const,
-        detailedIdentityType: identity.detailed_identity_type
-      }));
-  }
-  
-  // Stage 2: Basic Profile GraphQL Query Capture
-  async function setupProfileDebugger(session: IGProfileSession) {
-    console.log(`🔗 [Background] Setting up Profile debugger for session: ${session.sessionId}`);
-    
-    return new Promise<void>((resolve, reject) => {
-      let isResolved = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      
-      const cleanup = async () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
+        const tab = await browser.tabs.create({ url: 'about:blank' });
+
+
         try {
-          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
-          await browser.debugger.detach({ tabId: session.tabId! });
-        } catch (error) {
-          console.warn(`⚠️ [Background] Profile cleanup warning:`, error);
-        }
-      };
+          await browser.debugger.attach({ tabId: tab.id }, '1.3');
+          await browser.debugger.sendCommand({ tabId: tab.id }, 'Network.enable');
+          const url = 'https://www.instagram.com/accounts/edit/';
 
-      const handleDebuggerEvent = (source: any, method: string, params: any) => {
-        if (source.tabId !== session.tabId || isResolved) return;
-        
-        if (method === 'Network.requestWillBeSent') {
-          const url = params.request.url;
-          // Target: https://instagram.com/graphql/query
-          if (url.includes('instagram.com/graphql/query')) {
-            const postData = params.request.postData;
-            if (postData && postData.includes('PolarisProfilePageContentQuery')) {
-              console.log(`📤 [Background] Profile GraphQL request detected for ${session.username}`);
-            }
-          }
-        }
-        
-        if (method === 'Network.responseReceived') {
-          const requestId = params.requestId;
-          const url = params.response.url;
-          
-          if (url.includes('instagram.com/graphql/query')) {
-            setTimeout(() => {
-              if (isResolved) return;
-              
-              browser.debugger.sendCommand(
-                { tabId: session.tabId! },
-                'Network.getResponseBody',
-                { requestId },
-                async (response: any) => {
-                  if (isResolved || !response?.body) return;
-                  
-                  try {
-                    const data = JSON.parse(response.body);
-                    
-                    // Extract PolarisProfilePageContentQuery response
-                    const user = data?.data?.user || data?.data?.xdt_api__v1__users__web_profile_info?.user;
-                    if (user && user.username) {
-                      // Verify this is the correct user
-                      const normalizedExpected = session.username.toLowerCase().trim();
-                      const normalizedReceived = user.username.toLowerCase().trim();
-                      
-                      if (normalizedExpected === normalizedReceived) {
-                        console.log(`✅ [Background] Profile data captured for ${session.username}`);
-                        
-                        const profileData: IGProfileData = {
-                          followerCount: user.follower_count || user.edge_followed_by?.count || 0,
-                          accountType: user.account_type || (user.is_business ? 2 : 1),
-                          isVerified: user.is_verified || false,
-                          category: user.category || user.category_name || ''
-                        };
-                        
-                        session.collectedData.profileData = profileData;
-                        isResolved = true;
-                        await cleanup();
-                        
-                        // Proceed to Stage 3
-                        await executeStage3BusinessInsights(session);
-                        resolve();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await browser.tabs.update(tab.id, { url });
+          let capturedData: RawInstagramData = {};
+
+          // Set up event listener for network responses
+          const debuggerListener = (source: any, method: string, params: any) => {
+            if (method === 'Network.responseReceived' && source.tabId === tab.id) {
+              const { requestId, response, type } = params;
+              const responseUrl = response?.url;
+
+              // Handle GraphQL requests
+              if (responseUrl && responseUrl.includes('graphql') && type === 'XHR') {
+                browser.debugger.sendCommand(
+                  { tabId: tab.id },
+                  'Network.getRequestPostData',
+                  { requestId },
+                  (requestResult: any) => {
+                    browser.debugger.sendCommand(
+                      { tabId: tab.id },
+                      'Network.getResponseBody',
+                      { requestId },
+                      (result: any) => {
+                        if (result && result.body) {
+                          try {
+                            const json = JSON.parse(result.body);
+
+                            // Handle PolarisSettingsElevationEditProfilePageQuery for user ID
+                            if (requestResult && requestResult.postData &&
+                                requestResult.postData.includes('fb_api_req_friendly_name=PolarisSettingsElevationEditProfilePageQuery')) {
+                              if (json.data?.viewer?.user?.id) {
+                                capturedData.id = json.data.viewer.user.id;
+                                console.log('Captured user ID:', capturedData.id);
+                              }
+                            }
+
+                            // Handle PolarisSettingsDesktopContainerQuery for privacy and verification
+                            if (requestResult && requestResult.postData &&
+                                requestResult.postData.includes('fb_api_req_friendly_name=PolarisSettingsDesktopContainerQuery')) {
+                              if (json.data?.xdt__settings__get_screen_dependencies) {
+                                const deps = json.data.xdt__settings__get_screen_dependencies;
+
+                                // Extract privacy setting
+                                if (deps.boolean_settings?.[0]?.value !== undefined) {
+                                  capturedData.is_private = deps.boolean_settings[0].value;
+                                }
+
+                                // Extract verification status
+                                if (deps.boolean_server_values?.[1]?.value !== undefined) {
+                                  capturedData.is_verified = deps.boolean_server_values[1].value;
+                                }
+
+                                // Extract account type
+                                if (deps.string_server_values?.[0]?.value) {
+                                  capturedData.account_type = deps.string_server_values[0].value;
+                                }
+
+                                console.log('Captured settings data:', {
+                                  is_private: capturedData.is_private,
+                                  is_verified: capturedData.is_verified,
+                                  account_type: capturedData.account_type
+                                });
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error parsing GraphQL response:', e);
+                          }
+                        }
+                      }
+                    );
+                  }
+                );
+              }
+
+              // Handle web_form_data requests
+              if (responseUrl && responseUrl.includes('/api/v1/accounts/edit/web_form_data/')) {
+                browser.debugger.sendCommand(
+                  { tabId: tab.id },
+                  'Network.getResponseBody',
+                  { requestId },
+                  (result: any) => {
+                    if (result && result.body) {
+                      try {
+                        const json = JSON.parse(result.body);
+                        if (json.form_data) {
+                          if (json.form_data.username) {
+                            capturedData.username = json.form_data.username;
+                          }
+                          if (json.form_data.first_name) {
+                            capturedData.full_name = json.form_data.first_name;
+                          }
+                          if (json.form_data.biography !== undefined) {
+                            capturedData.biography = json.form_data.biography;
+                          }
+                          if (json.form_data.business_account !== undefined) {
+                            capturedData.is_business_account = json.form_data.business_account;
+                          }
+
+                          console.log('Captured form data:', {
+                            username: capturedData.username,
+                            full_name: capturedData.full_name,
+                            biography: capturedData.biography,
+                            is_business_account: capturedData.is_business_account
+                          });
+                        }
+                      } catch (e) {
+                        console.error('Error parsing form data response:', e);
                       }
                     }
-                  } catch (error) {
-                    console.error(`💥 [Background] Profile data parsing failed:`, error);
                   }
-                }
-              );
-            }, 100);
-          }
-        }
-      };
-
-      // Set up timeout
-      timeoutId = setTimeout(async () => {
-        if (isResolved) return;
-        console.log(`⏰ [Background] Profile capture timeout for ${session.username}`);
-        isResolved = true;
-        await cleanup();
-        reject(new Error('Profile data capture timeout'));
-      }, 30000);
-
-      // Attach debugger
-      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
-        if (browser.runtime.lastError) {
-          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
-          return;
-        }
-
-        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
-          if (browser.runtime.lastError) {
-            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
-            return;
-          }
-          
-          console.log(`📡 [Background] Profile network monitoring enabled`);
-          browser.debugger.onEvent.addListener(handleDebuggerEvent);
-        });
-      });
-    });
-  }
-  
-  // Stage 3: Business Insights GraphQL Query Capture
-  async function setupInsightsDebugger(session: IGProfileSession) {
-    console.log(`🔗 [Background] Setting up Insights debugger for session: ${session.sessionId}`);
-    
-    return new Promise<void>((resolve, reject) => {
-      let isResolved = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let collectedInsights: Partial<IGBusinessInsights> = {};
-      
-      const cleanup = async () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        try {
-          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
-          await browser.debugger.detach({ tabId: session.tabId! });
-        } catch (error) {
-          console.warn(`⚠️ [Background] Insights cleanup warning:`, error);
-        }
-      };
-
-      const handleDebuggerEvent = (source: any, method: string, params: any) => {
-        if (source.tabId !== session.tabId || isResolved) return;
-        
-        if (method === 'Network.requestWillBeSent') {
-          const url = params.request.url;
-          if (url.includes('instagram.com/graphql/query')) {
-            const postData = params.request.postData;
-            if (postData && (
-                postData.includes('PolarisAccountInsightsProfileQuery') ||
-                postData.includes('PolarisAccountInsightsTopContentByViewsQuery')
-            )) {
-              console.log(`📤 [Background] Insights GraphQL request detected`);
+                );
+              }
             }
-          }
-        }
-        
-        if (method === 'Network.responseReceived') {
-          const requestId = params.requestId;
-          const url = params.response.url;
+          };
+
+          browser.debugger.onEvent.addListener(debuggerListener);
+
+          // Wait for page load and potential network activity
+          await new Promise(resolve => setTimeout(resolve, 10000));
+
+          console.log('Edit page data collected:', capturedData);
+
+          // Now navigate to insights page to collect additional metrics
+          const insightsData: RawInsightsData = {};
+          const insightsUrl = 'https://www.instagram.com/accounts/insights/?timeframe=30';
           
-          if (url.includes('instagram.com/graphql/query')) {
-            setTimeout(() => {
-              if (isResolved) return;
-              
-              browser.debugger.sendCommand(
-                { tabId: session.tabId! },
-                'Network.getResponseBody',
-                { requestId },
-                async (response: any) => {
-                  if (isResolved || !response?.body) return;
-                  
-                  try {
-                    const data = JSON.parse(response.body);
-                    
-                    // Extract insights from various query responses
-                    const insights = data?.data?.business_manager?.account_insights_node;
-                    if (insights) {
-                      console.log(`📊 [Background] Processing insights data`);
-                      
-                      // Profile actions data
-                      if (insights.profile_actions) {
-                        collectedInsights.profileVisits7d = insights.profile_actions.profile_visits_7d || 0;
-                        collectedInsights.profileVisits30d = insights.profile_actions.profile_visits_30d || 0;
-                        collectedInsights.profileVisits90d = insights.profile_actions.profile_visits_90d || 0;
-                        collectedInsights.accountsReached7d = insights.profile_actions.accounts_reached_7d || 0;
-                        collectedInsights.accountsReached30d = insights.profile_actions.accounts_reached_30d || 0;
-                        collectedInsights.accountsEngaged7d = insights.profile_actions.accounts_engaged_7d || 0;
-                        collectedInsights.accountsEngaged30d = insights.profile_actions.accounts_engaged_30d || 0;
+          console.log('Navigating to insights page...');
+          await browser.tabs.update(tab.id, { url: insightsUrl });
+
+          // Set up insights page listener
+          const insightsListener = (source: any, method: string, params: any) => {
+            if (method === 'Network.responseReceived' && source.tabId === tab.id) {
+              const { requestId, response, type } = params;
+              const responseUrl = response?.url;
+
+              // Handle GraphQL requests for insights
+              if (responseUrl && responseUrl.includes('graphql') && type === 'XHR') {
+                browser.debugger.sendCommand(
+                  { tabId: tab.id },
+                  'Network.getRequestPostData',
+                  { requestId },
+                  (requestResult: any) => {
+                    browser.debugger.sendCommand(
+                      { tabId: tab.id },
+                      'Network.getResponseBody',
+                      { requestId },
+                      (result: any) => {
+                        if (result && result.body) {
+                          try {
+                            const json = JSON.parse(result.body);
+
+                            // Capture follower count
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsFollowersQuery')) {
+                              if (json.data?.userInfo?.follower_count !== undefined) {
+                                insightsData.follower_count = json.data.userInfo.follower_count;
+                                console.log('Captured follower count:', insightsData.follower_count);
+                              }
+                            }
+
+                            // Capture profile visits and bio clicks - PolarisAccountInsightsProfileQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsProfileQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node) {
+                                if (node.profile_visits_count?.results?.[0]?.value !== undefined) {
+                                  insightsData.profile_visits_count = node.profile_visits_count.results[0].value;
+                                }
+                                if (node.bio_link_clicks?.results?.[0]?.value !== undefined) {
+                                  insightsData.bio_link_clicks = node.bio_link_clicks.results[0].value;
+                                }
+                                console.log('Captured profile metrics:', {
+                                  visits: insightsData.profile_visits_count,
+                                  bio_clicks: insightsData.bio_link_clicks
+                                });
+                              }
+                            }
+
+                            // Capture views and reach metrics - PolarisAccountInsightsViewsQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsViewsQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node) {
+                                if (node.views_current_period?.results?.[0]?.value !== undefined) {
+                                  insightsData.views_current_period = node.views_current_period.results[0].value;
+                                }
+                                if (node.views_by_follow_type?.results) {
+                                  insightsData.views_by_follow_type = node.views_by_follow_type.results;
+                                }
+                                if (node.reach_current_period?.results?.[0]?.value !== undefined) {
+                                  insightsData.reach_current_period = node.reach_current_period.results[0].value;
+                                }
+                                console.log('Captured views/reach metrics:', {
+                                  views: insightsData.views_current_period,
+                                  reach: insightsData.reach_current_period
+                                });
+                              }
+                            }
+
+                            // Capture interactions - PolarisAccountInsightsInteractionsQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsInteractionsQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node) {
+                                if (node.total_interactions?.results?.[0]?.value !== undefined) {
+                                  insightsData.total_interactions = node.total_interactions.results[0].value;
+                                }
+                                if (node.engaged_accounts?.results?.[0]?.value !== undefined) {
+                                  insightsData.accounts_engaged = node.engaged_accounts.results[0].value;
+                                }
+                                if (node.interacted_accounts_by_follow_type?.results) {
+                                  insightsData.interacted_accounts_by_follow_type = node.interacted_accounts_by_follow_type.results;
+                                }
+                                console.log('Captured interaction metrics:', {
+                                  total: insightsData.total_interactions,
+                                  engaged: insightsData.accounts_engaged
+                                });
+                              }
+                            }
+
+                            // Capture message metrics - PolarisAccountInsightsConversationsQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsConversationsQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node) {
+                                if (node.messages_total_connections_unique?.results?.[0]?.value !== undefined) {
+                                  insightsData.messages_total_connections_unique = node.messages_total_connections_unique.results[0].value;
+                                }
+                                if (node.messages_conversations_started?.results?.[0]?.value !== undefined) {
+                                  insightsData.messages_conversations_started = node.messages_conversations_started.results[0].value;
+                                }
+                                console.log('Captured message metrics');
+                              }
+                            }
+
+                            // Capture message response metrics - PolarisAccountInsightsResponsivenessQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsResponsivenessQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node) {
+                                if (node.daily_response_rate?.results?.[0]?.value !== undefined) {
+                                  insightsData.daily_response_rate = node.daily_response_rate.results[0].value;
+                                }
+                                if (node.daily_response_time?.results?.[0]?.value !== undefined) {
+                                  insightsData.daily_response_time = node.daily_response_time.results[0].value;
+                                }
+                                console.log('Captured response metrics');
+                              }
+                            }
+
+                            // Capture views by content data - PolarisAccountInsightsViewsByContentDataQuery
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsViewsByContentDataQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node?.views_by_media_and_follow_types?.results) {
+                                insightsData.views_by_media_and_follow_types = node.views_by_media_and_follow_types.results;
+                                console.log('Captured views by media and follow types');
+                              }
+                              if (node?.total_interactions_by_media_type?.results) {
+                                insightsData.total_interactions_by_media_type = node.total_interactions_by_media_type.results;
+                                console.log('Captured interactions by media type');
+                              }
+                            }
+
+                            // Capture activity times
+                            if (requestResult?.postData?.includes('PolarisAccountInsightFollowersActiveTimesChartQuery')) {
+                              const node = json.data?.user?.business_manager?.account_insights_node;
+                              if (node?.hourly_30_day?.results) {
+                                insightsData.hourly_30_day = node.hourly_30_day.results;
+                                console.log('Captured activity times data');
+                              }
+                            }
+
+                            // Capture top content by views
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsTopContentByViewsQuery')) {
+                              const topViews = json.data?.user?.business_manager?.top_views_media;
+                              if (topViews?.nodes) {
+                                insightsData.top_views_media = topViews.nodes;
+                                console.log('Captured top views content');
+                              }
+                            }
+
+                            // Capture top content by interactions
+                            if (requestResult?.postData?.includes('PolarisAccountInsightsTopContentByInteractionsQuery')) {
+                              const topInteracted = json.data?.user?.business_manager?.top_interacted_media;
+                              if (topInteracted?.nodes) {
+                                insightsData.top_interacted_media = topInteracted.nodes;
+                                console.log('Captured top interacted content');
+                              }
+                            }
+
+                            // Capture Instagram user ID
+                            if (json.data?.user?.id) {
+                              insightsData.instagram_user_id = json.data.user.id;
+                            }
+
+                          } catch (e) {
+                            console.error('Error parsing insights response:', e);
+                          }
+                        }
                       }
-                      
-                      // Follower growth data
-                      const followerGrowth = data?.data?.business_manager?.follower_growth;
-                      if (followerGrowth) {
-                        collectedInsights.followerGrowth7d = followerGrowth.growth_7d?.percentage || 0;
-                        collectedInsights.followerGrowth30d = followerGrowth.growth_30d?.percentage || 0;
-                        collectedInsights.followerGrowth90d = followerGrowth.growth_90d?.percentage || 0;
-                      }
-                      
-                      // Engagement metrics
-                      const engagementMetrics = data?.data?.business_manager?.engagement_metrics;
-                      if (engagementMetrics) {
-                        collectedInsights.engagementRate = engagementMetrics.overall_engagement_rate || 0;
-                      }
-                      
-                      // Check if we have sufficient insights data
-                      const hasBasicInsights = collectedInsights.profileVisits30d !== undefined &&
-                                             collectedInsights.accountsReached30d !== undefined;
-                      
-                      if (hasBasicInsights) {
-                        console.log(`✅ [Background] Business insights data captured`);
-                        
-                        const businessInsights: IGBusinessInsights = {
-                          profileVisits7d: collectedInsights.profileVisits7d || 0,
-                          profileVisits30d: collectedInsights.profileVisits30d || 0,
-                          profileVisits90d: collectedInsights.profileVisits90d || 0,
-                          accountsReached7d: collectedInsights.accountsReached7d || 0,
-                          accountsReached30d: collectedInsights.accountsReached30d || 0,
-                          accountsEngaged7d: collectedInsights.accountsEngaged7d || 0,
-                          accountsEngaged30d: collectedInsights.accountsEngaged30d || 0,
-                          followerGrowth7d: collectedInsights.followerGrowth7d || 0,
-                          followerGrowth30d: collectedInsights.followerGrowth30d || 0,
-                          followerGrowth90d: collectedInsights.followerGrowth90d || 0,
-                          engagementRate: collectedInsights.engagementRate || 0
-                        };
-                        
-                        session.collectedData.insightsData = businessInsights;
-                        isResolved = true;
-                        await cleanup();
-                        
-                        // Proceed to Stage 4
-                        await executeStage4AudienceData(session);
-                        resolve();
-                      }
-                    }
-                  } catch (error) {
-                    console.error(`💥 [Background] Insights data parsing failed:`, error);
+                    );
                   }
-                }
-              );
-            }, 100);
-          }
-        }
-      };
-
-      // Set up timeout
-      timeoutId = setTimeout(async () => {
-        if (isResolved) return;
-        console.log(`⏰ [Background] Insights capture timeout`);
-        isResolved = true;
-        await cleanup();
-        
-        // Continue with partial data or skip insights
-        console.log(`⏭️ [Background] Continuing without complete insights data`);
-        await executeStage4AudienceData(session);
-        resolve();
-      }, 45000); // Longer timeout for insights
-
-      // Attach debugger
-      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
-        if (browser.runtime.lastError) {
-          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
-          return;
-        }
-
-        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
-          if (browser.runtime.lastError) {
-            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
-            return;
-          }
-          
-          console.log(`📡 [Background] Insights network monitoring enabled`);
-          browser.debugger.onEvent.addListener(handleDebuggerEvent);
-        });
-      });
-    });
-  }
-  
-  // Stage 4: Audience Demographics GraphQL Query Capture
-  async function setupAudienceDebugger(session: IGProfileSession) {
-    console.log(`🔗 [Background] Setting up Audience debugger for session: ${session.sessionId}`);
-    
-    return new Promise<void>((resolve, reject) => {
-      let isResolved = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let collectedAudience: Partial<IGAudienceData> = {};
-      
-      const cleanup = async () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        try {
-          browser.debugger.onEvent.removeListener(handleDebuggerEvent);
-          await browser.debugger.detach({ tabId: session.tabId! });
-        } catch (error) {
-          console.warn(`⚠️ [Background] Audience cleanup warning:`, error);
-        }
-      };
-
-      const handleDebuggerEvent = (source: any, method: string, params: any) => {
-        if (source.tabId !== session.tabId || isResolved) return;
-        
-        if (method === 'Network.requestWillBeSent') {
-          const url = params.request.url;
-          if (url.includes('instagram.com/graphql/query')) {
-            const postData = params.request.postData;
-            if (postData && postData.includes('PolarisAccountInsightsFollowersQuery')) {
-              console.log(`📤 [Background] Audience demographics GraphQL request detected`);
+                );
+              }
             }
-          }
-        }
-        
-        if (method === 'Network.responseReceived') {
-          const requestId = params.requestId;
-          const url = params.response.url;
-          
-          if (url.includes('instagram.com/graphql/query')) {
-            setTimeout(() => {
-              if (isResolved) return;
-              
-              browser.debugger.sendCommand(
-                { tabId: session.tabId! },
-                'Network.getResponseBody',
-                { requestId },
-                async (response: any) => {
-                  if (isResolved || !response?.body) return;
-                  
-                  try {
-                    const data = JSON.parse(response.body);
-                    
-                    // Extract audience demographics from follower insights
-                    const insightsNode = data?.data?.business_manager?.account_insights_node;
-                    const followerDemographics = insightsNode?.follower_demographics;
-                    
-                    if (followerDemographics) {
-                      console.log(`👥 [Background] Processing audience demographics`);
-                      
-                      // Gender distribution
-                      if (followerDemographics.gender) {
-                        const genderData = followerDemographics.gender;
-                        collectedAudience.genderDistribution = {
-                          male: genderData.find((g: any) => g.gender === 'male')?.percentage || 0,
-                          female: genderData.find((g: any) => g.gender === 'female')?.percentage || 0,
-                          other: genderData.find((g: any) => g.gender === 'other')?.percentage || 0
-                        };
-                      }
-                      
-                      // Age distribution
-                      if (followerDemographics.age_ranges) {
-                        const ageData = followerDemographics.age_ranges;
-                        collectedAudience.ageDistribution = {
-                          '13-17': ageData.find((a: any) => a.age_range === '13-17')?.percentage || 0,
-                          '18-24': ageData.find((a: any) => a.age_range === '18-24')?.percentage || 0,
-                          '25-34': ageData.find((a: any) => a.age_range === '25-34')?.percentage || 0,
-                          '35-44': ageData.find((a: any) => a.age_range === '35-44')?.percentage || 0,
-                          '45-54': ageData.find((a: any) => a.age_range === '45-54')?.percentage || 0,
-                          '55-64': ageData.find((a: any) => a.age_range === '55-64')?.percentage || 0,
-                          '65+': ageData.find((a: any) => a.age_range === '65+')?.percentage || 0
-                        };
-                      }
-                      
-                      // Top location
-                      if (followerDemographics.top_locations && followerDemographics.top_locations.length > 0) {
-                        collectedAudience.topLocation = followerDemographics.top_locations[0].location_name || '';
-                      }
-                      
-                      // Check if we have sufficient audience data
-                      const hasBasicDemographics = collectedAudience.genderDistribution !== undefined ||
-                                                  collectedAudience.ageDistribution !== undefined;
-                      
-                      if (hasBasicDemographics) {
-                        console.log(`✅ [Background] Audience demographics captured`);
-                        
-                        const audienceData: IGAudienceData = {
-                          genderDistribution: collectedAudience.genderDistribution || {
-                            male: 0, female: 0, other: 0
-                          },
-                          ageDistribution: collectedAudience.ageDistribution || {
-                            '13-17': 0, '18-24': 0, '25-34': 0, '35-44': 0,
-                            '45-54': 0, '55-64': 0, '65+': 0
-                          },
-                          topLocation: collectedAudience.topLocation || ''
-                        };
-                        
-                        session.collectedData.audienceData = audienceData;
-                        isResolved = true;
-                        await cleanup();
-                        
-                        // Complete the profile building process
-                        await completeProfileBuilding(session);
-                        resolve();
-                      }
-                    }
-                  } catch (error) {
-                    console.error(`💥 [Background] Audience data parsing failed:`, error);
-                  }
-                }
-              );
-            }, 100);
-          }
-        }
-      };
+          };
 
-      // Set up timeout
-      timeoutId = setTimeout(async () => {
-        if (isResolved) return;
-        console.log(`⏰ [Background] Audience demographics capture timeout`);
-        isResolved = true;
-        await cleanup();
-        
-        // Complete without audience data
-        console.log(`⏭️ [Background] Completing without audience demographics`);
-        await completeProfileBuilding(session);
-        resolve();
-      }, 45000); // Longer timeout for audience data
+          // Remove old listener and add insights listener
+          browser.debugger.onEvent.removeListener(debuggerListener);
+          browser.debugger.onEvent.addListener(insightsListener);
 
-      // Attach debugger
-      browser.debugger.attach({ tabId: session.tabId! }, '1.3', () => {
-        if (browser.runtime.lastError) {
-          reject(new Error(`Failed to attach debugger: ${browser.runtime.lastError.message}`));
-          return;
+          // Wait for insights page to load and fetch data
+          await new Promise(resolve => setTimeout(resolve, 12000));
+
+          console.log('Insights data collected:', insightsData);
+
+          // Clean up
+          browser.debugger.onEvent.removeListener(insightsListener);
+          await browser.debugger.detach({ tabId: tab.id });
+          if (tab.id !== undefined) {
+            await browser.tabs.remove(tab.id);
+          }
+
+          // Combine all collected data
+          const combinedData = {
+            ...capturedData,
+            insights: insightsData
+          };
+
+          if (Object.keys(capturedData).length === 0 && Object.keys(insightsData).length === 0) {
+            browser.runtime.sendMessage({
+              type: 'collectionError',
+              payload: 'No profile or insights data found'
+            });
+          }
+
+          // Store the metadata if we have any data
+          if (Object.keys(combinedData).length > 0) {
+            console.log('Combined data collected:', combinedData);
+            
+            // Send the collected data back to the side panel
+            browser.runtime.sendMessage({
+              type: 'igDataCollected',
+              payload: combinedData
+            });
+          }
+
+          sendResponse({ success: true, handle, data: combinedData });
+        } catch (error) {
+          console.error('Debugger error:', error);
+          browser.runtime.sendMessage({
+            type: 'collectionError',
+            payload: 'Failed to collect data'
+          });
+          if (tab.id !== undefined) {
+            await browser.tabs.remove(tab.id);
+          }
+          sendResponse({ success: false });
         }
 
-        browser.debugger.sendCommand({ tabId: session.tabId! }, 'Network.enable', {}, () => {
-          if (browser.runtime.lastError) {
-            reject(new Error(`Failed to enable network: ${browser.runtime.lastError.message}`));
-            return;
-          }
-          
-          console.log(`📡 [Background] Audience demographics network monitoring enabled`);
-          browser.debugger.onEvent.addListener(handleDebuggerEvent);
-        });
-      });
+        return true;
+      }
     });
+  });
+
+  // Map account_type number to enum
+  function mapAccountType(typeNum: number): InstagramAccountType {
+    switch (typeNum) {
+      case 1: return InstagramAccountType.PERSONAL;
+      case 2: return InstagramAccountType.BUSINESS;
+      case 3: return InstagramAccountType.CREATOR;
+      default: return InstagramAccountType.PERSONAL;
+    }
   }
 
-  console.log('🚀 [Background] Instagram verification background script initialized with MV3 support');
-});
+  // Map account_type string to enum
+  function mapAccountTypeString(typeStr: string | undefined): InstagramAccountType {
+    if (!typeStr) return InstagramAccountType.PERSONAL;
+
+    switch (typeStr.toLowerCase()) {
+      case 'media_creator': return InstagramAccountType.CREATOR;
+      case 'business': return InstagramAccountType.BUSINESS;
+      case 'personal': return InstagramAccountType.PERSONAL;
+      default: return InstagramAccountType.PERSONAL;
+    }
+  }

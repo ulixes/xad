@@ -1,89 +1,143 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Home } from '@xad/ui/components/welcome/home';
-import { useUserMachine } from '../../src/hooks/useUserMachine';
-import './globals.css';
+import { Home } from '@xad/ui';
+import '@xad/ui/styles';
 import './style.css';
+import { Platform, SocialAccount, User, UserStatus } from '@/src/types';
+import { adaptSocialAccountsForUI } from '@/src/utils/adapters';
 
 const App = () => {
-  const user = useUserMachine();
+  const [mockUser] = useState<User>(() => ({
+    id: crypto.randomUUID(),
+    email: 'user@example.com',
+    status: UserStatus.VERIFIED,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    wallet_address: '0x1234...5678',
+    metadata: { preferences: { notifications: true } },
+    pendingEarnings: 12.45,
+    availableEarnings: 67.89,
+    dailyActionsCompleted: 3,
+    dailyActionsRequired: 10,
+    socialAccounts: [
+      {
+        id: crypto.randomUUID(),
+        user_id: crypto.randomUUID(),
+        platform: Platform.INSTAGRAM,
+        handle: 'johndoe',
+        platform_user_id: '123456789',
+        is_verified: true,
+        last_verified_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        user_id: crypto.randomUUID(),
+        platform: Platform.INSTAGRAM,
+        handle: 'jane_creator',
+        platform_user_id: '987654321',
+        is_verified: false,
+        last_verified_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
+  }));
 
-  // Show loading state
-  if (user.isInitializing) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading your account...</p>
-        </div>
-      </div>
-    );
-  }
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>(mockUser.socialAccounts);
 
-  // Show error state
-  if (user.isError) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center p-4">
-          <h2 className="text-xl font-semibold mb-2">Failed to Load</h2>
-          <p className="text-gray-500 mb-4">{user.systemError}</p>
-          <button 
-            onClick={user.retryLoad}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Listen for messages from background script
+  useEffect(() => {
+    const messageListener = (message: any) => {
+      if (message.type === 'igDataCollected') {
+        const { metadata, platform_user_id } = message.payload;
+        console.log('Instagram data collected:', metadata);
+        
+        // Update the temporary account with real data
+        setSocialAccounts(prev => prev.map(account => {
+          if (account.platform_user_id === 'temp') {
+            return {
+              ...account,
+              platform_user_id,
+              is_verified: true,
+              last_verified_at: new Date().toISOString(),
+              metadata
+            };
+          }
+          return account;
+        }));
+      } else if (message.type === 'collectionError') {
+        console.error('Collection error:', message.payload);
+        // Remove temporary accounts on error
+        setSocialAccounts(prev => prev.filter(account => account.platform_user_id !== 'temp'));
+      }
+    };
 
-  // Map our state machine data to the existing Home component props
-  // The Home component expects the old interface, so we need to adapt
+    browser.runtime.onMessage.addListener(messageListener);
+    
+    return () => {
+      browser.runtime.onMessage.removeListener(messageListener);
+    };
+  }, []);
+
   return (
     <Home
       // Earnings data
-      pendingEarnings={user.pendingEarnings}
-      availableEarnings={user.availableEarnings}
-      dailyActionsCompleted={user.dailyActionsCompleted}
-      dailyActionsRequired={user.dailyActionsRequired}
-      
-      // Wallet  
-      walletAddress={user.walletAddress || null}
-      
-      // Transform accounts data to match expected format
-      connectedAccounts={user.accounts.map(account => ({
-        platform: account.platform,
-        handle: account.handle,
-        availableActions: account.availableActions,
-        isVerifying: account.isVerifying || account.isRetrying
-      }))}
-      
-      // Handle account addition through state machine
+      pendingEarnings={mockUser.pendingEarnings}
+      availableEarnings={mockUser.availableEarnings}
+      dailyActionsCompleted={mockUser.dailyActionsCompleted}
+      dailyActionsRequired={mockUser.dailyActionsRequired}
+
+      // Wallet
+      walletAddress={mockUser.wallet_address}
+
+      // Connected accounts
+      connectedAccounts={adaptSocialAccountsForUI(socialAccounts)}
+
+      // Mock handlers
       onAddAccount={(platform: string, handle: string) => {
-        // Since our new flow is different, we need to handle this in steps
-        if (!user.isAddingAccount) {
-          user.startAddAccount(platform);
-          // Set handle and submit immediately for compatibility
-          setTimeout(() => {
-            user.updateHandle(handle);
-            setTimeout(() => {
-              user.submitHandle();
-            }, 10);
-          }, 10);
-        }
+        // Add temporary account with isAdding state
+        const tempAccount: SocialAccount = {
+          id: crypto.randomUUID(),
+          user_id: mockUser.id,
+          platform: Platform.INSTAGRAM,
+          handle: handle,
+          platform_user_id: 'temp',
+          is_verified: false,
+          last_verified_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        setSocialAccounts(prev => [...prev, tempAccount]);
+
+        // Send message to background script
+        browser.runtime.sendMessage({
+          type: 'addIgAccount',
+          handle: handle
+        }).catch((error) => {
+          console.error('Failed to send add account message:', error);
+          // Remove temp account on error
+          setSocialAccounts(prev => prev.filter(acc => acc.id !== tempAccount.id));
+        });
       }}
-      
-      // Map other callbacks
+
       onAccountClick={(account: any) => {
-        // Find the account by platform and handle
-        const accountId = `${account.platform}-${account.handle}`;
-        user.clickAccount(accountId);
+        console.log('Mock account clicked:', account);
       }}
-      
-      onWalletClick={user.walletAddress ? user.disconnectWallet : user.connectWallet}
-      onJackpotClick={() => console.log('Jackpot clicked')}
-      onCashOut={user.cashOut}
+
+      onWalletClick={() => {
+        console.log('Mock wallet clicked');
+      }}
+
+      onJackpotClick={() => {
+        console.log('Mock jackpot clicked');
+      }}
+
+      onCashOut={() => {
+        console.log('Mock cash out');
+      }}
     />
   );
 };
