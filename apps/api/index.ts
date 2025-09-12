@@ -3,6 +3,10 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import campaignRoutes from "./src/routes/campaigns";
 import authRoutes from "./src/routes/auth";
+import usersRoutes from "./src/routes/users";
+import socialAccountsRoutes from "./src/routes/social-accounts";
+import actionRunsRoutes from "./src/routes/action-runs";
+import withdrawalsRoutes from "./src/routes/withdrawals";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
@@ -34,7 +38,7 @@ app.use("*", async (c, next) => {
       if (requestOrigin === "https://xad.com") return requestOrigin;
       return null;
     },
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: [
       "Content-Type",
       "Authorization",
@@ -60,6 +64,10 @@ app.get("/", (c) => {
 // Routes
 app.route("/api/auth", authRoutes);
 app.route("/api/campaigns", campaignRoutes);
+app.route("/api/users", usersRoutes);
+app.route("/api/social-accounts", socialAccountsRoutes);
+app.route("/api/action-runs", actionRunsRoutes);
+app.route("/api/withdrawals", withdrawalsRoutes);
 
 // Error handling
 app.onError((err, c) => {

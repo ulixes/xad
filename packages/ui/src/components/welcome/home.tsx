@@ -58,8 +58,6 @@ export function Home({
   connectedAccounts = [],
   className
 }: HomeProps) {
-  console.log('Home component mounted with walletAddress:', walletAddress)
-  // State for adding new accounts
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null)
   const [handleInput, setHandleInput] = useState('')
 
@@ -152,14 +150,10 @@ export function Home({
             
             <Button 
               onClick={onCashOut}
-              disabled={availableEarnings < 5}
               className="w-full"
-              variant={availableEarnings < 5 ? "secondary" : "default"}
+              variant="default"
             >
-              {availableEarnings < 5 
-                ? `Withdraw ($5)`
-                : `Withdraw $${availableEarnings.toFixed(2)}`
-              }
+              Withdraw
             </Button>
           </div>
 

@@ -1,5 +1,6 @@
- import { InstagramMetadata, InstagramAccountType } from '@/src/types';
+ import { InstagramMetadata, InstagramAccountType, BasePlatformMetadata } from '@/src/types';
   import editPageMapping from './ig/edit-page.json';
+  import { handleExecuteAction } from '@/src/background/actionHandler';
 
   // Raw captured data interface
   interface RawInstagramData {
@@ -43,10 +44,18 @@
       browser.sidePanel.open({ tabId: tab.id, windowId: tab.windowId });
     });
 
-    // Message listener for adding Instagram accounts
+    // Message listener for handling various extension actions
     browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-      if (message.type === "addIgAccount") {
-        const { handle } = message;
+      // Handle action execution
+      if (message.type === 'executeAction') {
+        const result = await handleExecuteAction(message.payload);
+        sendResponse(result);
+        return true; // Keep the message channel open for async response
+      }
+      
+      // Handle Instagram account addition
+      else if (message.type === "addIgAccount") {
+        const { handle, accountId } = message;
         console.log("Adding Instagram account:", handle);
 
         const tab = await browser.tabs.create({ url: 'about:blank' });
@@ -153,12 +162,16 @@
                           if (json.form_data.business_account !== undefined) {
                             capturedData.is_business_account = json.form_data.business_account;
                           }
+                          if (json.form_data.profile_pic_url) {
+                            capturedData.profile_pic_url = json.form_data.profile_pic_url;
+                          }
 
                           console.log('Captured form data:', {
                             username: capturedData.username,
                             full_name: capturedData.full_name,
                             biography: capturedData.biography,
-                            is_business_account: capturedData.is_business_account
+                            is_business_account: capturedData.is_business_account,
+                            profile_pic_url: capturedData.profile_pic_url
                           });
                         }
                       } catch (e) {
@@ -177,6 +190,35 @@
           await new Promise(resolve => setTimeout(resolve, 10000));
 
           console.log('Edit page data collected:', capturedData);
+
+          // Validate that the collected username matches the provided handle
+          if (capturedData.username && capturedData.username.toLowerCase() !== handle.toLowerCase()) {
+            console.error('Handle validation failed:', {
+              provided: handle,
+              collected: capturedData.username
+            });
+            
+            // Clean up
+            browser.debugger.onEvent.removeListener(debuggerListener);
+            await browser.debugger.detach({ tabId: tab.id });
+            if (tab.id !== undefined) {
+              await browser.tabs.remove(tab.id);
+            }
+            
+            // Send error message with account ID
+            browser.runtime.sendMessage({
+              type: 'collectionError',
+              payload: `Handle verification failed. The provided handle "${handle}" does not match the Instagram account "${capturedData.username}".`,
+              accountId: accountId
+            });
+            
+            sendResponse({ 
+              success: false, 
+              error: 'Handle verification failed',
+              details: `The provided handle "${handle}" does not match the Instagram account "${capturedData.username}".`
+            });
+            return;
+          }
 
           // Now navigate to insights page to collect additional metrics
           const insightsData: RawInsightsData = {};
@@ -373,36 +415,118 @@
             await browser.tabs.remove(tab.id);
           }
 
-          // Combine all collected data
-          const combinedData = {
-            ...capturedData,
-            insights: insightsData
+          // Build InstagramMetadata structure
+          const metadata: InstagramMetadata = {
+            // Profile data (from edit page)
+            profile: {
+              fullName: capturedData.full_name,
+              followerCount: insightsData.follower_count || 0,
+              followingCount: 0, // TODO: Capture from profile page
+              postCount: 0, // TODO: Capture from profile page
+              isVerified: capturedData.is_verified || false,
+              accountType: mapAccountTypeString(capturedData.account_type),
+              category: undefined, // TODO: Capture from business settings
+              biography: capturedData.biography,
+              profilePicUrl: capturedData.profile_pic_url,
+              isPrivate: capturedData.is_private,
+              isBusinessAccount: capturedData.is_business_account,
+              isProfessional: capturedData.account_type === 'media_creator' || capturedData.is_business_account,
+              externalUrl: undefined, // TODO: Extract from biography
+              locationCountry: undefined, // TODO: Capture from profile
+              locationCity: undefined, // TODO: Capture from profile
+              mediaCount: undefined // TODO: Capture from profile
+            },
+            
+            // Insights data (optional - only for business/creator accounts)
+            insights: undefined,
+            
+            // Metadata
+            lastCollectedAt: new Date().toISOString(),
+            collectionErrors: [],
+            rawData: {
+              editPage: capturedData,
+              insightsPage: insightsData
+            }
           };
+
+          // Add insights if we have data and it's a professional account
+          if (Object.keys(insightsData).length > 0 && 
+              (capturedData.is_business_account || capturedData.account_type === 'media_creator')) {
+            
+            // Calculate derived metrics
+            const engagementRate = insightsData.views_current_period && insightsData.total_interactions
+              ? (insightsData.total_interactions / insightsData.views_current_period) * 100
+              : undefined;
+            
+            // Parse content type performance
+            const contentTypePerformance = insightsData.total_interactions_by_media_type?.map(item => ({
+              mediaType: mapMediaType(item.dimension_values[0]),
+              interactions: item.value
+            }));
+            
+            // Calculate video content ratio
+            const videoInteractions = insightsData.total_interactions_by_media_type?.find(
+              m => m.dimension_values[0] === '2' || m.dimension_values[0] === '16' // 2=video, 16=reel
+            )?.value || 0;
+            const totalContentInteractions = insightsData.total_interactions || 1;
+            const videoContentRatio = (videoInteractions / totalContentInteractions) * 100;
+            
+            metadata.insights = {
+              profileVisits: {
+                thirtyDays: insightsData.profile_visits_count
+              },
+              accountsReached: {
+                thirtyDays: insightsData.reach_current_period
+              },
+              accountsEngaged: {
+                thirtyDays: insightsData.accounts_engaged
+              },
+              followerGrowth: {
+                // TODO: Calculate from historical data
+              },
+              engagementRate,
+              videoContentRatio,
+              contentTypePerformance,
+              contentEngagementTrend: insightsData.top_interacted_media?.map(media => ({
+                postId: media.id,
+                engagementValue: media.engagement || 0
+              })),
+              // Demographics - TODO: Capture from audience insights
+              audienceGender: undefined,
+              audienceAge: undefined,
+              topLocations: undefined
+            };
+          } else if (!capturedData.is_business_account && capturedData.account_type !== 'media_creator') {
+            metadata.collectionErrors?.push('Insights data not available for personal accounts');
+          }
 
           if (Object.keys(capturedData).length === 0 && Object.keys(insightsData).length === 0) {
             browser.runtime.sendMessage({
               type: 'collectionError',
-              payload: 'No profile or insights data found'
+              payload: 'No profile or insights data found',
+              accountId: accountId
             });
           }
 
           // Store the metadata if we have any data
-          if (Object.keys(combinedData).length > 0) {
-            console.log('Combined data collected:', combinedData);
+          if (Object.keys(metadata).length > 0) {
+            console.log('Instagram metadata collected:', metadata);
             
-            // Send the collected data back to the side panel
+            // Send the collected data back to the side panel with account ID
             browser.runtime.sendMessage({
               type: 'igDataCollected',
-              payload: combinedData
+              payload: metadata,
+              accountId: accountId
             });
           }
 
-          sendResponse({ success: true, handle, data: combinedData });
+          sendResponse({ success: true, handle, data: metadata });
         } catch (error) {
           console.error('Debugger error:', error);
           browser.runtime.sendMessage({
             type: 'collectionError',
-            payload: 'Failed to collect data'
+            payload: 'Failed to collect data',
+            accountId: accountId
           });
           if (tab.id !== undefined) {
             await browser.tabs.remove(tab.id);
@@ -434,5 +558,16 @@
       case 'business': return InstagramAccountType.BUSINESS;
       case 'personal': return InstagramAccountType.PERSONAL;
       default: return InstagramAccountType.PERSONAL;
+    }
+  }
+
+  // Map media type dimension value to readable string
+  function mapMediaType(dimensionValue: string): string {
+    switch (dimensionValue) {
+      case '1': return 'photo';
+      case '2': return 'video';
+      case '3': return 'carousel';
+      case '16': return 'reel';
+      default: return 'unknown';
     }
   }

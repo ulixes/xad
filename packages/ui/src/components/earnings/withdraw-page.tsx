@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Heart, MessageCircle, Repeat2, Share2, ArrowUp, Bookmark, UserPlus, Check } from "lucide-react"
+import { ChevronLeft, Heart, MessageCircle, Repeat2, Share2, ArrowUp, Bookmark, UserPlus, DollarSign } from "lucide-react"
 
 export type ActionHistoryStatus = 'pending' | 'verified' | 'failed'
 
@@ -160,7 +160,7 @@ export function WithdrawPage({
                   </div>
                   <div className="flex-shrink-0 ml-3">
                     {status.showCheck ? (
-                      <Check className="w-4 h-4 text-foreground" />
+                      <DollarSign className="w-4 h-4 text-green-500" />
                     ) : (
                       <span className={cn("text-xs", status.className)}>
                         {status.text}

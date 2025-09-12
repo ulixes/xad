@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Check, Loader2, X, Heart, MessageCircle, Repeat2, Share2, ArrowUp, Bookmark, UserRoundPlus, ChevronLeft } from "lucide-react"
 
@@ -7,7 +6,7 @@ export type ActionStatus = 'pending' | 'loading' | 'completed' | 'error'
 export interface Action {
   id: string
   type: 'like' | 'comment' | 'retweet' | 'share' | 'upvote' | 'save' | 'follow'
-  status: TaskStatus
+  status: ActionStatus
   url: string
   payment: number
   errorMessage?: string
@@ -19,7 +18,7 @@ interface ActionListPageProps {
   platform: 'tiktok' | 'instagram' | 'x' | 'reddit'
   actions: Action[]
   availableActionsCount: number
-  onStartActions?: () => void
+  isLoading?: boolean
   onActionClick?: (actionId: string) => void
   onBack?: () => void
   className?: string
@@ -47,7 +46,7 @@ export function ActionListPage({
   platform,
   actions,
   availableActionsCount,
-  onStartActions,
+  isLoading = false,
   onActionClick,
   onBack,
   className
@@ -124,9 +123,18 @@ export function ActionListPage({
             </div>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground">Loading available actions...</p>
+            </div>
+          )}
+
           {/* Actions List */}
-          <div className="space-y-3">
-            {actions.map((action) => {
+          {!isLoading && (
+            <div className="space-y-3">
+              {actions.map((action) => {
               const config = actionTypeConfig[action.type]
               const Icon = config.icon
               
@@ -134,7 +142,7 @@ export function ActionListPage({
                 <div key={action.id} className="space-y-2">
                   <div
                     className={cn(
-                      "w-full bg-card rounded-lg p-3 flex items-center justify-between",
+                      "w-full bg-card rounded-lg p-3 flex items-center justify-between transition-all",
                       action.status === 'loading' && "opacity-80"
                     )}
                   >
@@ -148,8 +156,11 @@ export function ActionListPage({
                           href={action.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-sm text-primary hover:underline truncate w-full text-left"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onActionClick?.(action.id);
+                          }}
+                          className="text-sm text-primary hover:underline truncate w-full text-left cursor-pointer"
                         >
                           {truncateUrl(action.url, platform)}
                         </a>
@@ -170,30 +181,17 @@ export function ActionListPage({
                 </div>
               )
             })}
-          </div>
+            </div>
+          )}
 
           {/* Empty State */}
-          {actions.length === 0 && (
+          {!isLoading && actions.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <p className="text-muted-foreground text-center">
                 No actions available at the moment
               </p>
             </div>
           )}
-        </div>
-      </div>
-      
-      {/* Fixed footer with gradient background */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-4">
-        <div className="bg-background">
-          <Button 
-            onClick={onStartActions}
-            size="lg"
-            className="w-full"
-            disabled={actions.length === 0}
-          >
-            Start
-          </Button>
         </div>
       </div>
     </div>
