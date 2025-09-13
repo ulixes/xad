@@ -1,0 +1,223 @@
+{
+  "tiktok_studio_api_for_targeted_ads": {
+    "description": "Focused TikTok Studio API endpoints for targeted advertising requirements",
+    "base_url": "https://www.tiktok.com/tiktokstudio/api",
+    "authentication": {
+      "method": "cookie-based",
+      "required_cookies": [
+        "tt_csrf_token",
+        "sessionid",
+        "sid_tt",
+        "uid_tt",
+        "msToken"
+      ]
+    },
+    "targeting_relevant_endpoints": {
+      "user_analytics": {
+        "endpoint": "/web/user",
+        "method": "GET",
+        "purpose": "Get user profile and demographics data",
+        "targeting_fields": {
+          "userId": "User's unique identifier",
+          "region": {
+            "description": "User's location data for geo-targeting",
+            "fields": ["Region", "RegistrationCountry", "SystemRegion"]
+          },
+          "language": {
+            "description": "User's language preferences",
+            "fields": ["Language", "Locale"]
+          },
+          "isVerified": "Verification status for influencer targeting",
+          "isPrivate": "Account privacy status"
+        }
+      },
+      "audience_analytics": {
+        "endpoint": "/tiktokstudio/api/analytics/audience",
+        "method": "GET",
+        "purpose": "Get detailed audience demographics for targeting",
+        "targeting_fields": {
+          "demographics": {
+            "age_distribution": {
+              "description": "Audience age range percentages",
+              "ranges": ["13-17", "18-24", "25-34", "35-44", "45+"]
+            },
+            "gender_distribution": {
+              "description": "Male/Female audience split",
+              "values": ["male_percentage", "female_percentage"]
+            },
+            "location_distribution": {
+              "description": "Top countries/cities where audience is located",
+              "fields": ["country", "city", "percentage"]
+            }
+          },
+          "viewer_types": {
+            "new_viewers": "First-time or 1+ year absent viewers",
+            "returning_viewers": "Viewers within past year",
+            "followers": "Current followers",
+            "non_followers": "Non-following viewers"
+          },
+          "active_times": {
+            "description": "When audience is most active",
+            "time_slots": ["morning", "afternoon", "evening", "night"],
+            "timezone": "User's local timezone"
+          }
+        }
+      },
+      "engagement_metrics": {
+        "endpoint": "/tiktokstudio/api/performance",
+        "method": "GET",
+        "purpose": "Get engagement data for targeting high-engagement users",
+        "targeting_fields": {
+          "followerCount": "Total followers for reach targeting",
+          "totalLikes": "Total likes received",
+          "totalComments": "Total comments received",
+          "totalShares": "Total shares",
+          "videoViews": "Total video views",
+          "profileViews": "Profile view count",
+          "engagementRate": "Overall engagement percentage",
+          "completionRate": "Average video completion rate"
+        }
+      },
+      "content_performance": {
+        "endpoint": "/tiktokstudio/api/videos",
+        "method": "GET",
+        "purpose": "Analyze content performance for interest-based targeting",
+        "targeting_fields": {
+          "topPerformingContent": {
+            "categories": "Content categories that perform well",
+            "hashtags": "Popular hashtags used",
+            "sounds": "Trending sounds/music used"
+          },
+          "viewerRetention": "How long viewers watch content",
+          "shareRate": "Content virality indicator"
+        }
+      },
+      "follower_analytics": {
+        "endpoint": "/web/relation/multiGetFollowRelationCount",
+        "method": "GET",
+        "purpose": "Get follower relationship data",
+        "targeting_fields": {
+          "followerCount": "Current follower count",
+          "followingCount": "Accounts user follows",
+          "mutualFollowerCount": "Mutual connections",
+          "followerGrowthRate": "Growth trajectory for trending creators"
+        }
+      }
+    },
+    "targeting_parameters": {
+      "demographics": {
+        "age": {
+          "type": "range",
+          "values": ["13-17", "18-24", "25-34", "35-44", "45+"],
+          "operator": "percentage_threshold"
+        },
+        "gender": {
+          "type": "select",
+          "values": ["male", "female"],
+          "operator": "percentage_threshold"
+        },
+        "location": {
+          "type": "multi_select",
+          "level": ["country", "city"],
+          "operator": "in_list"
+        }
+      },
+      "engagement": {
+        "follower_count": {
+          "type": "number",
+          "operators": [">", "<", "=", ">=", "<="]
+        },
+        "engagement_rate": {
+          "type": "percentage",
+          "operators": [">", "<", "="]
+        },
+        "video_views": {
+          "type": "number",
+          "operators": [">", "<", "=", ">=", "<="]
+        },
+        "profile_views": {
+          "type": "number",
+          "operators": [">", "<", "=", ">=", "<="]
+        }
+      },
+      "content": {
+        "viewer_type": {
+          "type": "select",
+          "values": ["new_viewers", "returning_viewers", "followers", "non_followers"]
+        },
+        "active_time": {
+          "type": "time_range",
+          "values": ["morning", "afternoon", "evening", "night"],
+          "timezone_aware": true
+        },
+        "content_category": {
+          "type": "multi_select",
+          "values": ["entertainment", "education", "lifestyle", "gaming", "music", "comedy"]
+        }
+      },
+      "account": {
+        "verified_status": {
+          "type": "boolean",
+          "values": [true, false]
+        },
+        "account_type": {
+          "type": "select",
+          "values": ["creator", "business", "personal"]
+        },
+        "account_age": {
+          "type": "date_range",
+          "operators": [">", "<", ">=", "<="]
+        }
+      }
+    },
+    "api_request_structure": {
+      "headers": {
+        "required": [
+          "accept: application/json",
+          "accept-language: en",
+          "referer: https://www.tiktok.com/tiktokstudio",
+          "user-agent: [browser user agent]"
+        ],
+        "security": [
+          "X-Bogus: [anti-bot token]",
+          "X-Gnarly: [security validation]"
+        ]
+      },
+      "common_params": {
+        "aid": 1988,
+        "app_name": "tiktok_creator_center",
+        "device_platform": "web_pc",
+        "channel": "tiktok_web",
+        "msToken": "[validation token]"
+      }
+    },
+    "data_extraction_priority": {
+      "high": [
+        "followerCount",
+        "audience_age_percentage",
+        "audience_gender_percentage",
+        "audience_location",
+        "engagementRate"
+      ],
+      "medium": [
+        "videoViews",
+        "profileViews",
+        "viewer_type",
+        "active_times",
+        "isVerified"
+      ],
+      "low": [
+        "content_categories",
+        "hashtags",
+        "sounds",
+        "account_age"
+      ]
+    },
+    "implementation_notes": {
+      "rate_limiting": "Implement token rotation and request throttling",
+      "caching": "Cache demographic data for 24 hours",
+      "privacy": "Only collect aggregated/anonymized audience data",
+      "compliance": "Ensure GDPR/CCPA compliance for data collection"
+    }
+  }
+}

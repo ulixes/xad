@@ -65,6 +65,12 @@ const App = () => {
     const actionsMap: Record<string, number> = {};
     
     for (const account of accounts) {
+      // Skip accounts with undefined or invalid IDs
+      if (!account?.id) {
+        console.warn('Skipping account with undefined ID:', account);
+        continue;
+      }
+      
       try {
         const response = await apiClient.getEligibleActions(account.id);
         // Use the summary for total available actions (not completed)
@@ -194,6 +200,51 @@ const App = () => {
         } else {
           console.log('Cannot save: account or user missing', { account, user });
         }
+      } else if (message.type === 'tiktokDataCollected') {
+        const { payload, accountId, handle } = message;
+        console.log('TikTok data collected:', payload, 'for account:', accountId);
+        
+        // Find the account by ID
+        const account = socialAccounts.find(acc => acc.id === accountId);
+        console.log('Found TikTok account:', account, 'User:', user);
+        
+        if (account && user) {
+          try {
+            console.log('Updating TikTok data for account:', account.id, 'handle:', account.handle);
+            
+            // Save TikTok data to API with handle validation
+            const result = await apiClient.updateTikTokData(account.id, payload, account.handle);
+            console.log('TikTok data update result:', result);
+            
+            // Remove from verifying state
+            setVerifyingAccounts(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(accountId);
+              return newSet;
+            });
+            
+            // Reload social accounts from API
+            const updatedAccounts = await apiClient.getUserSocialAccounts(user.id);
+            setSocialAccounts(updatedAccounts);
+            
+            // Fetch eligible actions for the updated accounts
+            await fetchActionsForAccounts(updatedAccounts);
+            
+            console.log('✅ TikTok account successfully added and verified!');
+            
+          } catch (error) {
+            console.error('Failed to save TikTok data:', error);
+            // Remove from verifying state and remove account
+            setVerifyingAccounts(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(accountId);
+              return newSet;
+            });
+            setSocialAccounts(prev => prev.filter(acc => acc.id !== account.id));
+          }
+        } else {
+          console.log('Cannot save TikTok data: account or user missing', { account, user });
+        }
       } else if (message.type === 'collectionError') {
         console.error('Collection error:', message.payload);
         const accountId = message.accountId;
@@ -241,7 +292,7 @@ const App = () => {
       type: action.actionType as any, // Map ActionType enum to UI action types
       status: (actionStatuses[action.id] || 'pending') as ActionStatus,
       url: action.target,
-      payment: action.price,
+      payment: action.price / 100, // Convert cents to dollars
       platform: (action.platform || selectedAccount?.platform || 'instagram').toLowerCase() as any,
       errorMessage: actionErrors[action.id], // Include error message if exists
       actionRunId: action.userActionRun?.id,
@@ -547,6 +598,10 @@ const App = () => {
               ...prev,
               [actionId]: 'error'
             }));
+            setActionErrors(prev => ({
+              ...prev,
+              [actionId]: error instanceof Error ? error.message : 'Failed to start action'
+            }));
             
             // If we created an action run but failed to start tracking, update it to failed
             const actionRunId = actionRunIds[actionId];
@@ -606,9 +661,10 @@ const App = () => {
           setSocialAccounts(prev => [...prev, newAccount]);
           setVerifyingAccounts(prev => new Set(prev).add(newAccount.id));
 
-          // Send message to background script to collect Instagram data
+          // Send message to background script to collect data based on platform
+          const messageType = platform.toLowerCase() === 'tiktok' ? 'addTikTokAccount' : 'addIgAccount';
           browser.runtime.sendMessage({
-            type: 'addIgAccount',
+            type: messageType,
             handle: handle,
             accountId: newAccount.id,
           }).catch(async (error) => {

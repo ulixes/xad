@@ -536,6 +536,88 @@
 
         return true;
       }
+      
+      // Handle TikTok account addition
+      else if (message.type === "addTikTokAccount") {
+        const { handle, accountId } = message;
+        console.log("🚀 STARTING TIKTOK ACCOUNT ADDITION FOR:", handle);
+        console.log("Account ID:", accountId);
+        
+        try {
+          // GO DIRECTLY TO TIKTOK STUDIO - THIS IS WHERE THE DATA IS!
+          const studioUrl = `https://www.tiktok.com/tiktokstudio/analytics/overview?tiktok_collect=true&account_id=${accountId}&handle=${handle}`;
+          console.log("📍 NAVIGATING TO TIKTOK STUDIO:", studioUrl);
+          
+          const tab = await browser.tabs.create({ url: studioUrl });
+          console.log('✅ Opened TikTok Studio with collection params in URL');
+          console.log('Tab ID:', tab.id);
+          
+          // METHOD 2: Also send message as backup after a delay
+          setTimeout(async () => {
+            try {
+              await browser.tabs.sendMessage(tab.id!, {
+                type: 'COLLECT_TIKTOK_DATA',
+                accountId: accountId,
+                handle: handle
+              });
+              console.log('Also sent collection message to content script');
+            } catch (e) {
+              console.log('Message send failed (expected if already collecting):', e);
+            }
+          }, 2000);
+          
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error('Error adding TikTok account:', error);
+          sendResponse({ success: false, error: error.message });
+        }
+        
+        return true;
+      }
+      
+      // Handle TikTok data collection response
+      else if (message.type === "TIKTOK_DATA_COLLECTED") {
+        const { accountId, handle, payload } = message;
+        console.log("TikTok data collected:", payload, "for account:", accountId);
+        
+        // Send the collected data back to the side panel
+        browser.runtime.sendMessage({
+          type: 'tiktokDataCollected',
+          payload: payload,
+          accountId: accountId,
+          handle: handle
+        });
+        
+        // Close the tab if it's still open
+        if (sender.tab?.id) {
+          browser.tabs.remove(sender.tab.id);
+        }
+        
+        return true;
+      }
+      
+      // Handle navigation to TikTok Studio
+      else if (message.type === "NAVIGATE_TO_STUDIO") {
+        const { accountId, handle } = message;
+        
+        if (sender.tab?.id) {
+          // Navigate current tab to TikTok Studio
+          await browser.tabs.update(sender.tab.id, {
+            url: 'https://www.tiktok.com/tiktokstudio/analytics/overview'
+          });
+          
+          // Wait and re-send collection message
+          setTimeout(async () => {
+            await browser.tabs.sendMessage(sender.tab.id!, {
+              type: 'COLLECT_TIKTOK_DATA',
+              accountId: accountId,
+              handle: handle
+            });
+          }, 3000);
+        }
+        
+        return true;
+      }
     });
   });
 

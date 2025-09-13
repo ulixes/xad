@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, integer, boolean, timestamp, jsonb, decimal } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, uuid, text, integer, boolean, timestamp, jsonb, decimal, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const actionRunStatusEnum = pgEnum('action_run_status', [
@@ -281,6 +281,120 @@ export const instagramContentPerformance = pgTable('instagram_content_performanc
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// TikTok-specific tables
+export const tiktokAccounts = pgTable('tiktok_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  socialAccountId: uuid('social_account_id').notNull().unique().references(() => socialAccounts.id, { onDelete: 'cascade' }),
+  
+  // TikTok-specific identifiers
+  tiktokUserId: text('tiktok_user_id').notNull(), // The long numeric ID like "7520550064620897298"
+  secUid: text('sec_uid'), // Secure UID for API calls
+  uniqueId: text('unique_id').notNull(), // Username/handle
+  
+  // Profile Information
+  nickname: text('nickname'),
+  avatarUrl: text('avatar_url'), // Changed from avatar
+  bio: text('bio'), // Changed from signature
+  isVerified: boolean('is_verified').default(false), // Changed from verified
+  isPrivate: boolean('is_private').default(false),
+  
+  // Account metadata
+  region: text('region'),
+  language: text('language'),
+  createTime: text('create_time'), // Store as text for bigint compatibility
+  
+  // Stats
+  followerCount: integer('follower_count').default(0),
+  followingCount: integer('following_count').default(0),
+  likeCount: integer('like_count').default(0), // Changed from heartCount
+  videoCount: integer('video_count').default(0),
+  profileViewCount: integer('profile_view_count').default(0), // Changed from profileViews
+  friendCount: integer('friend_count').default(0),
+  
+  // Business/Creator features
+  analyticsOn: boolean('analytics_on').default(false),
+  proAccountInfo: jsonb('pro_account_info'), // Store business/creator account details
+  
+  // Performance Metrics (30-day window)
+  videoViews30d: integer('video_views_30d'),
+  profileViews30d: integer('profile_views_30d'),
+  shares30d: integer('shares_30d'),
+  comments30d: integer('comments_30d'),
+  engagementRate: decimal('engagement_rate', { precision: 5, scale: 2 }), // Simplified from engagementRate30d
+  avgWatchTime: decimal('avg_watch_time', { precision: 10, scale: 2 }), // Simplified from avgWatchTime30d
+  completionRate: decimal('completion_rate', { precision: 5, scale: 2 }), // Simplified from completionRate30d
+  
+  // Collection Metadata
+  lastCollectedAt: timestamp('last_collected_at'),
+  rawApiData: jsonb('raw_api_data'), // Store raw API responses for debugging
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const tiktokAudienceDemographics = pgTable('tiktok_audience_demographics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tiktokAccountId: uuid('tiktok_account_id').notNull().references(() => tiktokAccounts.id, { onDelete: 'cascade' }),
+  dateCollected: date('date_collected').defaultNow(),
+  
+  // Gender Distribution  
+  genderMalePct: decimal('gender_male_pct', { precision: 5, scale: 2 }),
+  genderFemalePct: decimal('gender_female_pct', { precision: 5, scale: 2 }),
+  genderOtherPct: decimal('gender_other_pct', { precision: 5, scale: 2 }),
+  
+  // Age Distribution
+  age13_17Pct: decimal('age_13_17_pct', { precision: 5, scale: 2 }),
+  age18_24Pct: decimal('age_18_24_pct', { precision: 5, scale: 2 }),
+  age25_34Pct: decimal('age_25_34_pct', { precision: 5, scale: 2 }),
+  age35_44Pct: decimal('age_35_44_pct', { precision: 5, scale: 2 }),
+  age45_54Pct: decimal('age_45_54_pct', { precision: 5, scale: 2 }),
+  age55PlusPct: decimal('age_55_plus_pct', { precision: 5, scale: 2 }),
+  
+  // Top Countries
+  topCountries: jsonb('top_countries'), // Array of {country: string, percentage: number}
+  
+  // Top Cities
+  topCities: jsonb('top_cities'), // Array of {city: string, percentage: number}
+  
+  // Active Times and Devices
+  activeTimes: jsonb('active_times'), // Peak hours data
+  devices: jsonb('devices'), // Device distribution
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const tiktokContentPerformance = pgTable('tiktok_content_performance', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tiktokAccountId: uuid('tiktok_account_id').notNull().references(() => tiktokAccounts.id, { onDelete: 'cascade' }),
+  
+  // Video/Post identification
+  contentId: text('content_id').notNull(), // Changed from itemId
+  contentType: text('content_type'), // Changed from itemType to text
+  
+  // Content details
+  description: text('description'),
+  createdTime: text('created_time'), // Store as text for bigint compatibility
+  duration: integer('duration'), // in seconds
+  coverUrl: text('cover_url'),
+  
+  // Performance metrics
+  playCount: text('play_count').default('0'), // Store as text for bigint compatibility
+  likeCount: integer('like_count').default(0),
+  commentCount: integer('comment_count').default(0),
+  shareCount: integer('share_count').default(0),
+  favoriteCount: integer('favorite_count').default(0),
+  completionRate: decimal('completion_rate', { precision: 5, scale: 2 }),
+  avgWatchTime: decimal('avg_watch_time', { precision: 10, scale: 2 }),
+  hashtags: jsonb('hashtags'),
+  
+  // Additional metadata
+  visibility: text('visibility'), // Changed to text
+  isPinned: boolean('is_pinned').default(false),
+  
+  collectedAt: timestamp('collected_at').defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const socialAccountsRelations = relations(socialAccounts, ({ one, many }) => ({
   user: one(users, {
     fields: [socialAccounts.userId],
@@ -290,6 +404,10 @@ export const socialAccountsRelations = relations(socialAccounts, ({ one, many })
   instagramAccount: one(instagramAccounts, {
     fields: [socialAccounts.id],
     references: [instagramAccounts.socialAccountId],
+  }),
+  tiktokAccount: one(tiktokAccounts, {
+    fields: [socialAccounts.id],
+    references: [tiktokAccounts.socialAccountId],
   }),
 }));
 

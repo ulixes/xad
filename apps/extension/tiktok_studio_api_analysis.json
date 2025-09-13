@@ -1,0 +1,394 @@
+{
+  "tiktok_studio_api_analysis": {
+    "base_url": "https://www.tiktok.com/tiktokstudio/api",
+    "discovered_endpoints": {
+      "user_profile": {
+        "endpoint": "/web/user",
+        "method": "GET",
+        "parameters": {
+          "needIsVerified": "boolean",
+          "needProfileBio": "boolean"
+        },
+        "headers": {
+          "required": [
+            "accept",
+            "accept-language",
+            "referer",
+            "user-agent"
+          ],
+          "cookies": [
+            "tt_csrf_token",
+            "tt_chain_token",
+            "passport_csrf_token",
+            "sessionid",
+            "sid_tt",
+            "uid_tt",
+            "msToken"
+          ]
+        },
+        "response_structure": {
+          "userId": "string",
+          "statusCode": "number",
+          "tt-csrf-token": "string",
+          "userExtra": {
+            "isPrivate": "boolean",
+            "profileBio": "string",
+            "isVerified": "boolean"
+          },
+          "userBaseInfo": {
+            "UserProfile": {
+              "UserBase": {
+                "Id": "string",
+                "SecUid": "string",
+                "NickName": "string",
+                "UniqId": "string",
+                "AppId": "number",
+                "CreateTime": "string",
+                "ModifyTime": "string",
+                "Region": {
+                  "Region": "string",
+                  "RegistrationCountry": "string",
+                  "SystemRegion": "string"
+                },
+                "Language": {
+                  "Language": "string",
+                  "Locale": "string"
+                },
+                "Avatars": [
+                  {
+                    "UrlInfo": {
+                      "Uri": "string",
+                      "UrlList": ["string"]
+                    },
+                    "AvatarType": "number",
+                    "Category": "number"
+                  }
+                ],
+                "AvatarUris": "object"
+              },
+              "UserStatus": {
+                "AgeGate": {
+                  "AgeGateTime": "string",
+                  "Mode": "number",
+                  "Region": "string"
+                },
+                "PrivateType": "number",
+                "UserCancelType": "number",
+                "BanTypeObsolete": "number",
+                "AdAccountType": "number",
+                "FtcType": "number",
+                "UserStatus": "number",
+                "LogStatus": "number"
+              },
+              "ProfileBase": {
+                "Cover": {
+                  "CoverUri": {
+                    "Uri": "string",
+                    "UrlList": ["string"]
+                  }
+                },
+                "Bio": "string"
+              }
+            }
+          }
+        }
+      },
+      "relation_counts": {
+        "endpoint": "/web/relation/multiGetFollowRelationCount",
+        "method": "GET",
+        "parameters": {
+          "userId": "string",
+          "locale": "string",
+          "aid": "number",
+          "priority_region": "string",
+          "region": "string",
+          "tz_name": "string",
+          "app_name": "string (tiktok_creator_center)",
+          "app_language": "string",
+          "device_platform": "string",
+          "channel": "string",
+          "device_id": "string",
+          "os": "string",
+          "screen_width": "number",
+          "screen_height": "number",
+          "browser_language": "string",
+          "browser_platform": "string",
+          "browser_name": "string",
+          "browser_version": "string",
+          "msToken": "string",
+          "X-Bogus": "string",
+          "X-Gnarly": "string"
+        },
+        "response_structure": {
+          "statusCode": "number",
+          "data": {
+            "followerCount": "number",
+            "followingCount": "number",
+            "mutualFollowerCount": "number"
+          }
+        }
+      },
+      "comments": {
+        "endpoint": "/web/commentsV2",
+        "method": "GET",
+        "parameters": {
+          "locale": "string",
+          "aid": "number",
+          "priority_region": "string",
+          "region": "string",
+          "tz_name": "string",
+          "app_name": "string (tiktok_creator_center)",
+          "app_language": "string",
+          "device_platform": "string",
+          "channel": "string",
+          "device_id": "string",
+          "os": "string",
+          "screen_width": "number",
+          "screen_height": "number",
+          "browser_language": "string",
+          "browser_platform": "string",
+          "browser_name": "string",
+          "browser_version": "string",
+          "msToken": "string",
+          "X-Bogus": "string",
+          "X-Gnarly": "string"
+        },
+        "response_structure": {
+          "statusCode": "number",
+          "comments": [
+            {
+              "commentId": "string",
+              "text": "string",
+              "createTime": "number",
+              "hasCreatorLiked": "boolean",
+              "user": {
+                "userId": "string",
+                "nickname": "string",
+                "avatar": "string"
+              },
+              "likeCount": "number",
+              "replyCount": "number"
+            }
+          ],
+          "hasMore": "boolean",
+          "cursor": "string"
+        }
+      }
+    },
+    "authentication": {
+      "method": "cookie-based",
+      "required_cookies": {
+        "tt_csrf_token": "CSRF protection token",
+        "tt_chain_token": "Chain authentication token",
+        "passport_csrf_token": "Passport CSRF token",
+        "passport_auth_status": "Authentication status",
+        "sessionid": "Main session identifier",
+        "sid_tt": "Secondary session ID",
+        "uid_tt": "User ID token",
+        "msToken": "Microsoft token for validation",
+        "ttwid": "TikTok web identifier",
+        "odin_tt": "Odin tracking token"
+      }
+    },
+    "security_headers": {
+      "X-Bogus": "Anti-bot protection parameter",
+      "X-Gnarly": "Additional security validation",
+      "sec-ch-ua": "User agent client hints",
+      "sec-fetch-dest": "Fetch destination header",
+      "sec-fetch-mode": "Fetch mode (cors/same-origin)",
+      "sec-fetch-site": "Fetch site header"
+    },
+    "api_patterns": {
+      "studio_apis": [
+        "/tiktokstudio/api/web/user",
+        "/tiktokstudio/api/web/relation",
+        "/tiktokstudio/api/web/commentsV2",
+        "/tiktokstudio/api/analytics",
+        "/tiktokstudio/api/creator",
+        "/tiktokstudio/api/content",
+        "/tiktokstudio/api/monetization",
+        "/tiktokstudio/api/insights",
+        "/tiktokstudio/api/dashboard",
+        "/tiktokstudio/api/settings",
+        "/tiktokstudio/api/videos",
+        "/tiktokstudio/api/audience",
+        "/tiktokstudio/api/earnings",
+        "/tiktokstudio/api/performance",
+        "/tiktokstudio/api/trends",
+        "/tiktokstudio/api/upload",
+        "/tiktokstudio/api/schedule",
+        "/tiktokstudio/api/drafts",
+        "/tiktokstudio/api/notifications"
+      ],
+      "general_apis": [
+        "/api/v1/*",
+        "/api/v2/*",
+        "/api/user/*",
+        "/api/post/*",
+        "/api/comment/*",
+        "/api/share/*",
+        "/api/favorite/*",
+        "/api/follow/*",
+        "/api/challenge/*",
+        "/api/music/*",
+        "/api/discover/*",
+        "/api/recommend/*",
+        "/api/search/*",
+        "/api/trending/*",
+        "/api/live/*",
+        "/api/creator/*",
+        "/api/analytics/*",
+        "/api/monetization/*",
+        "/api/notification/*",
+        "/api/message/*",
+        "/api/settings/*",
+        "/api/profile/*",
+        "/api/upload/*",
+        "/api/effect/*",
+        "/api/sticker/*",
+        "/api/filter/*"
+      ],
+      "aweme_apis": [
+        "/aweme/v1/*",
+        "/aweme/v2/*"
+      ],
+      "data_apis": [
+        "/data/*",
+        "/data/analytics/*",
+        "/data/insights/*",
+        "/data/performance/*",
+        "/data/metrics/*",
+        "/data/export/*"
+      ],
+      "auth_apis": [
+        "/passport/*",
+        "/passport/web/login",
+        "/passport/web/logout",
+        "/passport/web/account",
+        "/passport/oauth/*"
+      ],
+      "node_apis": [
+        "/node/*",
+        "/node/share/*",
+        "/node/embed/*",
+        "/node/video/*"
+      ],
+      "web_apis": [
+        "/web-api/*",
+        "/graphql/*"
+      ]
+    },
+    "common_parameters": {
+      "locale": "Language locale (e.g., 'en')",
+      "aid": "Application ID (1988 for creator center)",
+      "priority_region": "Priority region code",
+      "region": "Region code (e.g., 'GE')",
+      "tz_name": "Timezone name (e.g., 'Asia/Tbilisi')",
+      "app_name": "Application name (tiktok_creator_center)",
+      "app_language": "Application language",
+      "device_platform": "Platform (web_pc)",
+      "channel": "Channel (tiktok_web)",
+      "device_id": "Device identifier",
+      "os": "Operating system",
+      "screen_width": "Screen width in pixels",
+      "screen_height": "Screen height in pixels",
+      "browser_language": "Browser language",
+      "browser_platform": "Browser platform",
+      "browser_name": "Browser name",
+      "browser_version": "Browser version",
+      "msToken": "Microsoft validation token",
+      "X-Bogus": "Anti-bot protection",
+      "X-Gnarly": "Security validation"
+    },
+    "response_codes": {
+      "0": "Success",
+      "200": "OK",
+      "400": "Bad Request",
+      "401": "Unauthorized",
+      "403": "Forbidden",
+      "404": "Not Found",
+      "429": "Rate Limited",
+      "500": "Internal Server Error"
+    },
+    "data_structures": {
+      "user_profile": {
+        "userId": "Unique user identifier",
+        "secUid": "Secure user ID",
+        "nickname": "Display name",
+        "uniqueId": "Username/handle",
+        "avatar": "Profile picture URL",
+        "bio": "Profile description",
+        "isVerified": "Verification status",
+        "isPrivate": "Privacy status",
+        "followerCount": "Number of followers",
+        "followingCount": "Number following",
+        "videoCount": "Total videos",
+        "likeCount": "Total likes received"
+      },
+      "video_metrics": {
+        "videoId": "Unique video identifier",
+        "views": "View count",
+        "likes": "Like count",
+        "comments": "Comment count",
+        "shares": "Share count",
+        "saves": "Save/favorite count",
+        "engagementRate": "Engagement percentage",
+        "watchTime": "Total watch time",
+        "completionRate": "Video completion rate"
+      },
+      "analytics_data": {
+        "period": "Time period",
+        "impressions": "Total impressions",
+        "reach": "Unique viewers",
+        "profileViews": "Profile view count",
+        "followerGrowth": "New followers",
+        "engagementRate": "Overall engagement",
+        "topVideos": "Best performing content",
+        "audienceDemographics": "Viewer demographics",
+        "peakTimes": "Best posting times"
+      },
+      "monetization": {
+        "totalEarnings": "Total earnings",
+        "creatorFund": "Creator fund earnings",
+        "liveGifts": "Live stream gifts",
+        "brandPartnerships": "Partnership earnings",
+        "pulseEarnings": "Pulse program earnings",
+        "currency": "Currency code",
+        "payoutStatus": "Payout status"
+      }
+    },
+    "interception_points": {
+      "fetch_api": "Window.fetch override for API capture",
+      "xhr": "XMLHttpRequest override for legacy calls",
+      "performance_observer": "PerformanceObserver for timing metrics",
+      "mutation_observer": "MutationObserver for dynamic content",
+      "window_properties": [
+        "SIGI_STATE",
+        "SIGI_RETRY",
+        "__NEXT_DATA__",
+        "__UNIVERSAL_DATA_FOR_REHYDRATION__",
+        "webpackChunkwebapp_studio",
+        "_sharedData",
+        "TiktokAnalytics",
+        "byted_acrawler",
+        "__INIT_DATA__",
+        "__DEFAULT_SCOPE__",
+        "Slardar",
+        "tea"
+      ]
+    },
+    "rate_limiting": {
+      "headers": {
+        "X-RateLimit-Limit": "Request limit",
+        "X-RateLimit-Remaining": "Remaining requests",
+        "X-RateLimit-Reset": "Reset timestamp"
+      },
+      "strategies": [
+        "Token bucket algorithm",
+        "Sliding window counters",
+        "msToken rotation",
+        "X-Bogus regeneration"
+      ]
+    }
+  }
+}

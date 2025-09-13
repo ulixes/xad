@@ -8,7 +8,12 @@ export default defineConfig({
   manifest: {
     action: {},
     permissions: ['sidePanel', 'tabs', 'activeTab', 'scripting'],
-    host_permissions: ['*://*.instagram.com/*']
+    host_permissions: [
+      '*://*.instagram.com/*',
+      '*://*.tiktok.com/*',
+      'https://www.tiktok.com/tiktokstudio/api/*',
+      'https://www.tiktok.com/api/*'
+    ]
   },
   vite: (inlineConfig) => {
     return mergeConfig(inlineConfig, {

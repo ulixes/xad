@@ -130,6 +130,71 @@ export async function handleExecuteAction(payload: ActionPayload): Promise<{ suc
           error: 'Content script not available on Instagram' 
         };
       }
+    } 
+    // For TikTok, communicate with content script (already auto-loaded via manifest)
+    else if (platform.toLowerCase() === 'tiktok') {
+      try {
+        console.log(`Checking if TikTok content script is ready on tab ${tab.id}`);
+        
+        // First, try to ping the content script to see if it's already loaded
+        let contentScriptReady = false;
+        try {
+          const response = await browser.tabs.sendMessage(tab.id, { 
+            type: 'CHECK_STATUS' 
+          });
+          contentScriptReady = response?.isActive === true;
+          console.log('TikTok content script status:', response);
+        } catch (pingError) {
+          console.log('TikTok content script not responding, will inject it');
+        }
+        
+        // If content script is not ready, inject it
+        if (!contentScriptReady) {
+          console.log(`Injecting TikTok content script into tab ${tab.id}`);
+          await browser.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content-scripts/tiktok.js']
+          });
+          console.log('TikTok content script injected, waiting for initialization...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          console.log('TikTok content script already loaded and ready');
+        }
+        
+        console.log(`Sending tracking request to TikTok content script on tab ${tab.id}`);
+        
+        await browser.tabs.sendMessage(tab.id, {
+          type: 'TRACK_ACTION',
+          actionId,
+          actionType,
+          targetUrl: url
+        });
+        
+        console.log('Tracking request sent successfully to TikTok content script');
+        
+        // Don't send completion here - let the content script handle it
+        return { success: true };
+        
+      } catch (err) {
+        console.error('Failed to communicate with TikTok content script:', err);
+        
+        // If content script isn't available, report error
+        activeActions.delete(actionId);
+        
+        await browser.runtime.sendMessage({
+          type: 'actionCompleted',
+          payload: {
+            actionId,
+            success: false,
+            error: 'TikTok tracking failed. Please ensure the extension has permission to run on TikTok.'
+          }
+        });
+        
+        return { 
+          success: false, 
+          error: 'Content script not available on TikTok' 
+        };
+      }
     } else {
       // For non-Instagram platforms, use timer-based completion
       console.log(`Non-Instagram platform (${platform}), using timer-based completion`);
@@ -178,6 +243,19 @@ export async function handleExecuteAction(payload: ActionPayload): Promise<{ suc
 
 // Listen for completion messages from content scripts
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Debug messages from TikTok content script
+  if (message.type === 'TIKTOK_DEBUG') {
+    console.log('[TikTok Debug]', message.message, message);
+    sendResponse({ received: true });
+    return true;
+  }
+  
+  if (message.type === 'TIKTOK_ACTION_RECEIVED') {
+    console.log('[TikTok] Action acknowledged by content script:', message);
+    sendResponse({ received: true });
+    return true;
+  }
+  
   if (message.type === 'ACTION_COMPLETED') {
     const { actionId, success, details, timestamp } = message.payload;
     

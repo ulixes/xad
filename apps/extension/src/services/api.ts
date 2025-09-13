@@ -160,6 +160,81 @@ class APIClient {
     });
   }
 
+  async updateTikTokData(
+    socialAccountId: string,
+    payload: any,
+    expectedHandle: string
+  ): Promise<any> {
+    // Extract the actual username from collected data
+    const collectedUsername = payload.profile?.uniqueId;
+    
+    // Validate that the collected username matches the expected handle
+    if (!collectedUsername) {
+      throw new Error('Username not found in collected TikTok data');
+    }
+    
+    if (collectedUsername.toLowerCase() !== expectedHandle.toLowerCase()) {
+      throw new Error(`TikTok username mismatch: expected "${expectedHandle}" but collected "${collectedUsername}"`);
+    }
+    
+    // Transform the payload to match the API schema
+    const tiktokData = {
+      socialAccountId,
+      tiktokUserId: payload.profile?.userId || payload.rawApiData?.userBase?.id,
+      secUid: payload.profile?.secUid || payload.rawApiData?.userBase?.secUid,
+      uniqueId: collectedUsername,
+      nickname: payload.profile?.nickname,
+      avatarUrl: payload.profile?.avatar,
+      bio: payload.profile?.bio,
+      isVerified: payload.profile?.verified || false,
+      isPrivate: payload.profile?.isPrivate || false,
+      region: payload.profile?.region,
+      language: payload.profile?.language,
+      createTime: payload.profile?.createTime,
+      analyticsOn: payload.profile?.analyticsOn,
+      proAccountInfo: payload.profile?.proAccountInfo,
+      
+      // Stats
+      followerCount: payload.stats?.followers || 0,
+      followingCount: payload.stats?.following || 0,
+      likeCount: payload.stats?.likes || 0,
+      videoCount: payload.stats?.videos || 0,
+      profileViewCount: payload.stats?.profileViews || 0,
+      friendCount: payload.stats?.friends || 0,
+      
+      // Analytics data if available
+      videoViews30d: payload.analytics?.videoViews,
+      profileViews30d: payload.analytics?.profileViews,
+      shares30d: payload.analytics?.shares,
+      comments30d: payload.analytics?.comments,
+      engagementRate: payload.analytics?.engagementRate,
+      avgWatchTime: payload.analytics?.avgWatchTime,
+      completionRate: payload.analytics?.completionRate,
+      
+      // Audience demographics if available
+      audienceGenderSplit: payload.audience?.demographics?.gender,
+      audienceAgeDistribution: payload.audience?.demographics?.age,
+      audienceTopCountries: payload.audience?.demographics?.location,
+      
+      // Top content if available
+      topContent: payload.topContent?.slice(0, 10),
+      
+      // Raw API data for reference
+      rawApiData: payload.rawApiData,
+      collectionTimestamp: payload.collectionTimestamp || Date.now(),
+    };
+
+    console.log('Sending TikTok data to API:', {
+      endpoint: `/api/social-accounts/${socialAccountId}/tiktok-data`,
+      data: tiktokData
+    });
+    
+    return this.request(`/api/social-accounts/${socialAccountId}/tiktok-data`, {
+      method: 'POST',
+      body: JSON.stringify(tiktokData),
+    });
+  }
+
   async deleteSocialAccount(accountId: string): Promise<void> {
     await this.request(`/api/social-accounts/${accountId}`, {
       method: 'DELETE',
