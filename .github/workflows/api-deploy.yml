@@ -55,6 +55,7 @@ jobs:
           
           [env.production]
           name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-production"
+          logpush = true
           
           [env.production.vars]
           ENVIRONMENT = "production"
@@ -62,9 +63,11 @@ jobs:
           ADMIN_AUTH_TOKEN = "${{ secrets.ADMIN_AUTH_TOKEN }}"
           PRIVY_APP_ID = "${{ secrets.PRIVY_APP_ID }}"
           PRIVY_APP_SECRET = "${{ secrets.PRIVY_APP_SECRET }}"
+          LOG_LEVEL = "info"
           
           [env.staging]
           name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-staging"
+          logpush = true
           
           [env.staging.vars]
           ENVIRONMENT = "staging"
@@ -72,6 +75,7 @@ jobs:
           ADMIN_AUTH_TOKEN = "${{ secrets.STAGING_ADMIN_AUTH_TOKEN || secrets.ADMIN_AUTH_TOKEN }}"
           PRIVY_APP_ID = "${{ secrets.STAGING_PRIVY_APP_ID || secrets.PRIVY_APP_ID }}"
           PRIVY_APP_SECRET = "${{ secrets.STAGING_PRIVY_APP_SECRET || secrets.PRIVY_APP_SECRET }}"
+          LOG_LEVEL = "debug"
           EOF
       
       - name: Deploy to Cloudflare Workers (Production)
