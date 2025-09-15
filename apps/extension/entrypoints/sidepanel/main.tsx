@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Home, ActionListPage, WithdrawPage, ActionHistory } from '@xad/ui';
 import './style.css';
@@ -28,6 +28,8 @@ const App = () => {
   const [actionStatuses, setActionStatuses] = useState<Record<string, ActionStatus>>({});
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [actionRunIds, setActionRunIds] = useState<Record<string, string>>({});  // Map action ID to action run ID
+  const actionRunIdsRef = useRef<Record<string, string>>({});  // Ref for immediate access to action run IDs
+  const [activeActionId, setActiveActionId] = useState<string | null>(null); // Track currently active action
   
   // Withdraw page state
   const [actionHistory, setActionHistory] = useState<ActionHistory[]>([]);
@@ -91,6 +93,11 @@ const App = () => {
         const { actionId, success, error, details } = message.payload;
         console.log('[Sidepanel] Action completed:', { actionId, success, details });
         
+        // Clear active action when completed
+        if (activeActionId === actionId) {
+          setActiveActionId(null);
+        }
+        
         setActionStatuses(prev => ({
           ...prev,
           [actionId]: success ? 'completed' : 'error'
@@ -105,13 +112,21 @@ const App = () => {
         }
         
         // Update action run in database based on result
-        const actionRunId = actionRunIds[actionId];
+        // Use ref for immediate access since state might not have updated yet
+        const actionRunId = actionRunIdsRef.current[actionId] || actionRunIds[actionId];
+        console.log('[DEBUG] Looking for actionRunId for actionId:', actionId);
+        console.log('[DEBUG] Current actionRunIds state:', actionRunIds);
+        console.log('[DEBUG] Current actionRunIds ref:', actionRunIdsRef.current);
+        console.log('[DEBUG] Found actionRunId:', actionRunId);
+        
         if (actionRunId) {
           try {
             if (success) {
               // Step 3: Update to dom_verified when DOM tracking confirms action
-              console.log('Updating action run to DOM_VERIFIED:', actionRunId);
-              const updateResult = await apiClient.updateActionRun(actionRunId, {
+              console.log('[DEBUG] Preparing to update action run to DOM_VERIFIED');
+              console.log('[DEBUG] ActionRunStatus.DOM_VERIFIED value:', ActionRunStatus.DOM_VERIFIED);
+              
+              const updatePayload = {
                 status: ActionRunStatus.DOM_VERIFIED,
                 proof: {
                   actionType: details?.actionType || 'unknown',
@@ -121,8 +136,13 @@ const App = () => {
                   userAgent: navigator.userAgent
                 },
                 verificationData: details
-              });
-              console.log('Action run updated to DOM_VERIFIED:', updateResult);
+              };
+              
+              console.log('[DEBUG] Update payload:', JSON.stringify(updatePayload, null, 2));
+              console.log('[DEBUG] Calling apiClient.updateActionRun with:', actionRunId);
+              
+              const updateResult = await apiClient.updateActionRun(actionRunId, updatePayload);
+              console.log('[DEBUG] Update result from API:', updateResult);
               
               // TODO: Step 4: Backend will verify via CDP and update to cdp_verified/completed
               // TODO: Step 5: Payment processing will update to paid
@@ -138,7 +158,13 @@ const App = () => {
               console.log('Action run updated to FAILED');
             }
           } catch (updateError) {
-            console.error('Failed to update action run:', updateError);
+            console.error('[DEBUG] Failed to update action run:', updateError);
+            console.error('[DEBUG] Error details:', {
+              message: updateError instanceof Error ? updateError.message : 'Unknown error',
+              stack: updateError instanceof Error ? updateError.stack : undefined,
+              actionRunId,
+              actionId
+            });
           }
         }
         
@@ -183,6 +209,8 @@ const App = () => {
             
             // Reload social accounts from API
             const updatedAccounts = await apiClient.getUserSocialAccounts(user.id);
+            console.log('Updated accounts from API after verification:', updatedAccounts);
+            console.log('First account structure:', updatedAccounts[0]);
             setSocialAccounts(updatedAccounts);
             
             // Fetch eligible actions for the updated accounts
@@ -225,6 +253,8 @@ const App = () => {
             
             // Reload social accounts from API
             const updatedAccounts = await apiClient.getUserSocialAccounts(user.id);
+            console.log('Updated accounts from API after verification:', updatedAccounts);
+            console.log('First account structure:', updatedAccounts[0]);
             setSocialAccounts(updatedAccounts);
             
             // Fetch eligible actions for the updated accounts
@@ -492,6 +522,13 @@ const App = () => {
         onActionClick={async (actionId: string) => {
           console.log('Action clicked:', actionId);
           
+          // Check if another action is currently in progress
+          if (activeActionId && activeActionId !== actionId) {
+            console.log('Another action is in progress:', activeActionId);
+            alert('Please wait for the current action to complete before starting a new one.');
+            return;
+          }
+          
           const selectedAction = eligibleActions.find(a => a.id === actionId);
           if (!selectedAction) {
             console.error('Selected action not found');
@@ -508,6 +545,9 @@ const App = () => {
           // Check if resuming an existing action run (for loading or failed states)
           if (selectedAction.userActionRun && (status === 'loading' || status === 'error')) {
             console.log('Resuming/retrying action:', selectedAction.userActionRun.id, 'Status:', status);
+            
+            // Set as active action when resuming
+            setActiveActionId(actionId);
             
             // If it's a failed action, reset it to pending_verification first
             if (status === 'error') {
@@ -557,11 +597,12 @@ const App = () => {
           
           console.log('Starting new action:', selectedAction);
           
-          // Update status to loading
+          // Update status to loading and set as active action
           setActionStatuses(prev => ({
             ...prev,
             [actionId]: 'loading'
           }));
+          setActiveActionId(actionId);
           
           try {
             // Use the new startActionRun method (handles duplicates)
@@ -575,10 +616,25 @@ const App = () => {
             console.log('Action run started:', actionRun);
             
             // Store the action run ID for later updates
-            setActionRunIds(prev => ({
-              ...prev,
-              [selectedAction.id]: actionRun.id
-            }));
+            console.log('[DEBUG] Storing actionRunId:', {
+              key: selectedAction.id,
+              value: actionRun.id,
+              actionId: actionId
+            });
+            
+            // Update ref immediately for instant access
+            actionRunIdsRef.current[selectedAction.id] = actionRun.id;
+            console.log('[DEBUG] Updated actionRunIds ref immediately:', actionRunIdsRef.current);
+            
+            // Also update state for React rendering
+            setActionRunIds(prev => {
+              const newMap = {
+                ...prev,
+                [selectedAction.id]: actionRun.id
+              };
+              console.log('[DEBUG] Updated actionRunIds state:', newMap);
+              return newMap;
+            });
             
             // Send message to background script to open tab and start tracking
             await browser.runtime.sendMessage({
@@ -594,6 +650,8 @@ const App = () => {
             });
           } catch (error) {
             console.error('Failed to start action:', error);
+            // Clear active action on error
+            setActiveActionId(null);
             setActionStatuses(prev => ({
               ...prev,
               [actionId]: 'error'
@@ -635,12 +693,28 @@ const App = () => {
       walletAddress={walletAddress}
 
       // Connected accounts with eligible actions count and verification state
-      connectedAccounts={socialAccounts.map(account => ({
-        platform: account.platform,
-        handle: account.handle,
-        availableActions: accountActions[account.id] || 0,
-        isVerifying: verifyingAccounts.has(account.id)
-      }))}
+      connectedAccounts={socialAccounts.map(account => {
+        console.log('Mapping account for UI:', account);
+        console.log('Account ID:', account.id);
+        console.log('Account isVerified:', account.isVerified);
+        
+        // Determine UI state:
+        // - isVerifying: true = currently collecting data (shows spinner)
+        // - isVerified: true = data collected successfully 
+        // - both false = account added but not yet verified
+        const isCurrentlyVerifying = verifyingAccounts.has(account.id);
+        const isVerified = account.isVerified || false;
+        
+        const mapped = {
+          platform: account.platform,
+          handle: account.handle,
+          availableActions: accountActions[account.id] || 0,
+          isVerifying: isCurrentlyVerifying,
+          isVerified: isVerified // Add this to show verified status!
+        };
+        console.log('Mapped to UI format:', mapped);
+        return mapped;
+      })}
 
       // Handlers
       onAddAccount={async (platform: string, handle: string) => {
@@ -730,6 +804,8 @@ const App = () => {
             
             setActionStatuses(statuses);
             setActionRunIds(runIds);
+            // Also update ref for immediate access
+            actionRunIdsRef.current = runIds;
           } else {
             console.error('Invalid response format:', response);
             setEligibleActions([]);

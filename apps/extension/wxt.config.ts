@@ -7,7 +7,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     action: {},
-    permissions: ['sidePanel', 'tabs', 'activeTab', 'scripting'],
+    permissions: ['sidePanel', 'tabs', 'activeTab', 'scripting', 'debugger'],
     host_permissions: [
       '*://*.instagram.com/*',
       '*://*.tiktok.com/*',

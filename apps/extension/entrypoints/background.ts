@@ -60,6 +60,16 @@
 
         const tab = await browser.tabs.create({ url: 'about:blank' });
 
+        if (!tab.id) {
+          console.error('Failed to create tab - no tab ID');
+          browser.runtime.sendMessage({
+            type: 'collectionError',
+            payload: 'Failed to create browser tab for data collection',
+            accountId: accountId
+          });
+          sendResponse({ success: false, error: 'Failed to create tab' });
+          return;
+        }
 
         try {
           await browser.debugger.attach({ tabId: tab.id }, '1.3');
@@ -521,17 +531,43 @@
           }
 
           sendResponse({ success: true, handle, data: metadata });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Debugger error:', error);
+          
+          // More detailed error message based on error type
+          let errorMessage = 'Failed to collect data';
+          if (error.message?.includes('Cannot access') || error.message?.includes('attach')) {
+            errorMessage = 'Unable to attach debugger. Please check browser permissions.';
+          } else if (error.message?.includes('Cannot read properties')) {
+            errorMessage = 'Data collection failed. Instagram page structure may have changed.';
+          } else if (error.message) {
+            errorMessage = `Collection error: ${error.message}`;
+          }
+          
           browser.runtime.sendMessage({
             type: 'collectionError',
-            payload: 'Failed to collect data',
+            payload: errorMessage,
             accountId: accountId
           });
-          if (tab.id !== undefined) {
-            await browser.tabs.remove(tab.id);
+          
+          // Clean up: detach debugger if attached and close tab
+          try {
+            if (tab.id !== undefined) {
+              await browser.debugger.detach({ tabId: tab.id });
+            }
+          } catch (detachError) {
+            console.log('Debugger already detached or not attached');
           }
-          sendResponse({ success: false });
+          
+          if (tab.id !== undefined) {
+            try {
+              await browser.tabs.remove(tab.id);
+            } catch (removeError) {
+              console.log('Tab already closed');
+            }
+          }
+          
+          sendResponse({ success: false, error: errorMessage });
         }
 
         return true;

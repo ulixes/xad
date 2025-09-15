@@ -1,86 +1,51 @@
 import { useState, useEffect } from 'react';
-import type { TargetingRule, ConditionGroup as ConditionGroupType } from '../../types/platform-schemas';
-import { allPlatformSchemas, OPERATOR_LABELS } from '../../types/platform-schemas';
-import { ConditionGroup } from './ConditionGroup';
+import type { TargetingRule } from '../../types/platform-schemas';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { calculateCampaignPrice } from '../../utils/pricing-calculator';
 import { useAppKit, useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { PaymentFlowService } from '../../services/paymentFlow';
 import { getNetworkConfig } from '../../config/networks';
 
-type Platform = 'tiktok' | 'reddit' | 'x' | 'instagram' | 'facebook' | 'farcaster';
+type Platform = 'tiktok' | 'instagram';
 
 const platforms = [
   { id: 'tiktok', name: 'TikTok', icon: '/social-logos/douyin.png' },
   { id: 'instagram', name: 'Instagram', icon: '/social-logos/instagram.png' },
-  { id: 'x', name: 'X', icon: '/social-logos/x.png' },
-  { id: 'facebook', name: 'Facebook', icon: '/social-logos/facebook.png' },
-  { id: 'reddit', name: 'Reddit', icon: '/social-logos/reddit.png' },
-  { id: 'farcaster', name: 'Farcaster', icon: '/social-logos/farcaster.png' },
 ];
 
-// Define actions per platform with minimum prices (in cents)
+// Beta: Only like and follow actions with minimum prices (in cents)
 const platformActions = {
   tiktok: [
     { id: 'like', name: 'Like', minPrice: 5 },
-    { id: 'comment', name: 'Comment', minPrice: 25 },
-    { id: 'share', name: 'Share', minPrice: 15 },
     { id: 'follow', name: 'Follow', minPrice: 50 },
   ],
   instagram: [
     { id: 'like', name: 'Like', minPrice: 5 },
-    { id: 'comment', name: 'Comment', minPrice: 25 },
-    { id: 'reel_share', name: 'Share Reel', minPrice: 20 },
-    { id: 'post_share', name: 'Share Post', minPrice: 15 },
-    { id: 'story_share', name: 'Share Story', minPrice: 10 },
     { id: 'follow', name: 'Follow', minPrice: 50 },
-  ],
-  x: [
-    { id: 'like', name: 'Like', minPrice: 5 },
-    { id: 'comment', name: 'Comment', minPrice: 25 },
-    { id: 'retweet', name: 'Retweet', minPrice: 15 },
-    { id: 'follow', name: 'Follow', minPrice: 50 },
-  ],
-  facebook: [
-    { id: 'like', name: 'Like', minPrice: 5 },
-    { id: 'comment', name: 'Comment', minPrice: 25 },
-    { id: 'story_share', name: 'Share Story', minPrice: 10 },
-    { id: 'follow', name: 'Follow', minPrice: 50 },
-  ],
-  reddit: [
-    { id: 'upvote', name: 'Upvote', minPrice: 3 },
-    { id: 'comment', name: 'Comment', minPrice: 30 },
-    { id: 'award', name: 'Award', minPrice: 100 },
-  ],
-  farcaster: [
-    { id: 'like', name: 'Like', minPrice: 10 },
-    { id: 'comment', name: 'Comment', minPrice: 50 },
-    { id: 'follow', name: 'Follow', minPrice: 75 },
   ],
 };
 
 type ActionConfig = { 
   enabled: boolean; 
   price: number;
-  target: string; // URL for posts, @handle for follows
+  target: string; // URL for posts or profiles
   maxVolume: number; // Maximum number of actions to pay for
 };
 
 type ActionPricing = Record<string, ActionConfig>;
 
-interface AdTargetingFormProps {
+interface AdTargetingFormBetaProps {
   initialRule?: TargetingRule;
   onSave?: (rule: TargetingRule) => void;
   onCancel?: () => void;
 }
 
-export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
+export function AdTargetingFormBeta({ initialRule, onSave }: AdTargetingFormBetaProps) {
   const { open } = useAppKit()
   const { address, isConnected } = useAppKitAccount()
   const { caipNetwork, switchNetwork } = useAppKitNetwork()
@@ -89,11 +54,13 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
   const networkConfig = getNetworkConfig()
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [actionPricing, setActionPricing] = useState<ActionPricing>({});
-  const [estimatedCost, setEstimatedCost] = useState<any>(null);
+  const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
-  const [rule, setRule] = useState<TargetingRule>(
+  
+  // Beta: No targeting rules, just empty conditions
+  const [rule] = useState<TargetingRule>(
     initialRule || {
       id: `rule-${Date.now()}`,
       name: '',
@@ -101,12 +68,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
       rootGroup: {
         id: `group-root`,
         operator: 'AND',
-        conditions: [{
-          id: `cond-${Date.now()}`,
-          schemaId: '',
-          params: {},
-          logicalOperator: 'AND'
-        }]
+        conditions: [] // No conditions for beta
       },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -114,34 +76,23 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     }
   );
 
-  // Calculate estimated cost whenever actions or conditions change
+  // Calculate estimated cost whenever actions change
   useEffect(() => {
-    const hasEnabledActions = Object.values(actionPricing).some(p => p.enabled);
-    if (hasEnabledActions) {
-      const cost = calculateCampaignPrice(
-        selectedPlatform,
-        actionPricing,
-        rule.rootGroup.conditions
-      );
-      setEstimatedCost(cost);
+    const enabledActions = Object.values(actionPricing).filter(p => p.enabled);
+    if (enabledActions.length > 0) {
+      const totalCost = enabledActions.reduce((sum, action) => {
+        return sum + (action.price * action.maxVolume / 100); // Convert cents to dollars
+      }, 0);
+      setEstimatedCost(totalCost);
     } else {
       setEstimatedCost(null);
     }
-  }, [actionPricing, rule.rootGroup.conditions, selectedPlatform]);
+  }, [actionPricing]);
 
   const handleSave = async () => {
     // Reset previous states
     setPaymentError(null)
     setPaymentSuccess(null)
-    
-    // Debug wallet connection state
-    console.log('Wallet connection state:', { 
-      isConnected, 
-      address, 
-      hasWalletClient: !!walletClient,
-      currentNetwork: caipNetwork?.id,
-      expectedChainId: networkConfig.chainId
-    })
     
     // Check wallet connection
     if (!isConnected || !address) {
@@ -158,7 +109,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     }
 
     // Validate minimum amount
-    if (!estimatedCost || estimatedCost.totalCost < 5) {
+    if (!estimatedCost || estimatedCost < 5) {
       setPaymentError('Minimum campaign budget is $5')
       return
     }
@@ -175,7 +126,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
       .filter(([_, config]: [string, any]) => config.enabled && !config.target.trim())
     
     if (invalidTargets.length > 0) {
-      setPaymentError('Please fill in all target URLs/handles for selected actions')
+      setPaymentError('Please fill in all URLs for selected actions')
       return
     }
 
@@ -184,9 +135,9 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     try {
       // Prepare campaign data
       const campaignData = {
-        platform: selectedPlatform,
+        platform: selectedPlatform as any,
         targetingRules: rule,
-        totalAmount: estimatedCost.totalCost.toString(), // Already in dollars from pricing calculator
+        totalAmount: estimatedCost.toString(),
         actions: Object.entries(actionPricing)
           .filter(([_, config]: [string, any]) => config.enabled)
           .map(([key, config]: [string, any]) => {
@@ -211,28 +162,19 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
         throw new Error('Network connection failed')
       }
 
-      // Step 1: Create draft campaign
-      console.log('Step 1: Creating draft campaign...')
-      const campaign = await PaymentFlowService.createDraftCampaign(campaignData, address)
-      
-      // Step 2: Process blockchain payment
-      console.log('Step 2: Processing blockchain payment...')
+      // Step 1: Process blockchain payment FIRST
+      console.log('Step 1: Processing blockchain payment...')
       const paymentResult = await PaymentFlowService.processPayment(
-        {
-          campaignId: campaign.id,
-          totalAmount: campaignData.totalAmount,
-          actions: campaignData.actions,
-          targetingRules: campaignData.targetingRules,
-          platform: campaignData.platform
-        },
+        campaignData,
+        address,
         walletClient,
         publicClient
       )
       
       console.log('Payment transaction submitted:', paymentResult.transactionHash)
       
-      // Step 3: Wait for transaction confirmation
-      console.log('Step 3: Waiting for transaction confirmation...')
+      // Step 2: Wait for transaction confirmation
+      console.log('Step 2: Waiting for transaction confirmation...')
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: paymentResult.transactionHash,
         timeout: 60_000 // 60 second timeout
@@ -244,19 +186,25 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           gasUsed: receipt.gasUsed
         })
         
-        // Step 4: Confirm payment with API to activate campaign
-        console.log('Step 4: Confirming payment with API...')
-        await PaymentFlowService.confirmPayment(campaign.id, {
-          transactionHash: paymentResult.transactionHash,
-          amount: paymentResult.amount,
-          blockNumber: receipt.blockNumber.toString(),
-          gasUsed: receipt.gasUsed?.toString()
-        })
+        // Step 3: Create campaign with payment data (only after payment is confirmed)
+        console.log('Step 3: Creating campaign with payment data...')
+        const campaign = await PaymentFlowService.createCampaignWithPayment(
+          campaignData,
+          address,
+          {
+            transactionHash: paymentResult.transactionHash,
+            amount: paymentResult.amount,
+            currency: paymentResult.currency,
+            network: paymentResult.network,
+            blockNumber: receipt.blockNumber.toString(),
+            gasUsed: receipt.gasUsed?.toString()
+          }
+        )
         
-        console.log('Campaign activated successfully!')
+        console.log('Campaign created and activated successfully!', campaign)
         
         setPaymentSuccess(
-          `Payment successful! Campaign activated with ${paymentResult.currency} on ${paymentResult.network}. Transaction: ${paymentResult.transactionHash?.slice(0, 10)}...`
+          `Payment successful! Campaign created with ${paymentResult.currency} on ${paymentResult.network}. Transaction: ${paymentResult.transactionHash?.slice(0, 10)}...`
         )
         
         // Call original onSave if provided
@@ -278,64 +226,6 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     }
   };
 
-  const handleUpdateRootGroup = (updatedGroup: ConditionGroupType) => {
-    setRule({
-      ...rule,
-      rootGroup: updatedGroup
-    });
-  };
-
-  const generateHumanReadable = (group: ConditionGroupType, depth = 0): string => {
-    if (group.conditions.length === 0) return '';
-    
-    let result = '';
-    group.conditions.forEach((cond, index) => {
-      if ('schemaId' in cond) {
-        const schema = allPlatformSchemas.find(s => s.id === cond.schemaId);
-        if (!schema) {
-          result += 'Unknown condition';
-        } else {
-          let text = schema.displayName;
-          
-          // Add operator and value
-          if (cond.operator && cond.value !== undefined) {
-            const operatorLabel = OPERATOR_LABELS[cond.operator] || cond.operator;
-            text += ` ${operatorLabel} ${cond.value}`;
-          }
-          
-          // Add params if present
-          if (cond.params && schema.params) {
-            const paramDisplay = schema.params.map(p => {
-              const value = cond.params?.[p.name];
-              if (value && p.options) {
-                const option = p.options.find(o => o.value === value);
-                return option?.label || value;
-              }
-              return value;
-            }).filter(Boolean);
-            
-            if (paramDisplay.length > 0) {
-              text += ` (${paramDisplay.join(', ')})`;
-            }
-          }
-          result += text;
-        }
-        
-        // Add the logical operator if not the last condition
-        if (index < group.conditions.length - 1) {
-          result += ` ${cond.logicalOperator || 'AND'} `;
-        }
-      } else {
-        // Nested group
-        if (index > 0) result += ` ${group.operator} `;
-        result += `(${generateHumanReadable(cond, depth + 1)})`;
-      }
-    });
-    
-    return result;
-  };
-
-
   return (
     <div className="space-y-6 sm:space-y-8">
         {/* Platform Selection */}
@@ -346,21 +236,9 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
               <button
                 key={platform.id}
                 onClick={() => {
-                  const newPlatform = platform.id as Platform;
-                  setSelectedPlatform(newPlatform);
-                  // Add a default condition when switching platforms
-                  setRule(prevRule => ({
-                    ...prevRule,
-                    rootGroup: {
-                      ...prevRule.rootGroup,
-                      conditions: [{
-                        id: `cond-${Date.now()}`,
-                        schemaId: '',
-                        params: {},
-                        logicalOperator: 'AND'
-                      }]
-                    }
-                  }));
+                  setSelectedPlatform(platform.id as Platform);
+                  // Reset action pricing when switching platforms
+                  setActionPricing({});
                 }}
                 className={`flex items-center gap-2 w-full sm:w-[140px] justify-center px-3 sm:px-4 py-2 rounded-lg border-2 transition-colors duration-150 cursor-pointer text-sm sm:text-base ${
                   selectedPlatform === platform.id
@@ -379,16 +257,14 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           </div>
         </div>
 
-        {/* Condition Builder */}
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Targeting</h2>
-            <ConditionGroup
-              group={rule.rootGroup}
-              onUpdate={handleUpdateRootGroup}
-              isRoot={true}
-              platform={selectedPlatform}
-            />
-        </div>
+        {/* Beta Notice */}
+        <Alert className="border-blue-500/50 text-blue-700 [&>svg]:text-blue-600">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Beta Release</AlertTitle>
+          <AlertDescription>
+            This is a simplified version for beta testing. No targeting requirements needed - your campaign will be available to all users.
+          </AlertDescription>
+        </Alert>
 
         {/* Actions & Pricing */}
         <div>
@@ -429,24 +305,22 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
 
                   {config.enabled && (
                     <div className="mt-4 space-y-4 pb-2">
-                      {/* Target URL or Handle */}
+                      {/* Target URL */}
                       <div className="space-y-2">
                         <Label htmlFor={`${key}-target`} className="text-base font-medium">
-                          {isFollowAction ? 'Account to Follow' : 'URL'}
+                          {isFollowAction ? 'Profile URL' : 'Post URL'}
                         </Label>
                         <Input
                           id={`${key}-target`}
-                          type={isFollowAction ? 'text' : 'url'}
+                          type="url"
                           placeholder={
                             isFollowAction 
-                              ? '@username' 
+                              ? selectedPlatform === 'tiktok'
+                                ? 'https://tiktok.com/@username'
+                                : 'https://instagram.com/username/'
                               : selectedPlatform === 'tiktok'
                                 ? 'https://tiktok.com/@user/video/123456789'
-                                : selectedPlatform === 'instagram'
-                                  ? 'https://instagram.com/p/ABC123/'
-                                  : selectedPlatform === 'x'
-                                    ? 'https://x.com/user/status/123456789'
-                                    : 'https://...'
+                                : 'https://instagram.com/p/ABC123/'
                           }
                           value={config.target}
                           onChange={(e) => {
@@ -519,21 +393,15 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           </div>
         </div>
 
-
         {/* Total */}
-        {estimatedCost && estimatedCost.breakdown.length > 0 && (
+        {estimatedCost && estimatedCost > 0 && (
           <div className="py-6 border-t border-border">
             <div className="flex justify-between items-center">
               <span className="text-2xl font-semibold">Total</span>
               <div className="text-right">
-                <span className={`text-2xl font-semibold ${estimatedCost.totalCost < 50 ? 'text-red-500' : 'text-foreground'}`}>
-                  ${estimatedCost.totalCost.toFixed(2)}
+                <span className={`text-2xl font-semibold ${estimatedCost < 5 ? 'text-red-500' : 'text-foreground'}`}>
+                  ${estimatedCost.toFixed(2)}
                 </span>
-                {estimatedCost.volumeDiscount < 1 && (
-                  <p className="text-sm text-green-600">
-                    {((1 - estimatedCost.volumeDiscount) * 100).toFixed(0)}% discount applied
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -556,16 +424,14 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           </Alert>
         )}
 
-
         {/* Pay Button */}
         <div className="pt-6">
           <Button 
             onClick={handleSave} 
             disabled={
               isProcessingPayment ||
-              rule.rootGroup.conditions.length === 0 ||
               Object.values(actionPricing).filter(p => p.enabled).length === 0 ||
-              (estimatedCost && estimatedCost.totalCost < 5)
+              (estimatedCost && estimatedCost < 5)
             }
             size="lg"
             className="w-full"

@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { ActionListPage, type Action, type ActionStatus } from '@xad/ui/src/components/tasks/action-list-page'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -45,8 +43,6 @@ export function BrandDashboard({
   onRefresh,
   className
 }: BrandDashboardProps) {
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
-  const [showActionList, setShowActionList] = useState(false)
 
   const formatBudget = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`
@@ -63,39 +59,12 @@ export function BrandDashboard({
     }
   }
 
-  const convertCampaignToActions = (campaign: Campaign): Action[] => {
-    if (!campaign.actions) return []
-    
-    return campaign.actions.map(action => ({
-      id: action.id,
-      type: action.actionType as Action['type'],
-      status: action.currentVolume >= action.maxVolume ? 'completed' : 
-              action.isActive ? 'pending' : 'error' as ActionStatus,
-      url: action.target,
-      payment: action.pricePerAction / 100,
-      platform: campaign.platform as Action['platform']
-    }))
-  }
 
   const activeCampaigns = campaigns.filter(c => c.status === 'active')
   const completedCampaigns = campaigns.filter(c => c.status === 'completed')
   const totalBudget = campaigns.reduce((sum, c) => sum + c.totalBudget, 0)
   const totalRemaining = campaigns.reduce((sum, c) => sum + c.remainingBudget, 0)
 
-  // Show action list view
-  if (showActionList && selectedCampaign) {
-    return (
-      <ActionListPage
-        accountHandle={walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Brand'}
-        platform={selectedCampaign.platform}
-        actions={convertCampaignToActions(selectedCampaign)}
-        availableActionsCount={selectedCampaign.actions?.length || 0}
-        isLoading={false}
-        onBack={() => setShowActionList(false)}
-        className="max-w-2xl mx-auto"
-      />
-    )
-  }
 
   return (
     <div className={`space-y-6 ${className || ''}`}>
@@ -178,12 +147,29 @@ export function BrandDashboard({
 
       {/* Campaigns Tabs */}
       {!isLoading && (
-        <Tabs defaultValue="active" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="all">All ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="active">Active ({activeCampaigns.length})</TabsTrigger>
             <TabsTrigger value="completed">Completed ({completedCampaigns.length})</TabsTrigger>
-            <TabsTrigger value="all">All ({campaigns.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="all" className="space-y-4">
+            {campaigns.length === 0 ? (
+              <EmptyState 
+                message="No campaigns yet"
+                actionMessage="Create Your First Campaign"
+                onCreateCampaign={onCreateCampaign}
+              />
+            ) : (
+              campaigns.map(campaign => (
+                <CampaignCard 
+                  key={campaign.id} 
+                  campaign={campaign}
+                />
+              ))
+            )}
+          </TabsContent>
 
           <TabsContent value="active" className="space-y-4">
             {activeCampaigns.length === 0 ? (
@@ -196,10 +182,6 @@ export function BrandDashboard({
                 <CampaignCard 
                   key={campaign.id} 
                   campaign={campaign}
-                  onViewActions={() => {
-                    setSelectedCampaign(campaign)
-                    setShowActionList(true)
-                  }}
                 />
               ))
             )}
@@ -216,31 +198,6 @@ export function BrandDashboard({
                 <CampaignCard 
                   key={campaign.id} 
                   campaign={campaign}
-                  onViewActions={() => {
-                    setSelectedCampaign(campaign)
-                    setShowActionList(true)
-                  }}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="all" className="space-y-4">
-            {campaigns.length === 0 ? (
-              <EmptyState 
-                message="No campaigns yet"
-                actionMessage="Create Your First Campaign"
-                onCreateCampaign={onCreateCampaign}
-              />
-            ) : (
-              campaigns.map(campaign => (
-                <CampaignCard 
-                  key={campaign.id} 
-                  campaign={campaign}
-                  onViewActions={() => {
-                    setSelectedCampaign(campaign)
-                    setShowActionList(true)
-                  }}
                 />
               ))
             )}
@@ -277,11 +234,9 @@ function EmptyState({
 
 // Campaign Card Component
 function CampaignCard({ 
-  campaign, 
-  onViewActions 
+  campaign
 }: { 
   campaign: Campaign
-  onViewActions: () => void 
 }) {
   const formatBudget = (cents: number) => `$${(cents / 100).toFixed(2)}`
   
@@ -411,13 +366,6 @@ function CampaignCard({
           </div>
         )}
 
-        <Button 
-          className="w-full"
-          variant="outline"
-          onClick={onViewActions}
-        >
-          View
-        </Button>
       </CardContent>
     </Card>
   )

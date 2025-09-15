@@ -38,6 +38,18 @@ button[class*="bg-primary"]:not([class*="bg-primary/"]) {
   color: #ffffff !important;
 }
 
+/* Fix tabs - inactive tabs should not have primary background */
+button[role="tab"][data-state="inactive"] {
+  background-color: transparent !important;
+  color: #999999 !important;
+}
+
+/* Active tabs should have primary background */
+button[role="tab"][data-state="active"] {
+  background-color: #4d61ff !important;
+  color: #ffffff !important;
+}
+
 /* Fix checkboxes - unchecked should be empty */
 button[role="checkbox"][data-state="unchecked"] {
   background-color: transparent !important;

@@ -177,14 +177,34 @@ socialAccountsRouter.get("/user/:userId", async (c) => {
 
   try {
     const accounts = await db
-      .select()
+      .select({
+        id: socialAccounts.id,
+        userId: socialAccounts.userId,
+        platform: socialAccounts.platform,
+        handle: socialAccounts.handle,
+        platformUserId: socialAccounts.platformUserId,
+        isVerified: socialAccounts.isVerified,
+        lastVerifiedAt: socialAccounts.lastVerifiedAt,
+        metadata: socialAccounts.metadata,
+        createdAt: socialAccounts.createdAt,
+        updatedAt: socialAccounts.updatedAt,
+        // Include Instagram data if available
+        instagramData: instagramAccounts,
+        // Include TikTok data if available
+        tiktokData: tiktokAccounts,
+      })
       .from(socialAccounts)
       .leftJoin(
         instagramAccounts,
         eq(socialAccounts.id, instagramAccounts.socialAccountId)
       )
+      .leftJoin(
+        tiktokAccounts,
+        eq(socialAccounts.id, tiktokAccounts.socialAccountId)
+      )
       .where(eq(socialAccounts.userId, userId));
 
+    // Return the properly formatted accounts
     return c.json(accounts);
   } catch (error) {
     console.error("Error fetching user social accounts:", error);

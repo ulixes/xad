@@ -185,7 +185,9 @@ export function WithdrawPage({
           >
             {canCashOut 
               ? `Withdraw $${totalVerified.toFixed(2)}`
-              : `Withdraw ($5)`
+              : totalVerified > 0 
+                ? `Withdraw $${totalVerified.toFixed(2)} (min $5.00)`
+                : `Withdraw (min $5.00)`
             }
           </Button>
         </div>

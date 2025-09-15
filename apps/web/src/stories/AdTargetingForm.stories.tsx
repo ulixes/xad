@@ -385,3 +385,23 @@ export const InstagramLifestyleInfluencer: Story = {
     onCancel: () => console.log('Cancelled')
   }
 };
+
+export const BetaSimplified: Story = {
+  args: {
+    initialRule: {
+      id: 'beta-simple-1',
+      name: 'Simple Campaign',
+      description: 'Simplified campaign for beta release',
+      rootGroup: {
+        id: 'group-root',
+        operator: 'AND',
+        conditions: []  // No requirements
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'draft'
+    } as TargetingRule,
+    onSave: (rule) => console.log('Saved rule:', rule),
+    onCancel: () => console.log('Cancelled')
+  }
+};
