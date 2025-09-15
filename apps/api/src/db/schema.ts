@@ -57,6 +57,7 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
+  privyDid: text('privy_did').unique(), // Privy user identifier
   walletAddress: text('wallet_address').unique(),
   email: text('email').unique(),
   status: userStatusEnum('status').notNull().default('pending_verification'),

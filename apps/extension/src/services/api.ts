@@ -14,9 +14,15 @@ const API_BASE_URL = (() => {
 
 class APIClient {
   private baseUrl: string;
+  private getAccessToken: (() => Promise<string | null>) | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+  }
+
+  // Set the function to get Privy access token
+  setAccessTokenGetter(getter: () => Promise<string | null>) {
+    this.getAccessToken = getter;
   }
 
   private async request<T>(
@@ -25,12 +31,26 @@ class APIClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Get Privy access token if available
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.getAccessToken) {
+      try {
+        const token = await this.getAccessToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (error) {
+        console.error('Failed to get access token:', error);
+      }
+    }
+    
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -41,6 +61,19 @@ class APIClient {
     }
 
     return response.json();
+  }
+
+  // Get or create user with current authentication
+  async getOrCreateCurrentUser(): Promise<User | null> {
+    try {
+      // This endpoint will use the Privy token to identify the user
+      return await this.request<User>('/api/users/current', {
+        method: 'POST',
+      });
+    } catch (error: any) {
+      console.error('Failed to get/create current user:', error);
+      return null;
+    }
   }
 
   // User endpoints

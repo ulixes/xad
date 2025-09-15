@@ -477,7 +477,7 @@ const AppContent = () => {
           
           if (totalVerified >= 5 && user) {
             try {
-              // Process the withdrawal through the API
+              // Process the withdrawal through the API (with Privy auth)
               const result = await apiClient.processWithdrawal(user.id, totalVerified);
               
               console.log('Withdrawal result:', result);
@@ -838,6 +838,7 @@ const AppContent = () => {
           // Connect
           setIsConnecting(true);
           try {
+            // Connect with Privy
             await login();
             
             // If no wallet exists after login, create embedded wallet

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { users, socialAccounts, instagramAccounts } from "../db/schema";
 import type { AppContext } from "../types";
+import { dualAuthMiddleware } from "../middleware/privyAuth";
 
 const usersRouter = new Hono<AppContext>();
 
@@ -16,6 +17,93 @@ const updateUserSchema = z.object({
   email: z.string().email().optional(),
   status: z.enum(["pending_verification", "verified", "suspended"]).optional(),
   metadata: z.record(z.any()).optional(),
+});
+
+// Get or create current user using Privy authentication
+usersRouter.post("/current", dualAuthMiddleware, async (c) => {
+  const db = c.get("db");
+  const privySession = c.get("privySession");
+  const authSession = c.get("authSession");
+
+  try {
+    // Get user ID from either Privy or old JWT session
+    const userId = privySession?.dbUserId || authSession?.userId;
+    
+    if (!userId) {
+      return c.json({ error: "User ID not found in session" }, 400);
+    }
+
+    // Get user with social accounts
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user.length) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Get social accounts with Instagram data
+    const userSocialAccounts = await db
+      .select({
+        id: socialAccounts.id,
+        platform: socialAccounts.platform,
+        handle: socialAccounts.handle,
+        platformUserId: socialAccounts.platformUserId,
+        isVerified: socialAccounts.isVerified,
+        lastVerifiedAt: socialAccounts.lastVerifiedAt,
+        createdAt: socialAccounts.createdAt,
+        updatedAt: socialAccounts.updatedAt,
+        instagramData: instagramAccounts,
+      })
+      .from(socialAccounts)
+      .leftJoin(
+        instagramAccounts,
+        eq(socialAccounts.id, instagramAccounts.socialAccountId)
+      )
+      .where(eq(socialAccounts.userId, userId));
+
+    // Process social accounts
+    const processedAccounts = userSocialAccounts.map(account => {
+      const metadata: any = {};
+      
+      if (account.instagramData) {
+        metadata.followerCount = account.instagramData.followerCount;
+        metadata.followingCount = account.instagramData.followingCount;
+        metadata.postCount = account.instagramData.postCount;
+        metadata.isVerified = account.instagramData.isVerified;
+        metadata.accountType = account.instagramData.accountType;
+        if (account.instagramData.category) {
+          metadata.category = account.instagramData.category;
+        }
+        if (account.instagramData.biography) {
+          metadata.biography = account.instagramData.biography;
+        }
+      }
+
+      return {
+        id: account.id,
+        userId: userId,
+        platform: account.platform,
+        handle: account.handle,
+        platformUserId: account.platformUserId,
+        isVerified: account.isVerified,
+        lastVerifiedAt: account.lastVerifiedAt,
+        metadata,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
+      };
+    });
+
+    return c.json({
+      ...user[0],
+      socialAccounts: processedAccounts,
+    });
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // Get user by ID with social accounts
