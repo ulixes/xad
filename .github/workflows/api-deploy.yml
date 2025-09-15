@@ -62,7 +62,10 @@ jobs:
           ADMIN_AUTH_TOKEN = "${{ secrets.ADMIN_AUTH_TOKEN }}"
           PRIVY_APP_ID = "${{ secrets.PRIVY_APP_ID }}"
           PRIVY_APP_SECRET = "${{ secrets.PRIVY_APP_SECRET }}"
+          PRIVY_VERIFICATION_KEY = "${{ secrets.PRIVY_VERIFICATION_KEY }}"
           JWT_SECRET = "${{ secrets.JWT_SECRET }}"
+          ESCROW_WALLET_ADDRESS = "${{ secrets.ESCROW_WALLET_ADDRESS }}"
+          ESCROW_CONTRACT_ADDRESS = "${{ secrets.ESCROW_CONTRACT_ADDRESS }}"
           LOG_LEVEL = "info"
           
           [env.production.observability]
@@ -77,7 +80,10 @@ jobs:
           ADMIN_AUTH_TOKEN = "${{ secrets.STAGING_ADMIN_AUTH_TOKEN || secrets.ADMIN_AUTH_TOKEN }}"
           PRIVY_APP_ID = "${{ secrets.STAGING_PRIVY_APP_ID || secrets.PRIVY_APP_ID }}"
           PRIVY_APP_SECRET = "${{ secrets.STAGING_PRIVY_APP_SECRET || secrets.PRIVY_APP_SECRET }}"
+          PRIVY_VERIFICATION_KEY = "${{ secrets.STAGING_PRIVY_VERIFICATION_KEY || secrets.PRIVY_VERIFICATION_KEY }}"
           JWT_SECRET = "${{ secrets.STAGING_JWT_SECRET || secrets.JWT_SECRET }}"
+          ESCROW_WALLET_ADDRESS = "${{ secrets.STAGING_ESCROW_WALLET_ADDRESS || secrets.ESCROW_WALLET_ADDRESS }}"
+          ESCROW_CONTRACT_ADDRESS = "${{ secrets.STAGING_ESCROW_CONTRACT_ADDRESS || secrets.ESCROW_CONTRACT_ADDRESS }}"
           LOG_LEVEL = "debug"
           
           [env.staging.observability]
