@@ -5,12 +5,8 @@ import type {
   UpdateActionRunRequest 
 } from '@/src/types/actionRun';
 
-// For extensions, we can't rely on NODE_ENV, so check the hostname
-const API_BASE_URL = (() => {
-  // Always use localhost for development
-  // You can change this to your production API URL when deploying
-  return 'http://localhost:8787';
-})();
+// Get API URL from environment variable or use default
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 class APIClient {
   private baseUrl: string;
