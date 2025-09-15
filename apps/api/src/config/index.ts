@@ -49,9 +49,8 @@ export class ConfigManager {
     if (!env.JWT_SECRET) {
       throw new Error("JWT_SECRET is required");
     }
-    if (!env.ESCROW_WALLET_ADDRESS) {
-      throw new Error("ESCROW_WALLET_ADDRESS is required");
-    }
+    // Use ESCROW_ADDRESS with fallback to old env var name
+    const escrowAddress = env.ESCROW_ADDRESS || env.ESCROW_WALLET_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b';
 
     this.config = {
       database: {
@@ -71,7 +70,7 @@ export class ConfigManager {
         version: "1.0.0",
       },
       payment: {
-        escrowWalletAddress: env.ESCROW_WALLET_ADDRESS,
+        escrowWalletAddress: escrowAddress,
       },
     };
 

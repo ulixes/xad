@@ -5,7 +5,8 @@ export interface Env {
   DATABASE_URL: string;
   ADMIN_AUTH_TOKEN: string;
   JWT_SECRET: string;
-  ESCROW_WALLET_ADDRESS: string;
+  ESCROW_ADDRESS?: string;
+  ESCROW_WALLET_ADDRESS?: string; // Legacy, use ESCROW_ADDRESS
   ENVIRONMENT: string; // "development" | "production" | "test"
 }
 
