@@ -1,17 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
+import { Buffer } from 'buffer';
 import { Home, ActionListPage, WithdrawPage, ActionHistory } from '@xad/ui';
 import './style.css';
 import { Platform, SocialAccount, User, UserStatus, EligibleAction, ActionType } from '@/src/types';
 import { adaptSocialAccountsForUI } from '@/src/utils/adapters';
-import { portoWallet } from '@/src/services/PortoWallet';
+import { PrivyProvider, usePrivy, useWallets, useCreateWallet } from '@privy-io/react-auth';
 import { apiClient } from '@/src/services/api';
 import { ActionRunStatus } from '@/src/types/actionRun';
+
+// Ensure Buffer is available for SDKs that expect Node globals
+(window as any).Buffer = (window as any).Buffer || Buffer;
 
 type ViewState = 'home' | 'actions' | 'withdraw';
 type ActionStatus = 'pending' | 'loading' | 'completed' | 'error';
 
-const App = () => {
+const AppContent = () => {
+  const { authenticated, login, logout, user: privyUser } = usePrivy();
+  const { wallets } = useWallets();
+  const { createWallet } = useCreateWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -35,16 +42,16 @@ const App = () => {
   const [actionHistory, setActionHistory] = useState<ActionHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Check wallet connection and load user data on mount
+  // Check wallet connection and load user data when Privy auth changes
   useEffect(() => {
     const initialize = async () => {
       try {
-        const account = await portoWallet.getAccount();
-        if (account?.isConnected) {
-          setWalletAddress(account.address);
+        if (authenticated && wallets.length > 0) {
+          const address = wallets[0].address;
+          setWalletAddress(address);
           
           // Get or create user in API
-          const userData = await apiClient.getOrCreateUserByWallet(account.address);
+          const userData = await apiClient.getOrCreateUserByWallet(address);
           setUser(userData);
           setSocialAccounts(userData.socialAccounts || []);
           
@@ -52,6 +59,10 @@ const App = () => {
           if (userData.socialAccounts) {
             await fetchActionsForAccounts(userData.socialAccounts);
           }
+        } else if (!authenticated) {
+          setWalletAddress(null);
+          setUser(null);
+          setSocialAccounts([]);
         }
       } catch (error) {
         console.error('Failed to initialize:', error);
@@ -60,7 +71,7 @@ const App = () => {
       }
     };
     initialize();
-  }, []);
+  }, [authenticated, wallets]);
 
   // Function to fetch eligible actions for accounts
   const fetchActionsForAccounts = async (accounts: SocialAccount[]) => {
@@ -690,7 +701,7 @@ const App = () => {
       dailyActionsRequired={10} // TODO: Get from campaign requirements
 
       // Wallet
-      walletAddress={walletAddress}
+      walletAddress={walletAddress || undefined}
 
       // Connected accounts with eligible actions count and verification state
       connectedAccounts={socialAccounts.map(account => {
@@ -822,27 +833,16 @@ const App = () => {
       onWalletClick={async () => {
         if (walletAddress) {
           // Disconnect
-          await portoWallet.disconnect();
-          setWalletAddress(null);
-          setUser(null);
-          setSocialAccounts([]);
+          await logout();
         } else {
           // Connect
           setIsConnecting(true);
           try {
-            const address = await portoWallet.connect();
-            if (address) {
-              setWalletAddress(address);
-              
-              // Get or create user in API
-              const userData = await apiClient.getOrCreateUserByWallet(address);
-              setUser(userData);
-              setSocialAccounts(userData.socialAccounts || []);
-              
-              // Fetch eligible actions for each account
-              if (userData.socialAccounts) {
-                await fetchActionsForAccounts(userData.socialAccounts);
-              }
+            await login();
+            
+            // If no wallet exists after login, create embedded wallet
+            if (wallets.length === 0) {
+              await createWallet();
             }
           } catch (error) {
             console.error('Failed to connect wallet:', error);
@@ -862,6 +862,24 @@ const App = () => {
         await fetchActionHistory();
       }}
     />
+  );
+};
+
+const App = () => {
+  return (
+    <PrivyProvider 
+      appId={import.meta.env.VITE_PRIVY_APP_ID || ''}
+      config={{
+        appearance: {
+          theme: 'dark',
+        },
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+        },
+      }}
+    >
+      <AppContent />
+    </PrivyProvider>
   );
 };
 

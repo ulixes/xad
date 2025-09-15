@@ -19,9 +19,11 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@privy-io/react-auth": "^2.24.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@xad/ui": "workspace:*",
     "@xstate/react": "^6.0.0",
+    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.542.0",
