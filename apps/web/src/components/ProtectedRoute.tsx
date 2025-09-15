@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useLocation } from 'react-router-dom'
+import { API_BASE_URL } from '../config/api'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -36,7 +37,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
       try {
         // Validate token with backend
-        const response = await fetch('/api/auth/session', {
+        const response = await fetch(`${API_BASE_URL}/auth/session`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
 
@@ -81,6 +82,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h2>
           <p className="text-gray-600 mb-6">Please connect your wallet to access this page</p>
+          {/* @ts-ignore */}
           <appkit-button />
         </div>
       </div>
@@ -93,6 +95,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign In Required</h2>
           <p className="text-gray-600 mb-6">Please sign the message with your wallet to continue</p>
+          {/* @ts-ignore */}
           <appkit-button />
           <p className="text-sm text-gray-500 mt-4">
             After connecting, you'll be prompted to sign a message to verify your identity
@@ -106,11 +109,4 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   return <>{children}</>
 }
 
-// TypeScript declaration for AppKit web component
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'appkit-button': any
-    }
-  }
-}
+// TypeScript declaration moved to src/types/appkit.d.ts

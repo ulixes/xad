@@ -211,28 +211,20 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
         throw new Error('Network connection failed')
       }
 
-      // Step 1: Create draft campaign
-      console.log('Step 1: Creating draft campaign...')
-      const campaign = await PaymentFlowService.createDraftCampaign(campaignData, address)
+      // Step 1: Process blockchain payment FIRST
+      console.log('Step 1: Processing blockchain payment...')
       
-      // Step 2: Process blockchain payment
-      console.log('Step 2: Processing blockchain payment...')
       const paymentResult = await PaymentFlowService.processPayment(
-        {
-          campaignId: campaign.id,
-          totalAmount: campaignData.totalAmount,
-          actions: campaignData.actions,
-          targetingRules: campaignData.targetingRules,
-          platform: campaignData.platform
-        },
+        campaignData,
+        address,
         walletClient,
         publicClient
       )
       
       console.log('Payment transaction submitted:', paymentResult.transactionHash)
       
-      // Step 3: Wait for transaction confirmation
-      console.log('Step 3: Waiting for transaction confirmation...')
+      // Step 2: Wait for transaction confirmation
+      console.log('Step 2: Waiting for transaction confirmation...')
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: paymentResult.transactionHash,
         timeout: 60_000 // 60 second timeout
@@ -244,14 +236,20 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           gasUsed: receipt.gasUsed
         })
         
-        // Step 4: Confirm payment with API to activate campaign
-        console.log('Step 4: Confirming payment with API...')
-        await PaymentFlowService.confirmPayment(campaign.id, {
-          transactionHash: paymentResult.transactionHash,
-          amount: paymentResult.amount,
-          blockNumber: receipt.blockNumber.toString(),
-          gasUsed: receipt.gasUsed?.toString()
-        })
+        // Step 3: Create campaign with payment data (only after payment is confirmed)
+        console.log('Step 3: Creating campaign with payment data...')
+        await PaymentFlowService.createCampaignWithPayment(
+          campaignData,
+          address,
+          {
+            transactionHash: paymentResult.transactionHash,
+            amount: paymentResult.amount,
+            currency: paymentResult.currency,
+            network: paymentResult.network,
+            blockNumber: receipt.blockNumber.toString(),
+            gasUsed: receipt.gasUsed?.toString()
+          }
+        )
         
         console.log('Campaign activated successfully!')
         

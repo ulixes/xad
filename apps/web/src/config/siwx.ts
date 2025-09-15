@@ -3,6 +3,7 @@ import { DefaultSIWX } from '@reown/appkit-siwx'
 import { InformalMessenger, SIWXVerifier } from '@reown/appkit-siwx'
 import type { SIWXSession } from '@reown/appkit-controllers'
 import type { ChainNamespace } from '@reown/appkit-common'
+import { API_BASE_URL } from './api'
 
 // Custom verifier that integrates with our backend
 class XADBackendVerifier extends SIWXVerifier {
@@ -30,7 +31,7 @@ class XADBackendVerifier extends SIWXVerifier {
     
     
     try {
-      const response = await fetch('/api/auth/verify', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -67,10 +68,10 @@ export const siwxConfig = new DefaultSIWX({
     uri: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
     statement: 'Sign in to XAD with your wallet',
     // This is the key fix - provide the getNonce function to the messenger
-    getNonce: async (input: any) => {
+    getNonce: async (_input: any) => {
       try {
         // Use relative URL to work in all environments
-        const response = await fetch('/api/auth/nonce', {
+        const response = await fetch(`${API_BASE_URL}/auth/nonce`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         })

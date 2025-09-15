@@ -80,6 +80,9 @@ export function Dashboard() {
 
   return (
     <div className="p-6">
+      {error && (
+        <div className="text-red-500 mb-4">{error}</div>
+      )}
       <BrandDashboard
         campaigns={campaigns}
         isLoading={loading || !isConnected}

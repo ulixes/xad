@@ -431,7 +431,7 @@ export function AdTargetingFormBeta({ initialRule, onSave }: AdTargetingFormBeta
             disabled={
               isProcessingPayment ||
               Object.values(actionPricing).filter(p => p.enabled).length === 0 ||
-              (estimatedCost && estimatedCost < 5)
+              (estimatedCost !== null && estimatedCost < 5)
             }
             size="lg"
             className="w-full"

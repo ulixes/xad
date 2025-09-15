@@ -145,7 +145,7 @@ campaignRoutes.post('/create-with-payment', authMiddleware, zValidator('json', c
       transactionHash: data.payment.transactionHash,
       expectedAmount: Math.round(parseFloat(data.totalAmount) * 100), // Convert to cents
       expectedFromAddress: data.brandWalletAddress,
-      expectedToAddress: process.env.ESCROW_CONTRACT_ADDRESS || process.env.ESCROW_WALLET_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
+      expectedToAddress: process.env.ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
       network: process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia'
     });
 

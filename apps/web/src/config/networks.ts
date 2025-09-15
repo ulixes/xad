@@ -11,14 +11,12 @@ export const getNetworkConfig = () => {
     networkName: isProduction ? 'Base' : 'Base Sepolia',
     
     // Contract addresses
-    escrowContract: isProduction 
-      ? import.meta.env.VITE_ESCROW_CONTRACT_MAINNET
-      : import.meta.env.VITE_ESCROW_CONTRACT_SEPOLIA,
+    escrowContract: import.meta.env.VITE_ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
     
     // Payment token (USDC)
     paymentToken: isProduction
-      ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // Base mainnet USDC
-      : '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base sepolia USDC
+      ? (import.meta.env.VITE_PAYMENT_TOKEN_MAINNET || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
+      : (import.meta.env.VITE_PAYMENT_TOKEN_SEPOLIA || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'),
     
     // RPC URLs (using free Base RPCs)
     rpcUrl: isProduction

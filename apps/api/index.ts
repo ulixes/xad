@@ -27,7 +27,7 @@ app.use("*", async (c, next) => {
 
   // Allow Chrome extension origins (chrome-extension://...) and localhost for development
   const allowedOriginPattern =
-    /^(chrome-extension:\/\/|http:\/\/localhost|https:\/\/localhost)/;
+    /^(chrome-extension:\/\/|http:\/\/localhost(:\d+)?|https:\/\/localhost(:\d+)?)/;
 
   return cors({
     origin: (requestOrigin) => {

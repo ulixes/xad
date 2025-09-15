@@ -38,10 +38,20 @@ export async function verifyPaymentTransaction(
       transport: http(rpcUrl)
     })
     
-    // Get transaction receipt
-    const receipt = await client.getTransactionReceipt({
-      hash: transactionHash as `0x${string}`
-    })
+    // Get transaction receipt with a single retry for minor RPC sync delays
+    let receipt;
+    try {
+      receipt = await client.getTransactionReceipt({
+        hash: transactionHash as `0x${string}`
+      })
+    } catch (error: any) {
+      // If not found, wait 3 seconds and try once more
+      console.log(`Transaction not found on first attempt, retrying after 3s...`)
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      receipt = await client.getTransactionReceipt({
+        hash: transactionHash as `0x${string}`
+      })
+    }
     
     // Check if transaction was successful
     if (receipt.status !== 'success') {

@@ -3,6 +3,7 @@
 import { parseEther, formatUnits } from 'viem'
 import { useWalletClient, usePublicClient } from 'wagmi'
 import { getNetworkConfig, USDC_ABI, formatPaymentAmount, validateNetwork, getNetworkSwitchMessage } from '../config/networks'
+import { API_BASE_URL } from '../config/api'
 
 export interface CampaignPaymentData {
   campaignId: string
@@ -22,7 +23,7 @@ export class PaymentFlowService {
   /**
    * Create campaign in database (called after payment confirmation)
    */
-  static async createCampaign(formData: any, walletAddress: string, paymentData: any) {
+  static async createCampaign(formData: any, walletAddress: string, _paymentData: any) {
     console.log('Creating campaign:', { ...formData, brandWalletAddress: walletAddress })
     
     // Get JWT token for authentication
@@ -35,7 +36,7 @@ export class PaymentFlowService {
         const sessionData = JSON.parse(localStorage.getItem(siwxSessionKeys[0]) || '{}')
         if (sessionData.message && sessionData.signature) {
           try {
-            const response = await fetch('/api/auth/verify', {
+            const response = await fetch(`${API_BASE_URL}/auth/verify`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
@@ -61,7 +62,7 @@ export class PaymentFlowService {
     // Development bypass if still no token
     if (!token && walletAddress && process.env.NODE_ENV === 'development') {
       try {
-        const bypassResponse = await fetch('/api/auth/bypass', {
+        const bypassResponse = await fetch(`${API_BASE_URL}/auth/bypass`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address: walletAddress })
@@ -81,7 +82,7 @@ export class PaymentFlowService {
       throw new Error('Please sign in with your wallet first')
     }
     
-    const response = await fetch('/api/campaigns', {
+    const response = await fetch(`${API_BASE_URL}/campaigns`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -122,7 +123,7 @@ export class PaymentFlowService {
   /**
    * Process blockchain payment (ETH for testnet, USDC for mainnet)
    */
-  static async processPayment(formData: any, walletAddress: string, walletClient: any, publicClient: any) {
+  static async processPayment(formData: any, _walletAddress: string, walletClient: any, publicClient: any) {
     const config = getNetworkConfig()
     
     // Validate network
@@ -190,7 +191,7 @@ export class PaymentFlowService {
         
         return { 
           transactionHash: hash, 
-          amount: campaignData.totalAmount,
+          amount: formData.totalAmount,
           currency: 'USDC',
           network: config.networkName
         }
@@ -233,7 +234,7 @@ export class PaymentFlowService {
         }
         
         // Simple ETH transfer - use the escrow contract from config
-        const escrowAddress = config.escrowContract || import.meta.env.VITE_ESCROW_CONTRACT_SEPOLIA || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b'
+        const escrowAddress = config.escrowContract || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b'
         console.log('Sending ETH to escrow:', escrowAddress)
         
         const hash = await walletClient.sendTransaction({
@@ -276,7 +277,7 @@ export class PaymentFlowService {
     if (!token && walletAddress) {
       // Try to get or create token
       try {
-        const response = await fetch('/api/auth/bypass', {
+        const response = await fetch(`${API_BASE_URL}/auth/bypass`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address: walletAddress })
@@ -297,7 +298,7 @@ export class PaymentFlowService {
     }
     
     // Create campaign with payment data
-    const response = await fetch('/api/campaigns/create-with-payment', {
+    const response = await fetch(`${API_BASE_URL}/campaigns/create-with-payment`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

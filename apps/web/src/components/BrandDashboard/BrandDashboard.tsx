@@ -38,7 +38,7 @@ export interface BrandDashboardProps {
 export function BrandDashboard({
   campaigns,
   isLoading = false,
-  walletAddress,
+  // walletAddress, // unused
   onCreateCampaign,
   onRefresh,
   className
@@ -48,16 +48,16 @@ export function BrandDashboard({
     return `$${(cents / 100).toFixed(2)}`
   }
 
-  const getStatusColor = (status: Campaign['status']) => {
-    switch (status) {
-      case 'active': return 'bg-green-500'
-      case 'completed': return 'bg-blue-500'
-      case 'paused': return 'bg-yellow-500'
-      case 'cancelled': return 'bg-red-500'
-      case 'draft': return 'bg-gray-500'
-      default: return 'bg-gray-400'
-    }
-  }
+  // const getStatusColor = (status: Campaign['status']) => {
+  //   switch (status) {
+  //     case 'active': return 'bg-green-500'
+  //     case 'completed': return 'bg-blue-500'
+  //     case 'paused': return 'bg-yellow-500'
+  //     case 'cancelled': return 'bg-red-500'
+  //     case 'draft': return 'bg-gray-500'
+  //     default: return 'bg-gray-400'
+  //   }
+  // }
 
 
   const activeCampaigns = campaigns.filter(c => c.status === 'active')

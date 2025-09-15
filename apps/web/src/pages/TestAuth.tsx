@@ -1,4 +1,3 @@
-import React from 'react'
 import { useAppKit } from '@reown/appkit/react'
 import { useAccount } from 'wagmi'
 
