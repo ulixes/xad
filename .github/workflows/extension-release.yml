@@ -1,0 +1,74 @@
+name: Extension Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'apps/extension/**'
+      - '!apps/extension/README.md'
+      - '!apps/extension/.env.example'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/extension
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: |
+          cd ../..
+          bun install
+      
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/extension-v${{ steps.version.outputs.version }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build extension
+        if: steps.check_tag.outputs.exists == 'false'
+        run: bun run build
+      
+      - name: Package extension
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cd .output/chrome-mv3
+          zip -r ../../xad-extension-chrome-v${{ steps.version.outputs.version }}.zip . -x "*.DS_Store"
+          cd ../..
+      
+      - name: Create Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: extension-v${{ steps.version.outputs.version }}
+          name: Extension Release v${{ steps.version.outputs.version }}
+          body: |
+            Chrome Extension release v${{ steps.version.outputs.version }}
+            
+            ## Installation
+            1. Download the `xad-extension-chrome-v${{ steps.version.outputs.version }}.zip` file
+            2. Extract the zip file
+            3. Open Chrome and navigate to `chrome://extensions/`
+            4. Enable "Developer mode"
+            5. Click "Load unpacked" and select the extracted folder
+          files: apps/extension/xad-extension-chrome-v${{ steps.version.outputs.version }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

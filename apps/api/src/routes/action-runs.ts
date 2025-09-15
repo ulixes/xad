@@ -2,8 +2,12 @@ import { Hono } from "hono";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { actionRuns, actions, users, socialAccounts } from "../db/schema";
 import type { Context } from "../types";
+import { dualAuthMiddleware } from "../middleware/privyAuth";
 
 const app = new Hono<Context>();
+
+// Apply authentication to all routes
+app.use('*', dualAuthMiddleware);
 
 // Start a new action run (with duplicate check)
 app.post("/start", async (c) => {

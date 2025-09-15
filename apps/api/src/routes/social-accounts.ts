@@ -13,8 +13,12 @@ import {
   actionRuns 
 } from "../db/schema";
 import type { AppContext } from "../types";
+import { dualAuthMiddleware } from "../middleware/privyAuth";
 
 const socialAccountsRouter = new Hono<AppContext>();
+
+// Apply authentication to all routes
+socialAccountsRouter.use('*', dualAuthMiddleware);
 
 // Validation schemas
 const createSocialAccountSchema = z.object({

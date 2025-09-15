@@ -16,7 +16,7 @@ type ViewState = 'home' | 'actions' | 'withdraw';
 type ActionStatus = 'pending' | 'loading' | 'completed' | 'error';
 
 const AppContent = () => {
-  const { authenticated, login, logout, user: privyUser } = usePrivy();
+  const { authenticated, login, logout, user: privyUser, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -42,6 +42,20 @@ const AppContent = () => {
   const [actionHistory, setActionHistory] = useState<ActionHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Set up API client with Privy token getter
+  useEffect(() => {
+    apiClient.setAccessTokenGetter(async () => {
+      try {
+        if (authenticated) {
+          return await getAccessToken();
+        }
+      } catch (error) {
+        console.error('Failed to get Privy access token:', error);
+      }
+      return null;
+    });
+  }, [authenticated, getAccessToken]);
+
   // Check wallet connection and load user data when Privy auth changes
   useEffect(() => {
     const initialize = async () => {
@@ -50,8 +64,8 @@ const AppContent = () => {
           const address = wallets[0].address;
           setWalletAddress(address);
           
-          // Get or create user in API
-          const userData = await apiClient.getOrCreateUserByWallet(address);
+          // Get or create user using Privy authentication
+          const userData = await apiClient.getOrCreateCurrentUser();
           setUser(userData);
           setSocialAccounts(userData.socialAccounts || []);
           
