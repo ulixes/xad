@@ -38,19 +38,26 @@ export async function verifyPaymentTransaction(
       transport: http(rpcUrl)
     })
     
-    // Get transaction receipt with a single retry for minor RPC sync delays
+    // Get transaction receipt with multiple retries for blockchain propagation delays
     let receipt;
-    try {
-      receipt = await client.getTransactionReceipt({
-        hash: transactionHash as `0x${string}`
-      })
-    } catch (error: any) {
-      // If not found, wait 3 seconds and try once more
-      console.log(`Transaction not found on first attempt, retrying after 3s...`)
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      receipt = await client.getTransactionReceipt({
-        hash: transactionHash as `0x${string}`
-      })
+    let retryCount = 0;
+    const maxRetries = 5;
+    const retryDelay = 3000; // 3 seconds between retries
+    
+    while (retryCount < maxRetries) {
+      try {
+        receipt = await client.getTransactionReceipt({
+          hash: transactionHash as `0x${string}`
+        })
+        break; // Successfully got receipt
+      } catch (error: any) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw error; // Max retries reached, throw the error
+        }
+        console.log(`Transaction not found (attempt ${retryCount}/${maxRetries}), retrying in ${retryDelay/1000}s...`)
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
+      }
     }
     
     // Check if transaction was successful
