@@ -3,6 +3,7 @@ name: Extension Development Release
 on:
   push:
     branches:
+      - dev
       - develop
       - 'feature/*'
     paths:
