@@ -82,7 +82,7 @@ jobs:
         if: github.event_name == 'push' || github.event.inputs.environment == 'production'
         run: |
           cd apps/api
-          npx wrangler deploy --env production
+          bun run wrangler deploy --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       
@@ -90,7 +90,7 @@ jobs:
         if: github.event.inputs.environment == 'staging'
         run: |
           cd apps/api
-          npx wrangler deploy --env staging
+          bun run wrangler deploy --env staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       
