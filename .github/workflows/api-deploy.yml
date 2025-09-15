@@ -80,19 +80,19 @@ jobs:
       
       - name: Deploy to Cloudflare Workers (Production)
         if: github.event_name == 'push' || github.event.inputs.environment == 'production'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          workingDirectory: apps/api
-          command: deploy --env production
+        run: |
+          cd apps/api
+          npx wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       
       - name: Deploy to Cloudflare Workers (Staging)
         if: github.event.inputs.environment == 'staging'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          workingDirectory: apps/api
-          command: deploy --env staging
+        run: |
+          cd apps/api
+          npx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       
       - name: Clean up sensitive files
         if: always()
