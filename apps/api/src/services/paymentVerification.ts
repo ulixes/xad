@@ -26,12 +26,21 @@ export async function verifyPaymentTransaction(
 ): Promise<PaymentVerificationResult> {
   const { transactionHash, expectedAmount, expectedFromAddress, expectedToAddress, network } = params
   
+  console.log('=== PAYMENT VERIFICATION START ===');
+  console.log('Transaction hash:', transactionHash);
+  console.log('Network:', network);
+  console.log('Expected from:', expectedFromAddress);
+  console.log('Expected to:', expectedToAddress);
+  console.log('Expected amount (cents):', expectedAmount);
+  
   try {
     // Create public client for the specified network
     const chain = network === 'base' ? base : baseSepolia
     const rpcUrl = network === 'base' 
       ? 'https://mainnet.base.org'
       : 'https://sepolia.base.org'
+    
+    console.log('Using RPC URL:', rpcUrl);
     
     const client = createPublicClient({
       chain,
@@ -41,22 +50,35 @@ export async function verifyPaymentTransaction(
     // Get transaction receipt with multiple retries for blockchain propagation delays
     let receipt;
     let retryCount = 0;
-    const maxRetries = 5;
-    const retryDelay = 3000; // 3 seconds between retries
+    const maxRetries = 10; // Increased from 5 to 10
     
     while (retryCount < maxRetries) {
       try {
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s, then 30s for remaining attempts
+        const delay = Math.min(2000 * Math.pow(2, retryCount), 30000);
+        
+        if (retryCount > 0) {
+          console.log(`Retry ${retryCount}/${maxRetries}: Waiting ${delay/1000}s before next attempt...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        console.log(`Attempting to fetch transaction receipt (attempt ${retryCount + 1}/${maxRetries})...`);
         receipt = await client.getTransactionReceipt({
           hash: transactionHash as `0x${string}`
         })
+        console.log('Transaction receipt found!', { 
+          blockNumber: receipt.blockNumber,
+          status: receipt.status,
+          gasUsed: receipt.gasUsed 
+        });
         break; // Successfully got receipt
       } catch (error: any) {
         retryCount++;
+        console.error(`Failed to get receipt (attempt ${retryCount}/${maxRetries}):`, error.message);
         if (retryCount >= maxRetries) {
+          console.error('Max retries reached. Transaction may still be pending.');
           throw error; // Max retries reached, throw the error
         }
-        console.log(`Transaction not found (attempt ${retryCount}/${maxRetries}), retrying in ${retryDelay/1000}s...`)
-        await new Promise(resolve => setTimeout(resolve, retryDelay))
       }
     }
     
@@ -94,6 +116,8 @@ export async function verifyPaymentTransaction(
       // since it's test ETH anyway
       if (network === 'base-sepolia') {
         // On testnet, just verify payment was made to correct address
+        console.log('=== PAYMENT VERIFICATION SUCCESS (Testnet ETH) ===');
+        console.log('Transaction verified successfully on Base Sepolia');
         return {
           valid: true,
           fromAddress: transaction.from,
