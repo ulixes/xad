@@ -280,7 +280,7 @@ campaignRoutes.post('/:id/payment', async (c) => {
       transactionHash: body.transactionHash,
       expectedAmount: campaign.totalBudget, // Amount in cents
       expectedFromAddress: campaign.brandWalletAddress,
-      expectedToAddress: process.env.ESCROW_CONTRACT_ADDRESS || process.env.ESCROW_WALLET_ADDRESS || '0x1234567890123456789012345678901234567890', // Our escrow address
+      expectedToAddress: process.env.ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b', // Our escrow address
       network: process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia'
     });
 
