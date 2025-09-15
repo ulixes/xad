@@ -1,0 +1,102 @@
+name: API Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'apps/api/**'
+      - '!apps/api/README.md'
+      - '!apps/api/.env.example'
+      - '!apps/api/wrangler.toml.example'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: |
+          cd ../..
+          bun install
+      
+      - name: Create wrangler.toml with secrets
+        run: |
+          cat > wrangler.toml << EOF
+          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}"
+          main = "index.ts"
+          compatibility_date = "2025-09-04"
+          compatibility_flags = ["nodejs_compat"]
+          account_id = "${{ secrets.CF_ACCOUNT_ID }}"
+          
+          [env.production]
+          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-production"
+          
+          [env.production.vars]
+          ENVIRONMENT = "production"
+          DATABASE_URL = "${{ secrets.DATABASE_URL }}"
+          ADMIN_AUTH_TOKEN = "${{ secrets.ADMIN_AUTH_TOKEN }}"
+          PRIVY_APP_ID = "${{ secrets.PRIVY_APP_ID }}"
+          PRIVY_APP_SECRET = "${{ secrets.PRIVY_APP_SECRET }}"
+          
+          [env.staging]
+          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-staging"
+          
+          [env.staging.vars]
+          ENVIRONMENT = "staging"
+          DATABASE_URL = "${{ secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}"
+          ADMIN_AUTH_TOKEN = "${{ secrets.STAGING_ADMIN_AUTH_TOKEN || secrets.ADMIN_AUTH_TOKEN }}"
+          PRIVY_APP_ID = "${{ secrets.STAGING_PRIVY_APP_ID || secrets.PRIVY_APP_ID }}"
+          PRIVY_APP_SECRET = "${{ secrets.STAGING_PRIVY_APP_SECRET || secrets.PRIVY_APP_SECRET }}"
+          EOF
+      
+      - name: Deploy to Cloudflare Workers (Production)
+        if: github.event_name == 'push' || github.event.inputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          workingDirectory: apps/api
+          command: deploy --env production
+      
+      - name: Deploy to Cloudflare Workers (Staging)
+        if: github.event.inputs.environment == 'staging'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          workingDirectory: apps/api
+          command: deploy --env staging
+      
+      - name: Clean up sensitive files
+        if: always()
+        run: rm -f wrangler.toml
+      
+      - name: Create deployment notification
+        if: success()
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          echo "✅ API deployed to $ENVIRONMENT environment"
+          echo "Worker: ${{ secrets.CF_WORKER_NAME || 'xad-api' }}-$ENVIRONMENT"
+          echo "Deployment triggered by: ${{ github.actor }}"

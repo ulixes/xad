@@ -9,6 +9,10 @@ on:
       - '!apps/extension/README.md'
       - '!apps/extension/.env.example'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
