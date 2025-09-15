@@ -1,0 +1,130 @@
+name: Extension Development Release
+
+on:
+  push:
+    branches:
+      - develop
+      - 'feature/*'
+    paths:
+      - 'apps/extension/**'
+      - '!apps/extension/README.md'
+      - '!apps/extension/.env.example'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., dev-v0.0.1-alpha.1)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  dev-release:
+    runs-on: ubuntu-latest
+    environment: development
+    defaults:
+      run:
+        working-directory: apps/extension
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: |
+          cd ../..
+          bun install
+      
+      - name: Get version and create dev tag
+        id: version
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          if [ "${{ github.event.inputs.release_tag }}" != "" ]; then
+            DEV_TAG="${{ github.event.inputs.release_tag }}"
+          else
+            DEV_TAG="dev-v${BASE_VERSION}-${TIMESTAMP}-${SHORT_SHA}"
+          fi
+          
+          echo "version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "dev_tag=${DEV_TAG}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+      
+      - name: Build extension (Development)
+        env:
+          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENV: development
+        run: |
+          echo "Building development version: ${{ steps.version.outputs.dev_tag }}"
+          bun run build
+      
+      - name: Inject development manifest
+        run: |
+          cd .output/chrome-mv3
+          # Add DEV badge to extension name
+          jq '.name = .name + " [DEV]"' manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+          # Add version_name with dev tag
+          jq '.version_name = "${{ steps.version.outputs.dev_tag }}"' manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+          cd ../..
+      
+      - name: Package development extension
+        run: |
+          cd .output/chrome-mv3
+          zip -r ../../xad-extension-chrome-${{ steps.version.outputs.dev_tag }}.zip . -x "*.DS_Store"
+          cd ../..
+          echo "Extension packaged: xad-extension-chrome-${{ steps.version.outputs.dev_tag }}.zip"
+          ls -lh xad-extension-chrome-*.zip
+      
+      - name: Create Development Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.dev_tag }}
+          name: Development Release ${{ steps.version.outputs.dev_tag }}
+          body: |
+            🚧 **Development Build** 🚧
+            
+            This is a development build for testing purposes only.
+            
+            ## Build Information
+            - Base Version: v${{ steps.version.outputs.version }}
+            - Build Time: ${{ steps.version.outputs.timestamp }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Triggered by: ${{ github.actor }}
+            
+            ## Installation (Development Mode)
+            1. Download the `xad-extension-chrome-${{ steps.version.outputs.dev_tag }}.zip` file
+            2. Extract the zip file to a folder
+            3. Open Chrome and navigate to `chrome://extensions/`
+            4. Enable "Developer mode" (top right)
+            5. Click "Load unpacked" and select the extracted folder
+            
+            ⚠️ **Warning**: This is a development build and may contain bugs or incomplete features.
+            
+            ## Environment
+            - API: `${{ secrets.VITE_API_URL }}`
+            - Environment: Development
+          files: apps/extension/xad-extension-chrome-${{ steps.version.outputs.dev_tag }}.zip
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Clean up old dev releases
+        run: |
+          # Keep only the last 5 development releases
+          gh release list --limit 100 | grep -E "^dev-v" | tail -n +6 | cut -f1 | while read -r tag; do
+            echo "Deleting old dev release: $tag"
+            gh release delete "$tag" --yes --cleanup-tag
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

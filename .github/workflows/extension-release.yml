@@ -16,6 +16,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: production
     defaults:
       run:
         working-directory: apps/extension
@@ -50,6 +51,7 @@ jobs:
         env:
           VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENV: production
         run: bun run build
       
       - name: Package extension
