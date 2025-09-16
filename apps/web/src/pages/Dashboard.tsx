@@ -30,7 +30,9 @@ export function Dashboard() {
         return
       }
 
-      const response = await fetch(`/api/campaigns/brand/${address}`, {
+      // Use the configured API URL
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+      const response = await fetch(`${apiUrl}/campaigns/brand/${address}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

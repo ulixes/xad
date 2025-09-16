@@ -80,10 +80,7 @@ export class AuthService {
       const storedNonce = nonceStore.get(nonce)
       
       if (!storedNonce) {
-        // In development, be more lenient with nonce validation
-        if (process.env.ENVIRONMENT !== 'dev') {
-          return { valid: false, reason: 'Invalid or expired nonce' }
-        }
+        return { valid: false, reason: 'Invalid or expired nonce' }
       }
 
       // Remove used nonce (prevent replay attacks) - only if it exists
@@ -93,36 +90,19 @@ export class AuthService {
 
 
       // Verify the signature
-      let isValid = true
-      if (process.env.ENVIRONMENT === 'dev') {
-        try {
-          isValid = await verifyMessage({
-            address: address as `0x${string}`,
-            message: message!,
-            signature: signature as `0x${string}`
-          })
-          console.log('Dev mode signature verification result:', isValid)
-        } catch (error) {
-          console.error('Signature verification error:', error)
-          isValid = true // Allow in dev mode
-        }
-      } else {
-        isValid = await verifyMessage({
-          address: address as `0x${string}`,
-          message: message!,
-          signature: signature as `0x${string}`
-        })
-      }
+      const isValid = await verifyMessage({
+        address: address as `0x${string}`,
+        message: message!,
+        signature: signature as `0x${string}`
+      })
 
       if (!isValid) {
         return { valid: false, reason: 'Invalid signature' }
       }
 
-      // Additional message validation - bypassed in dev mode
-      if (process.env.ENVIRONMENT !== 'dev') {
-        if (!message.toLowerCase().includes(address.toLowerCase()) || !message.includes('Chain ID: eip155:' + chainId)) {
-          return { valid: false, reason: 'Message does not match expected format' }
-        }
+      // Additional message validation
+      if (!message.toLowerCase().includes(address.toLowerCase()) || !message.includes('Chain ID: eip155:' + chainId)) {
+        return { valid: false, reason: 'Message does not match expected format' }
       }
 
       return { valid: true }

@@ -1,30 +1,26 @@
-// Payment Flow Service - handles the complete payment process
+// Payment Flow Service - Two-phase campaign creation with proper state tracking
 
-import { parseEther, formatUnits } from 'viem'
+import { parseEther, formatUnits, toHex } from 'viem'
 import { useWalletClient, usePublicClient } from 'wagmi'
 import { getNetworkConfig, USDC_ABI, formatPaymentAmount, validateNetwork, getNetworkSwitchMessage } from '../config/networks'
 import { API_BASE_URL } from '../config/api'
 
-export interface CampaignPaymentData {
+export interface PaymentDetails {
   campaignId: string
-  totalAmount: string // in USD
-  actions: Array<{
-    type: string
-    target: string
-    price: number
-    maxVolume: number
-  }>
-  targetingRules: any
-  platform: string
+  amount: string
+  currency: string
+  toAddress: string
+  reference: string
+  network: string
 }
 
 export class PaymentFlowService {
   
   /**
-   * Create campaign in database (called after payment confirmation)
+   * Step 1: Create draft campaign (before payment)
    */
-  static async createCampaign(formData: any, walletAddress: string, _paymentData: any) {
-    console.log('Creating campaign:', { ...formData, brandWalletAddress: walletAddress })
+  static async createDraftCampaign(formData: any, walletAddress: string) {
+    console.log('Creating draft campaign:', { ...formData, brandWalletAddress: walletAddress })
     
     // Get JWT token for authentication
     let token = localStorage.getItem('auth_token')
@@ -82,7 +78,7 @@ export class PaymentFlowService {
       throw new Error('Please sign in with your wallet first')
     }
     
-    const response = await fetch(`${API_BASE_URL}/campaigns`, {
+    const response = await fetch(`${API_BASE_URL}/campaigns/draft`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -91,7 +87,6 @@ export class PaymentFlowService {
       body: JSON.stringify({ ...formData, brandWalletAddress: walletAddress })
     })
     
-    // Get response text first
     const responseText = await response.text()
     
     if (!response.ok) {
@@ -117,13 +112,15 @@ export class PaymentFlowService {
       throw new Error(`Invalid JSON response: ${responseText}`)
     }
     
-    return result.campaign
+    return result
   }
-
+  
   /**
-   * Process blockchain payment (ETH for testnet, USDC for mainnet)
+   * Step 2: Process blockchain payment with reference
    */
-  static async processPayment(formData: any, _walletAddress: string, walletClient: any, publicClient: any) {
+  static async processPaymentWithReference(paymentDetails: PaymentDetails, walletClient: any, publicClient: any) {
+    console.log('processPaymentWithReference called with:', paymentDetails)
+    
     const config = getNetworkConfig()
     
     // Validate network
@@ -132,25 +129,13 @@ export class PaymentFlowService {
       throw new Error(getNetworkSwitchMessage())
     }
     
-    const dollarAmount = parseFloat(formData.totalAmount)
-    const usdcAmount = formatPaymentAmount(dollarAmount, 6) // USDC has 6 decimals
-    
     try {
-      // Environment-based payment method selection
-      // Test environment (Base Sepolia): Use ETH
-      // Production environment (Base Mainnet): Use USDC
-      const USE_USDC = config.isProduction
-      
-      console.log('Payment method configuration:', {
-        environment: config.isProduction ? 'production' : 'test',
-        network: config.networkName,
-        paymentMethod: USE_USDC ? 'USDC' : 'ETH',
-        chainId: chainId
-      })
-      
-      if (USE_USDC && config.escrowContract && config.paymentToken) {
+      if (paymentDetails.currency === 'USDC') {
+        // USDC Payment - amount is in dollars
+        const dollarAmount = parseFloat(paymentDetails.amount)
+        const usdcAmount = formatPaymentAmount(dollarAmount, 6)
         
-        // First check USDC balance
+        // Check USDC balance
         const balance = await publicClient.readContract({
           address: config.paymentToken,
           abi: USDC_ABI,
@@ -158,22 +143,10 @@ export class PaymentFlowService {
           args: [walletClient.account.address]
         })
         
-        // Log balance details for debugging
         console.log('USDC Payment validation:', {
           network: config.networkName,
-          chainId: chainId,
-          userAddress: walletClient.account.address,
-          usdcContract: config.paymentToken,
-          userBalance: {
-            raw: balance.toString(),
-            formatted: formatUnits(balance, 6),
-            inUSD: `$${formatUnits(balance, 6)}`
-          },
-          required: {
-            raw: usdcAmount.toString(),
-            formatted: formatUnits(usdcAmount, 6),
-            inUSD: `$${dollarAmount}`
-          },
+          userBalance: formatUnits(balance, 6),
+          required: formatUnits(usdcAmount, 6),
           sufficient: balance >= usdcAmount
         })
         
@@ -181,72 +154,75 @@ export class PaymentFlowService {
           throw new Error(`Insufficient USDC balance. Need $${dollarAmount}, have $${formatUnits(balance, 6)}`)
         }
         
-        // Transfer USDC to escrow
+        // Transfer USDC (Note: can't include reference in standard ERC20 transfer)
         const hash = await walletClient.writeContract({
           address: config.paymentToken,
           abi: USDC_ABI,
           functionName: 'transfer',
-          args: [config.escrowContract, usdcAmount]
+          args: [paymentDetails.toAddress, usdcAmount]
         })
         
         return { 
           transactionHash: hash, 
-          amount: formData.totalAmount,
+          amount: paymentDetails.amount,
           currency: 'USDC',
-          network: config.networkName
+          network: paymentDetails.network
         }
       } else {
-        // Option B: ETH payment for testnet (Base Sepolia)
-        console.log('Using ETH payment for testnet')
+        // ETH Payment - amount from API is already in ETH
+        const ethAmountFromApi = paymentDetails.amount
         
-        // Simple conversion: $1 = 0.0002 ETH (so $10 = 0.002 ETH, $100 = 0.02 ETH)
-        const ETH_PER_DOLLAR = 0.0002
-        const ethAmount = parseEther((dollarAmount * ETH_PER_DOLLAR).toString())
+        console.log('ETH Payment Debug:', {
+          ethAmountFromApi,
+          ethToUsdRate: config.ethToUsdRate,
+        })
+        
+        // Parse the ETH amount directly - it's already in ETH from the API
+        const ethAmount = parseEther(ethAmountFromApi)
+        
+        console.log('ETH Amount Debug:', {
+          ethAmountBigInt: ethAmount.toString(),
+          ethAmountFormatted: formatUnits(ethAmount, 18)
+        })
         
         // Get ETH balance
         const ethBalance = await publicClient.getBalance({
           address: walletClient.account.address
         })
         
-        // Log ETH payment details (testnet only)
-        console.log('ETH Payment validation (Testnet):', {
-          environment: 'TEST',
+        console.log('ETH Payment validation:', {
           network: config.networkName,
-          chainId: chainId,
-          conversionRate: `$1 = ${ETH_PER_DOLLAR} ETH`,
-          userAddress: walletClient.account.address,
-          userBalance: {
-            raw: ethBalance.toString(),
-            formatted: formatUnits(ethBalance, 18),
-            inETH: `${formatUnits(ethBalance, 18)} ETH`
-          },
-          required: {
-            raw: ethAmount.toString(),
-            formatted: formatUnits(ethAmount, 18),
-            inETH: `${formatUnits(ethAmount, 18)} ETH`,
-            inUSD: `$${dollarAmount}`
-          },
+          ethToUsdRate: config.ethToUsdRate,
+          userBalance: formatUnits(ethBalance, 18),
+          required: formatUnits(ethAmount, 18),
           sufficient: ethBalance >= ethAmount
         })
         
         if (ethBalance < ethAmount) {
-          throw new Error(`Insufficient ETH balance. Need ${formatUnits(ethAmount, 18)} ETH for testnet payment, have ${formatUnits(ethBalance, 18)} ETH`)
+          throw new Error(`Insufficient ETH balance. Need ${formatUnits(ethAmount, 18)} ETH, have ${formatUnits(ethBalance, 18)} ETH`)
         }
         
-        // Simple ETH transfer - use the escrow contract from config
-        const escrowAddress = config.escrowContract || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b'
-        console.log('Sending ETH to escrow:', escrowAddress)
+        // ETH transfer with campaign reference in data field
+        console.log('Sending ETH payment:', {
+          to: paymentDetails.toAddress,
+          amount: formatUnits(ethAmount, 18),
+          reference: paymentDetails.reference
+        })
+        
+        // Include campaign reference in transaction data
+        const data = toHex(paymentDetails.reference)
         
         const hash = await walletClient.sendTransaction({
-          to: escrowAddress,
-          value: ethAmount
+          to: paymentDetails.toAddress,
+          value: ethAmount,
+          data: data as `0x${string}`
         })
         
         return { 
           transactionHash: hash, 
-          amount: formatUnits(ethAmount, 18),
-          currency: 'ETH (testnet)',
-          network: config.networkName
+          amount: paymentDetails.amount,
+          currency: 'ETH',
+          network: paymentDetails.network
         }
       }
     } catch (error) {
@@ -266,55 +242,25 @@ export class PaymentFlowService {
       throw new Error(`Payment failed: ${errorMessage || 'Unknown error'}`)
     }
   }
-
+  
   /**
-   * Create campaign and record payment in one step (after blockchain confirmation)
+   * Step 3: Confirm payment with API
    */
-  static async createCampaignWithPayment(formData: any, walletAddress: string, paymentData: any) {
-    // Get JWT token for authentication
-    let token = localStorage.getItem('auth_token')
-    
-    if (!token && walletAddress) {
-      // Try to get or create token
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/bypass`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: walletAddress })
-        })
-        
-        if (response.ok) {
-          const { token: bypassToken } = await response.json()
-          localStorage.setItem('auth_token', bypassToken)
-          token = bypassToken
-        }
-      } catch (error) {
-        console.error('Auth failed:', error)
-      }
-    }
-    
+  static async confirmCampaignPayment(campaignId: string, transactionHash: string, currency: string) {
+    const token = localStorage.getItem('auth_token')
     if (!token) {
-      throw new Error('Please sign in with your wallet first')
+      throw new Error('Authentication required')
     }
     
-    // Create campaign with payment data
-    const response = await fetch(`${API_BASE_URL}/campaigns/create-with-payment`, {
+    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/confirm-payment`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ 
-        ...formData, 
-        brandWalletAddress: walletAddress,
-        payment: {
-          transactionHash: paymentData.transactionHash,
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          network: paymentData.network,
-          blockNumber: paymentData.blockNumber,
-          gasUsed: paymentData.gasUsed
-        }
+      body: JSON.stringify({
+        transactionHash,
+        currency
       })
     })
     
@@ -327,7 +273,7 @@ export class PaymentFlowService {
       } catch (parseError) {
         throw new Error(`Server error: ${response.status} - ${responseText}`)
       }
-      throw new Error(errorData.error || 'Failed to create campaign')
+      throw new Error(errorData.error || 'Failed to confirm payment')
     }
     
     let result
@@ -339,10 +285,83 @@ export class PaymentFlowService {
     
     return result.campaign
   }
+
+  /**
+   * Complete two-phase payment flow
+   */
+  static async createCampaignWithPayment(formData: any, walletAddress: string, walletClient: any, publicClient: any) {
+    try {
+      console.log('=== PAYMENT FLOW START ===')
+      
+      // Step 1: Create draft campaign
+      console.log('Step 1: Creating draft campaign...')
+      const draftResult = await this.createDraftCampaign(formData, walletAddress)
+      
+      if (!draftResult.success || !draftResult.paymentDetails) {
+        throw new Error('Failed to create draft campaign')
+      }
+      
+      const campaign = draftResult.campaign
+      const paymentDetails = draftResult.paymentDetails as PaymentDetails
+      
+      console.log('Draft campaign created:', campaign.id)
+      
+      // Step 2: Process payment
+      console.log('Step 2: Processing payment...')
+      const paymentResult = await this.processPaymentWithReference(
+        paymentDetails,
+        walletClient,
+        publicClient
+      )
+      
+      console.log('Payment submitted:', paymentResult.transactionHash)
+      
+      // Step 3: Wait for confirmation
+      console.log('Step 3: Waiting for confirmation...')
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: paymentResult.transactionHash,
+        timeout: 60_000
+      })
+      
+      if (receipt.status !== 'success') {
+        throw new Error('Transaction failed on blockchain')
+      }
+      
+      console.log('Transaction confirmed')
+      
+      // Step 4: Confirm payment with API
+      console.log('Step 4: Confirming payment with API...')
+      const confirmedCampaign = await this.confirmCampaignPayment(
+        campaign.id,
+        paymentResult.transactionHash,
+        paymentDetails.currency
+      )
+      
+      console.log('Campaign activated successfully!')
+      
+      return {
+        success: true,
+        campaign: confirmedCampaign,
+        transactionHash: paymentResult.transactionHash,
+        blockNumber: receipt.blockNumber.toString(),
+        gasUsed: receipt.gasUsed.toString(),
+        currency: paymentDetails.currency,
+        network: paymentDetails.network
+      }
+      
+    } catch (error) {
+      console.error('Payment flow error:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      return {
+        success: false,
+        error: errorMessage
+      }
+    }
+  }
 }
 
 /**
- * Complete payment flow hook for React components
+ * React hook for the payment flow
  */
 export function usePaymentFlow() {
   const { data: walletClient } = useWalletClient()
@@ -357,55 +376,12 @@ export function usePaymentFlow() {
       throw new Error('Network connection failed')
     }
 
-    try {
-      // Step 1: Process blockchain payment FIRST
-      const paymentResult = await PaymentFlowService.processPayment(
-        formData,
-        walletAddress,
-        walletClient,
-        publicClient
-      )
-      
-      // Step 2: Wait for transaction confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: paymentResult.transactionHash,
-        timeout: 60_000 // 60 second timeout
-      })
-      
-      if (receipt.status === 'success') {
-        
-        // Step 3: Create campaign with payment data (only after payment is confirmed)
-        const campaign = await PaymentFlowService.createCampaignWithPayment(
-          formData, 
-          walletAddress,
-          {
-            ...paymentResult,
-            blockNumber: receipt.blockNumber.toString(),
-            gasUsed: receipt.gasUsed.toString()
-          }
-        )
-        
-        return {
-          success: true,
-          campaign: campaign,
-          transactionHash: paymentResult.transactionHash,
-          blockNumber: receipt.blockNumber.toString(),
-          gasUsed: receipt.gasUsed.toString(),
-          currency: paymentResult.currency,
-          network: paymentResult.network
-        }
-      } else {
-        throw new Error('Transaction failed on blockchain')
-      }
-      
-    } catch (error) {
-      console.error('Payment flow failed:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      return {
-        success: false,
-        error: errorMessage || 'Payment failed'
-      }
-    }
+    return PaymentFlowService.createCampaignWithPayment(
+      formData,
+      walletAddress,
+      walletClient,
+      publicClient
+    )
   }
   
   return { processFullPayment }

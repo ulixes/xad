@@ -5,18 +5,28 @@ export const getNetworkConfig = () => {
   const networkEnv = import.meta.env.VITE_NETWORK_ENV || 'development'
   const isProduction = networkEnv === 'production'
   
+  // Payment currency configuration (ETH or USDC)
+  const paymentCurrency = (import.meta.env.VITE_PAYMENT_CURRENCY as 'ETH' | 'USDC') || 
+    (isProduction ? 'USDC' : 'ETH')
+  
   return {
     // Network selection
     network: isProduction ? base : baseSepolia,
     networkName: isProduction ? 'Base' : 'Base Sepolia',
     
+    // Payment configuration
+    paymentCurrency, // 'ETH' or 'USDC'
+    
     // Contract addresses
     escrowContract: import.meta.env.VITE_ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
     
-    // Payment token (USDC)
+    // Payment token (USDC) - only used when paymentCurrency === 'USDC'
     paymentToken: isProduction
       ? (import.meta.env.VITE_PAYMENT_TOKEN_MAINNET || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
       : (import.meta.env.VITE_PAYMENT_TOKEN_SEPOLIA || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'),
+    
+    // ETH configuration - only used when paymentCurrency === 'ETH'
+    ethToUsdRate: parseFloat(import.meta.env.VITE_ETH_USD_RATE || '3000'), // Default $3000/ETH
     
     // RPC URLs (using free Base RPCs)
     rpcUrl: isProduction

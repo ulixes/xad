@@ -45,8 +45,8 @@ const createCampaignWithPaymentSchema = z.object({
   })
 });
 
-// Create new campaign (requires authentication)
-campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema), async (c) => {
+// Create draft campaign (Step 1: Before payment)
+campaignRoutes.post('/draft', authMiddleware, zValidator('json', createCampaignSchema), async (c) => {
   const db = c.get('db');
   const data = c.req.valid('json');
 
@@ -77,7 +77,8 @@ campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema
     // Calculate total budget in cents
     const totalBudgetCents = Math.round(parseFloat(data.totalAmount) * 100);
 
-    // Create campaign
+    // Create campaign in pending_payment status
+    const campaignId = `c${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const [campaign] = await db.insert(campaigns).values({
       brandId: brand.id,
       brandWalletAddress: data.brandWalletAddress, // Keep for backward compatibility
@@ -85,7 +86,7 @@ campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema
       targetingRules: data.targetingRules,
       totalBudget: totalBudgetCents,
       remainingBudget: totalBudgetCents,
-      status: 'draft'
+      status: 'pending_payment'
     }).returning();
 
     // Create campaign actions
@@ -102,12 +103,33 @@ campaignRoutes.post('/', authMiddleware, zValidator('json', createCampaignSchema
 
     await db.insert(campaignActions).values(campaignActionsData);
 
-    console.log('Campaign created successfully:', campaign);
+    // Calculate payment details
+    const network = process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia';
+    const paymentCurrency = process.env.PAYMENT_CURRENCY || (network === 'base' ? 'USDC' : 'ETH');
+    const escrowAddress = process.env.ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b';
+    
+    let paymentAmount: string;
+    if (paymentCurrency === 'ETH') {
+      const ethRate = parseFloat(process.env.ETH_USD_RATE || '3000');
+      paymentAmount = (parseFloat(data.totalAmount) / ethRate).toFixed(6);
+    } else {
+      paymentAmount = data.totalAmount; // USDC is 1:1 with USD
+    }
+    
+    console.log('Draft campaign created:', campaign.id);
     
     return c.json({ 
       success: true, 
       campaign: campaign,
-      message: 'Campaign created successfully. Proceed with payment.' 
+      paymentDetails: {
+        campaignId: campaign.id,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        toAddress: escrowAddress,
+        reference: `XAD_${campaign.id}`, // Reference to include in transaction
+        network: network
+      },
+      message: 'Campaign created. Please proceed with payment.' 
     });
 
   } catch (error) {
@@ -146,7 +168,8 @@ campaignRoutes.post('/create-with-payment', authMiddleware, zValidator('json', c
       expectedAmount: Math.round(parseFloat(data.totalAmount) * 100), // Convert to cents
       expectedFromAddress: data.brandWalletAddress,
       expectedToAddress: process.env.ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
-      network: process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia'
+      network: process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia',
+      paymentCurrency: data.payment.currency as 'ETH' | 'USDC' // Pass currency from frontend
     });
 
     if (!verificationResult.valid) {
@@ -255,6 +278,128 @@ campaignRoutes.post('/create-with-payment', authMiddleware, zValidator('json', c
       success: false, 
       error: 'Failed to create campaign',
       details: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
+// Confirm payment for existing campaign (Step 2: After payment)
+campaignRoutes.post('/:id/confirm-payment', authMiddleware, async (c) => {
+  const db = c.get('db');
+  const campaignId = c.req.param('id');
+  const body = await c.req.json();
+
+  try {
+    // Get campaign
+    const [campaign] = await db.select().from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (!campaign) {
+      return c.json({ success: false, error: 'Campaign not found' }, 404);
+    }
+
+    if (campaign.status !== 'pending_payment') {
+      return c.json({ 
+        success: false, 
+        error: `Campaign is not pending payment. Current status: ${campaign.status}` 
+      }, 400);
+    }
+
+    // Get payment currency from environment
+    const network = process.env.ENVIRONMENT === 'production' ? 'base' : 'base-sepolia';
+    const paymentCurrency = body.currency || process.env.PAYMENT_CURRENCY || (network === 'base' ? 'USDC' : 'ETH');
+
+    // Verify transaction on blockchain
+    const verificationResult = await verifyPaymentTransaction({
+      transactionHash: body.transactionHash,
+      expectedAmount: campaign.totalBudget, // Amount in cents
+      expectedFromAddress: campaign.brandWalletAddress,
+      expectedToAddress: process.env.ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
+      network: network as 'base' | 'base-sepolia',
+      paymentCurrency: paymentCurrency as 'ETH' | 'USDC'
+    });
+
+    if (!verificationResult.valid) {
+      // Update campaign status to payment_failed
+      await db.update(campaigns)
+        .set({ 
+          status: 'cancelled',
+          updatedAt: new Date()
+        })
+        .where(eq(campaigns.id, campaignId));
+
+      return c.json({ 
+        success: false, 
+        error: `Payment verification failed: ${verificationResult.reason}` 
+      }, 400);
+    }
+
+    // Check if transaction was already used
+    const existingPayment = await db.select().from(payments)
+      .where(eq(payments.transactionHash, body.transactionHash))
+      .limit(1);
+    
+    if (existingPayment.length > 0) {
+      return c.json({ 
+        success: false, 
+        error: 'Transaction hash already used' 
+      }, 400);
+    }
+
+    // Record verified payment
+    await db.insert(payments).values({
+      campaignId: campaignId,
+      fromAddress: verificationResult.fromAddress!,
+      toAddress: verificationResult.toAddress!,
+      amount: verificationResult.actualAmount!,
+      currency: verificationResult.currency!,
+      transactionHash: body.transactionHash,
+      blockNumber: verificationResult.blockNumber?.toString(),
+      gasUsed: verificationResult.gasUsed?.toString(),
+      status: 'completed'
+    });
+
+    // Update campaign status to active
+    await db.update(campaigns)
+      .set({ 
+        status: 'active',
+        isActive: true,
+        updatedAt: new Date()
+      })
+      .where(eq(campaigns.id, campaignId));
+
+    // Get campaign actions to create trackable actions
+    const campaignActionsData = await db.select().from(campaignActions)
+      .where(eq(campaignActions.campaignId, campaignId));
+
+    // Create trackable actions for the extension
+    for (const campaignAction of campaignActionsData) {
+      await db.insert(actions).values({
+        platform: campaign.platform,
+        actionType: campaignAction.actionType,
+        target: campaignAction.target,
+        title: `${campaign.platform} ${campaignAction.actionType}`,
+        description: `${campaignAction.actionType} on ${campaign.platform}`,
+        price: campaignAction.pricePerAction,
+        maxVolume: campaignAction.maxVolume,
+        currentVolume: 0,
+        eligibilityCriteria: campaign.targetingRules,
+        isActive: true,
+        expiresAt: campaign.expiresAt
+      });
+    }
+
+    return c.json({ 
+      success: true, 
+      campaign: { ...campaign, status: 'active' },
+      message: 'Payment confirmed and campaign activated successfully' 
+    });
+
+  } catch (error) {
+    console.error('Payment confirmation error:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Failed to confirm payment' 
     }, 500);
   }
 });

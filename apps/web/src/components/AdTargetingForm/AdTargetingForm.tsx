@@ -211,50 +211,20 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
         throw new Error('Network connection failed')
       }
 
-      // Step 1: Process blockchain payment FIRST
-      console.log('Step 1: Processing blockchain payment...')
-      
-      const paymentResult = await PaymentFlowService.processPayment(
+      // Use the new unified payment flow
+      console.log('Starting unified payment flow...')
+      const result = await PaymentFlowService.createCampaignWithPayment(
         campaignData,
         address,
         walletClient,
         publicClient
       )
       
-      console.log('Payment transaction submitted:', paymentResult.transactionHash)
-      
-      // Step 2: Wait for transaction confirmation
-      console.log('Step 2: Waiting for transaction confirmation...')
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: paymentResult.transactionHash,
-        timeout: 60_000 // 60 second timeout
-      })
-      
-      if (receipt.status === 'success') {
-        console.log('Transaction confirmed!', {
-          blockNumber: receipt.blockNumber,
-          gasUsed: receipt.gasUsed
-        })
-        
-        // Step 3: Create campaign with payment data (only after payment is confirmed)
-        console.log('Step 3: Creating campaign with payment data...')
-        await PaymentFlowService.createCampaignWithPayment(
-          campaignData,
-          address,
-          {
-            transactionHash: paymentResult.transactionHash,
-            amount: paymentResult.amount,
-            currency: paymentResult.currency,
-            network: paymentResult.network,
-            blockNumber: receipt.blockNumber.toString(),
-            gasUsed: receipt.gasUsed?.toString()
-          }
-        )
-        
-        console.log('Campaign activated successfully!')
+      if (result.success) {
+        console.log('Campaign created and activated successfully!', result.campaign)
         
         setPaymentSuccess(
-          `Payment successful! Campaign activated with ${paymentResult.currency} on ${paymentResult.network}. Transaction: ${paymentResult.transactionHash?.slice(0, 10)}...`
+          `Payment successful! Campaign activated with ${result.currency} on ${result.network}. Transaction: ${result.transactionHash?.slice(0, 10)}...`
         )
         
         // Call original onSave if provided
@@ -265,7 +235,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
           })
         }
       } else {
-        throw new Error('Transaction failed on blockchain')
+        throw new Error(result.error || 'Payment failed')
       }
       
     } catch (error) {

@@ -8,6 +8,7 @@ interface PaymentVerificationParams {
   expectedFromAddress: string
   expectedToAddress: string
   network: 'base' | 'base-sepolia'
+  paymentCurrency?: 'ETH' | 'USDC' // Optional, defaults based on environment
 }
 
 interface PaymentVerificationResult {
@@ -24,11 +25,17 @@ interface PaymentVerificationResult {
 export async function verifyPaymentTransaction(
   params: PaymentVerificationParams
 ): Promise<PaymentVerificationResult> {
-  const { transactionHash, expectedAmount, expectedFromAddress, expectedToAddress, network } = params
+  const { transactionHash, expectedAmount, expectedFromAddress, expectedToAddress, network, paymentCurrency } = params
+  
+  // Determine payment currency based on environment config or parameter
+  const currency = paymentCurrency || 
+    (process.env.PAYMENT_CURRENCY as 'ETH' | 'USDC') || 
+    (network === 'base' ? 'USDC' : 'ETH') // Default: USDC for mainnet, ETH for testnet
   
   console.log('=== PAYMENT VERIFICATION START ===');
   console.log('Transaction hash:', transactionHash);
   console.log('Network:', network);
+  console.log('Currency:', currency);
   console.log('Expected from:', expectedFromAddress);
   console.log('Expected to:', expectedToAddress);
   console.log('Expected amount (cents):', expectedAmount);
@@ -103,38 +110,32 @@ export async function verifyPaymentTransaction(
       }
     }
     
-    // For USDC transfers, we need to check the logs for Transfer events
-    // For now, let's implement ETH verification first
-    if (transaction.to?.toLowerCase() === expectedToAddress.toLowerCase()) {
-      // Direct ETH transfer verification for testnet
-      // On testnet we use $1 = 0.0002 ETH, so 1 ETH = $5000
-      const actualAmountEth = formatUnits(transaction.value, 18)
-      const ETH_TO_USD_RATE = 5000 // 1 ETH = $5000 (since $1 = 0.0002 ETH)
-      const actualAmountCents = Math.round(parseFloat(actualAmountEth) * ETH_TO_USD_RATE * 100)
-      
-      // For testnet, we just check if payment was made, not exact amount
-      // since it's test ETH anyway
-      if (network === 'base-sepolia') {
-        // On testnet, just verify payment was made to correct address
-        console.log('=== PAYMENT VERIFICATION SUCCESS (Testnet ETH) ===');
-        console.log('Transaction verified successfully on Base Sepolia');
+    // Handle ETH transfers
+    if (currency === 'ETH') {
+      // Verify it's a direct ETH transfer to the escrow address
+      if (transaction.to?.toLowerCase() !== expectedToAddress.toLowerCase()) {
         return {
-          valid: true,
-          fromAddress: transaction.from,
-          toAddress: transaction.to,
-          actualAmount: expectedAmount, // Use expected amount for testnet
-          blockNumber: receipt.blockNumber,
-          gasUsed: receipt.gasUsed,
-          currency: 'ETH'
+          valid: false,
+          reason: `ETH recipient mismatch. Expected: ${expectedToAddress}, Got: ${transaction.to}`
         }
       }
       
-      // For mainnet (when using ETH), do strict verification
-      const tolerance = expectedAmount * 0.01
+      // Calculate ETH amount in cents
+      const actualAmountEth = formatUnits(transaction.value, 18)
+      const ethToUsdRate = process.env.ETH_USD_RATE ? parseFloat(process.env.ETH_USD_RATE) : 3000 // Default $3000/ETH
+      const actualAmountCents = Math.round(parseFloat(actualAmountEth) * ethToUsdRate * 100)
+      
+      console.log('ETH Payment Details:');
+      console.log('- Amount (ETH):', actualAmountEth);
+      console.log('- ETH/USD Rate:', ethToUsdRate);
+      console.log('- Amount (USD):', actualAmountCents / 100);
+      
+      // Verify amount with tolerance (5% for ETH due to price volatility)
+      const tolerance = expectedAmount * 0.05
       if (Math.abs(actualAmountCents - expectedAmount) > tolerance) {
         return {
           valid: false,
-          reason: `Amount mismatch. Expected: $${expectedAmount/100}, Got: ~$${actualAmountCents/100} (ETH conversion)`
+          reason: `ETH amount mismatch. Expected: $${expectedAmount/100}, Got: $${actualAmountCents/100} (at $${ethToUsdRate}/ETH)`
         }
       }
       
@@ -149,63 +150,83 @@ export async function verifyPaymentTransaction(
       }
     }
     
-    // For USDC transfers, check if this is a contract call to USDC token
+    // Handle USDC transfers
     // Base mainnet USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
     // Base sepolia USDC: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
     const usdcContractAddress = network === 'base' 
       ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' 
       : '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
       
-    if (usdcContractAddress && transaction.to?.toLowerCase() === usdcContractAddress.toLowerCase()) {
-      // Parse USDC transfer from logs
-      const transferLog = receipt.logs.find(log => 
-        log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' // Transfer event signature
-      )
-      
-      if (!transferLog || !transferLog.topics[2]) {
-        return {
-          valid: false,
-          reason: 'USDC transfer log not found'
-        }
-      }
-      
-      // Decode transfer event (simplified)
-      const toAddressFromLog = `0x${transferLog.topics[2].slice(-40)}`
-      const amountHex = transferLog.data
-      const actualAmountUsdc = parseInt(amountHex, 16)
-      const actualAmountCents = Math.round(actualAmountUsdc / 10000) // USDC has 6 decimals, convert to cents
-      
-      // Verify to address
-      if (toAddressFromLog.toLowerCase() !== expectedToAddress.toLowerCase()) {
-        return {
-          valid: false,
-          reason: `USDC recipient address mismatch. Expected: ${expectedToAddress}, Got: ${toAddressFromLog}`
-        }
-      }
-      
-      // Verify amount (allow small tolerance for rounding)
-      const tolerance = 1 // 1 cent tolerance
-      if (Math.abs(actualAmountCents - expectedAmount) > tolerance) {
-        return {
-          valid: false,
-          reason: `USDC amount mismatch. Expected: $${expectedAmount/100}, Got: $${actualAmountCents/100}`
-        }
-      }
-      
+    if (transaction.to?.toLowerCase() !== usdcContractAddress.toLowerCase()) {
       return {
-        valid: true,
-        fromAddress: transaction.from,
-        toAddress: toAddressFromLog,
-        actualAmount: actualAmountCents,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed,
-        currency: 'USDC'
+        valid: false,
+        reason: `Transaction is not a USDC transfer. Expected USDC contract: ${usdcContractAddress}, Got: ${transaction.to}`
       }
     }
     
+    // Parse USDC transfer from logs
+    const transferLog = receipt.logs.find(log => 
+      log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' && // Transfer event signature
+      log.address.toLowerCase() === usdcContractAddress.toLowerCase() // Ensure it's from USDC contract
+    )
+    
+    if (!transferLog || !transferLog.topics[2]) {
+      return {
+        valid: false,
+        reason: 'USDC transfer log not found in transaction'
+      }
+    }
+    
+    // Decode transfer event
+    const fromAddressFromLog = `0x${transferLog.topics[1].slice(-40)}`
+    const toAddressFromLog = `0x${transferLog.topics[2].slice(-40)}`
+    const amountHex = transferLog.data
+    const actualAmountUsdc = parseInt(amountHex, 16)
+    const actualAmountCents = Math.round(actualAmountUsdc / 10000) // USDC has 6 decimals, convert to cents
+    
+    console.log('=== PAYMENT VERIFICATION ===');
+    console.log('Network:', network);
+    console.log('USDC Contract:', usdcContractAddress);
+    console.log('From:', fromAddressFromLog);
+    console.log('To:', toAddressFromLog);
+    console.log('Amount (USDC):', actualAmountUsdc / 1000000); // Show in USDC units
+    console.log('Amount (USD):', actualAmountCents / 100);
+    
+    // Verify from address
+    if (fromAddressFromLog.toLowerCase() !== expectedFromAddress.toLowerCase()) {
+      return {
+        valid: false,
+        reason: `USDC sender address mismatch. Expected: ${expectedFromAddress}, Got: ${fromAddressFromLog}`
+      }
+    }
+    
+    // Verify to address
+    if (toAddressFromLog.toLowerCase() !== expectedToAddress.toLowerCase()) {
+      return {
+        valid: false,
+        reason: `USDC recipient address mismatch. Expected: ${expectedToAddress}, Got: ${toAddressFromLog}`
+      }
+    }
+    
+    // Verify amount (allow small tolerance for rounding)
+    const tolerance = 1 // 1 cent tolerance
+    if (Math.abs(actualAmountCents - expectedAmount) > tolerance) {
+      return {
+        valid: false,
+        reason: `USDC amount mismatch. Expected: $${expectedAmount/100}, Got: $${actualAmountCents/100}`
+      }
+    }
+    
+    console.log('=== PAYMENT VERIFICATION SUCCESS ===');
+    
     return {
-      valid: false,
-      reason: `Transaction does not match expected payment pattern. To: ${transaction.to}, Expected: ${expectedToAddress}`
+      valid: true,
+      fromAddress: fromAddressFromLog,
+      toAddress: toAddressFromLog,
+      actualAmount: actualAmountCents,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed,
+      currency: 'USDC'
     }
     
   } catch (error) {
