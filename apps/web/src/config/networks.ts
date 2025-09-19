@@ -13,7 +13,7 @@ export const getNetworkConfig = () => {
     
     // Smart Contract (CampaignPayments)
     campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
-      '0xB32856642B5Ec5742ed979D31B82AB5CE30383FB', // Base Sepolia deployment
+      '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6', // Base Sepolia deployment with dynamic pricing
     
     // USDC Token Address (payment currency)
     usdcAddress: isProduction
@@ -46,16 +46,6 @@ export const USDC_DECIMALS = 6
 // Export commonly used ABIs
 export const USDC_ABI = [
   {
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    name: 'approve',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  {
     inputs: [{ name: 'account', type: 'address' }],
     name: 'balanceOf',
     outputs: [{ name: '', type: 'uint256' }],
@@ -63,9 +53,16 @@ export const USDC_ABI = [
     type: 'function'
   },
   {
-    inputs: [{ name: 'spender', type: 'address' }],
-    name: 'allowance',
+    inputs: [{ name: 'owner', type: 'address' }],
+    name: 'nonces',
     outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'DOMAIN_SEPARATOR',
+    outputs: [{ name: '', type: 'bytes32' }],
     stateMutability: 'view',
     type: 'function'
   }
@@ -78,9 +75,13 @@ export const CAMPAIGN_PAYMENTS_ABI = [
       { name: 'country', type: 'string' },
       { name: 'targetGender', type: 'bool' },
       { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' }
+      { name: 'verifiedOnly', type: 'bool' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'v', type: 'uint8' },
+      { name: 'r', type: 'bytes32' },
+      { name: 's', type: 'bytes32' }
     ],
-    name: 'depositForCampaign',
+    name: 'depositForCampaignWithPermit',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function'

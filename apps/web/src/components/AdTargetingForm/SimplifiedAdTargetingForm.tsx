@@ -2,18 +2,20 @@
  * Simplified Ad Targeting Form for Beta Release
  * - TikTok only (other platforms labeled as "coming soon")
  * - Limited to Gender, Age, and Country targeting
- * - Storybook-friendly (no wallet dependencies)
+ * - Fetches package and pricing data from smart contract
  */
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { AlertCircle, CheckCircle, Loader2, Info, BadgeCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, BadgeCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { PaymentFlowService } from '../../services/paymentFlow';
 import { useWalletClient, usePublicClient } from 'wagmi';
+import { useAppKitAccount } from '@reown/appkit/react';
+import { formatUnits } from 'viem';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -26,66 +28,69 @@ const platforms = [
   { id: 'farcaster', name: 'Farcaster', icon: '/social-logos/farcaster.png', available: false },
 ];
 
-// Base rates for the "easiest" audience (worldwide, all demographics)
-const BASE_RATES = {
-  likes: { count: 20, basePrice: 0.05 }, // $0.05 per like base
-  follows: { count: 10, basePrice: 0.50 }, // $0.50 per follow base
-};
+// Contract ABI for reading configuration
+const CAMPAIGN_PAYMENTS_ABI = [
+  {
+    inputs: [],
+    name: 'campaignLikes',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'campaignFollows',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'baseLikePrice',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'baseFollowPrice',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'country', type: 'string' },
+      { name: 'targetGender', type: 'bool' },
+      { name: 'targetAge', type: 'bool' },
+      { name: 'verifiedOnly', type: 'bool' }
+    ],
+    name: 'calculatePrice',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  }
+] as const;
 
-// Country tier multipliers based on advertising costs
-const COUNTRY_MULTIPLIERS: Record<string, number> = {
-  // Tier 1: High-value markets
-  'us': 2.5, // USA
-  'uk': 2.5, // United Kingdom
-  'ca': 2.5, // Canada
-  'au': 2.5, // Australia
-  
-  // Tier 2: Mid-value markets
-  'de': 1.8, // Germany
-  'fr': 1.8, // France
-  'jp': 1.8, // Japan
-  'kr': 1.8, // South Korea
-  
-  // Tier 3: Growing markets
-  'es': 1.3, // Spain
-  'it': 1.3, // Italy
-  'br': 1.3, // Brazil
-  'mx': 1.3, // Mexico
-  'in': 1.3, // India
-  
-  // Default
-  'all': 1.0, // All countries
-};
-
-// Calculate dynamic price based on targeting
-const calculateDynamicPrice = (requirements: TargetingRequirements) => {
-  // Get multipliers
-  const countryMultiplier = COUNTRY_MULTIPLIERS[requirements.country || 'all'] || 1.0;
-  const genderMultiplier = requirements.gender !== 'all' ? 1.2 : 1.0;
-  const ageMultiplier = requirements.ageRange !== 'all' ? 1.4 : 1.0;
-  const verifiedMultiplier = requirements.verifiedOnly ? 1.5 : 1.0;
-  
-  // Calculate final prices
-  const combinedMultiplier = countryMultiplier * genderMultiplier * ageMultiplier * verifiedMultiplier;
-  const likePrice = BASE_RATES.likes.basePrice * combinedMultiplier;
-  const followPrice = BASE_RATES.follows.basePrice * combinedMultiplier;
-  
-  // Calculate total
-  const total = (BASE_RATES.likes.count * likePrice) + (BASE_RATES.follows.count * followPrice);
-  
-  return {
-    likePrice,
-    followPrice,
-    total,
-    multipliers: {
-      country: countryMultiplier,
-      gender: genderMultiplier,
-      age: ageMultiplier,
-      verified: verifiedMultiplier,
-      combined: combinedMultiplier
-    }
-  };
-};
+// Country list with codes matching contract
+const COUNTRIES = [
+  { code: 'all', name: 'All Countries' },
+  { code: 'US', name: 'United States' },
+  { code: 'UK', name: 'United Kingdom' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'IN', name: 'India' },
+  { code: 'PH', name: 'Philippines' },
+  { code: 'ID', name: 'Indonesia' }
+];
 
 type CampaignTargets = {
   likeTarget: string;
@@ -109,7 +114,6 @@ interface SimplifiedAdTargetingFormProps {
 
 export function SimplifiedAdTargetingForm({ 
   onSave,
-  onCancel,
   mockWalletConnected = false,
   mockWalletAddress = '0x1234567890123456789012345678901234567890'
 }: SimplifiedAdTargetingFormProps) {
@@ -123,8 +127,18 @@ export function SimplifiedAdTargetingForm({
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   
   // Real wallet hooks (will be undefined in Storybook)
+  const { address: connectedAddress, isConnected } = useAppKitAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
+  
+  // Contract data
+  const [contractData, setContractData] = useState({
+    likes: 20,
+    follows: 10,
+    baseLikePrice: 200000, // in USDC (6 decimals)
+    baseFollowPrice: 400000,
+    loading: true
+  });
   
   // Simplified targeting requirements
   const [requirements, setRequirements] = useState<TargetingRequirements>({
@@ -133,10 +147,117 @@ export function SimplifiedAdTargetingForm({
     country: 'all',
     verifiedOnly: false
   });
-
-  // Calculate dynamic pricing based on targeting
-  const pricing = calculateDynamicPrice(requirements);
-  const estimatedCost = pricing.total;
+  
+  // Calculated price from contract
+  const [calculatedPrice, setCalculatedPrice] = useState<bigint>(0n);
+  const [isCalculating, setIsCalculating] = useState(false);
+  
+  // Load contract configuration
+  useEffect(() => {
+    const loadContractData = async () => {
+      if (!publicClient) {
+        // Use defaults for Storybook
+        setContractData({
+          likes: 20,
+          follows: 10,
+          baseLikePrice: 200000,
+          baseFollowPrice: 400000,
+          loading: false
+        });
+        return;
+      }
+      
+      try {
+        const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
+        
+        const [likes, follows, likePrice, followPrice] = await Promise.all([
+          publicClient.readContract({
+            address: contractAddress,
+            abi: CAMPAIGN_PAYMENTS_ABI,
+            functionName: 'campaignLikes'
+          }),
+          publicClient.readContract({
+            address: contractAddress,
+            abi: CAMPAIGN_PAYMENTS_ABI,
+            functionName: 'campaignFollows'
+          }),
+          publicClient.readContract({
+            address: contractAddress,
+            abi: CAMPAIGN_PAYMENTS_ABI,
+            functionName: 'baseLikePrice'
+          }),
+          publicClient.readContract({
+            address: contractAddress,
+            abi: CAMPAIGN_PAYMENTS_ABI,
+            functionName: 'baseFollowPrice'
+          })
+        ]);
+        
+        setContractData({
+          likes: Number(likes),
+          follows: Number(follows),
+          baseLikePrice: Number(likePrice),
+          baseFollowPrice: Number(followPrice),
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error loading contract data:', error);
+        setContractData(prev => ({ ...prev, loading: false }));
+      }
+    };
+    
+    loadContractData();
+  }, [publicClient]);
+  
+  // Calculate price when requirements change
+  useEffect(() => {
+    const calculatePrice = async () => {
+      if (!publicClient) {
+        // Mock calculation for Storybook
+        const baseTotal = (contractData.likes * contractData.baseLikePrice + 
+                          contractData.follows * contractData.baseFollowPrice);
+        setCalculatedPrice(BigInt(baseTotal));
+        return;
+      }
+      
+      setIsCalculating(true);
+      try {
+        const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
+        
+        const price = await publicClient.readContract({
+          address: contractAddress,
+          abi: CAMPAIGN_PAYMENTS_ABI,
+          functionName: 'calculatePrice',
+          args: [
+            requirements.country || 'all',
+            requirements.gender !== 'all',
+            requirements.ageRange !== 'all',
+            requirements.verifiedOnly || false
+          ]
+        });
+        
+        setCalculatedPrice(price);
+      } catch (error) {
+        console.error('Error calculating price:', error);
+        // Fallback to base price
+        const baseTotal = (contractData.likes * contractData.baseLikePrice + 
+                          contractData.follows * contractData.baseFollowPrice);
+        setCalculatedPrice(BigInt(baseTotal));
+      }
+      setIsCalculating(false);
+    };
+    
+    calculatePrice();
+  }, [requirements, contractData, publicClient]);
+  
+  // Convert price to USD string
+  const formatPrice = (price: bigint) => {
+    return formatUnits(price, 6); // USDC has 6 decimals
+  };
+  
+  const estimatedCost = Number(formatPrice(calculatedPrice));
+  const basePackagePrice = (contractData.likes * contractData.baseLikePrice + 
+                           contractData.follows * contractData.baseFollowPrice) / 1000000;
 
   const handleSave = async () => {
     // Reset previous states
@@ -144,11 +265,17 @@ export function SimplifiedAdTargetingForm({
     setPaymentSuccess(null);
     
     // Check wallet connection (use real wallet if available, otherwise mock)
-    const isWalletConnected = walletClient ? true : mockWalletConnected;
-    const walletAddress = walletClient?.account?.address || mockWalletAddress;
+    const isWalletConnected = isConnected || mockWalletConnected;
+    const walletAddress = connectedAddress || mockWalletAddress;
     
     if (!isWalletConnected) {
       setPaymentError('Please connect your wallet first');
+      return;
+    }
+    
+    // Additional check for wallet client availability
+    if (!mockWalletConnected && (!walletClient || !publicClient)) {
+      setPaymentError('Wallet is connecting... Please try again in a moment');
       return;
     }
 
@@ -169,6 +296,8 @@ export function SimplifiedAdTargetingForm({
       // If we have real wallet clients, use actual payment flow
       if (walletClient && publicClient) {
         console.log('Processing real payment...');
+        console.log('Wallet client available:', !!walletClient);
+        console.log('Wallet account:', walletClient.account?.address);
         
         const formData = {
           platform: selectedPlatform,
@@ -182,7 +311,6 @@ export function SimplifiedAdTargetingForm({
         
         const result = await PaymentFlowService.createCampaignWithPayment(
           formData,
-          walletAddress,
           walletClient,
           publicClient
         );
@@ -197,107 +325,73 @@ export function SimplifiedAdTargetingForm({
             campaignId: result.campaignId,
             transactionHash: result.transactionHash,
             totalAmount: estimatedCost,
-            walletAddress
           });
         }
       } else {
-        // Fallback to demo mode for Storybook
-        console.log('[Demo] Processing campaign...');
-        
-        // Simulate payment processing delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const campaignData = {
-          platform: selectedPlatform,
-          requirements,
-          package: {
-            likes: { count: FIXED_CAMPAIGN_PACKAGE.likes.count, target: campaignTargets.likeTarget },
-            follows: { count: FIXED_CAMPAIGN_PACKAGE.follows.count, target: campaignTargets.followTarget }
-          },
-          totalAmount: estimatedCost,
-          walletAddress
-        };
-        
-        setPaymentSuccess(`Campaign created successfully! (Demo Mode)`);
-        
-        if (onSave) {
-          onSave(campaignData);
-        }
+        // Mock payment for Storybook
+        console.log('Mock payment processing...');
+        setTimeout(() => {
+          setPaymentSuccess('Campaign created successfully! (Mock payment)');
+          if (onSave) {
+            onSave({
+              platform: selectedPlatform,
+              requirements,
+              targets: campaignTargets,
+              totalAmount: estimatedCost,
+              mockTransaction: true
+            });
+          }
+        }, 2000);
       }
     } catch (error) {
       console.error('Payment failed:', error);
-      setPaymentError(error instanceof Error ? error.message : 'Payment failed. Please try again.');
+      setPaymentError(
+        error instanceof Error ? error.message : 'Transaction failed. Please try again.'
+      );
     } finally {
       setIsProcessingPayment(false);
     }
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Create Your Campaign</h1>
+          <p className="text-muted-foreground">Launch your TikTok engagement campaign in minutes</p>
+        </div>
+
         {/* Platform Selection */}
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Platform</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Select Platform</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {platforms.map((platform) => (
               <button
                 key={platform.id}
-                onClick={() => {
-                  if (platform.available) {
-                    setSelectedPlatform(platform.id as Platform);
-                    // Reset campaign targets when switching platforms
-                    setCampaignTargets({ likeTarget: '', followTarget: '' });
-                  }
-                }}
+                onClick={() => platform.available && setSelectedPlatform(platform.id as Platform)}
                 disabled={!platform.available}
-                className={`relative flex items-center gap-2 justify-center px-3 sm:px-4 py-3 rounded-lg border-2 transition-all duration-150 ${
-                  platform.available
-                    ? selectedPlatform === platform.id
-                      ? 'border-primary bg-primary/20 text-foreground cursor-pointer'
-                      : 'border-border hover:border-primary/50 hover:bg-primary/10 text-foreground cursor-pointer'
-                    : 'border-border/50 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-60'
-                }`}
+                className={`
+                  relative p-3 rounded-lg border-2 transition-all
+                  ${selectedPlatform === platform.id 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-muted-foreground/50'
+                  }
+                  ${!platform.available 
+                    ? 'cursor-not-allowed' 
+                    : 'cursor-pointer'
+                  }
+                `}
               >
                 <img 
                   src={platform.icon} 
                   alt={platform.name}
-                  className={`w-4 h-4 rounded ${!platform.available ? 'opacity-50' : ''}`}
+                  className="w-8 h-8 mx-auto mb-2 object-contain"
                 />
-                <span className="text-sm sm:text-base">{platform.name}</span>
+                <p className="text-xs font-medium">{platform.name}</p>
                 {!platform.available && (
-                  <span className="absolute -top-2 -right-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full border border-border">
-                    Soon
-                  </span>
+                  <p className="text-[10px] text-muted-foreground">Coming Soon</p>
                 )}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Creator Requirements */}
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Creator Requirements</h2>
-          <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-            {/* Account Verified Checkbox */}
-            <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:border-primary/50 transition-colors bg-background">
-              <Checkbox
-                id="verified-only"
-                checked={requirements.verifiedOnly}
-                onCheckedChange={(checked) => 
-                  setRequirements({...requirements, verifiedOnly: !!checked})
-                }
-                className="h-5 w-5"
-              />
-              <Label 
-                htmlFor="verified-only" 
-                className="flex items-center gap-2 cursor-pointer select-none flex-1"
-              >
-                <BadgeCheck className="h-5 w-5 text-blue-500" />
-                <div className="flex-1">
-                  <span className="text-base font-medium block">Verified Creators Only</span>
-                  <span className="text-sm text-muted-foreground">Only blue checkmark accounts can participate</span>
-                </div>
-              </Label>
-            </div>
           </div>
         </div>
 
@@ -364,20 +458,11 @@ export function SimplifiedAdTargetingForm({
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
-                  <SelectItem value="us">United States</SelectItem>
-                  <SelectItem value="uk">United Kingdom</SelectItem>
-                  <SelectItem value="ca">Canada</SelectItem>
-                  <SelectItem value="au">Australia</SelectItem>
-                  <SelectItem value="de">Germany</SelectItem>
-                  <SelectItem value="fr">France</SelectItem>
-                  <SelectItem value="es">Spain</SelectItem>
-                  <SelectItem value="it">Italy</SelectItem>
-                  <SelectItem value="br">Brazil</SelectItem>
-                  <SelectItem value="mx">Mexico</SelectItem>
-                  <SelectItem value="jp">Japan</SelectItem>
-                  <SelectItem value="kr">South Korea</SelectItem>
-                  <SelectItem value="in">India</SelectItem>
+                  {COUNTRIES.map(country => (
+                    <SelectItem key={country.code} value={country.code}>
+                      {country.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -394,7 +479,7 @@ export function SimplifiedAdTargetingForm({
                     <li>• Audience Age: {requirements.ageRange}</li>
                   )}
                   {requirements.country !== 'all' && (
-                    <li>• Audience Location: {requirements.country?.toUpperCase()}</li>
+                    <li>• Audience Location: {COUNTRIES.find(c => c.code === requirements.country)?.name}</li>
                   )}
                 </ul>
               </div>
@@ -402,149 +487,138 @@ export function SimplifiedAdTargetingForm({
           </div>
         </div>
 
-        {/* Fixed Campaign Package */}
+        {/* Creator Targeting */}
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Creator Targeting</h2>
+          <p className="text-sm text-muted-foreground mb-3">Select the type of creators you want to engage with</p>
+          <div className="border border-border rounded-lg p-4 bg-card">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="verified-only"
+                checked={requirements.verifiedOnly}
+                onCheckedChange={(checked) => 
+                  setRequirements({...requirements, verifiedOnly: checked as boolean})
+                }
+              />
+              <Label 
+                htmlFor="verified-only" 
+                className="flex items-center gap-2 cursor-pointer flex-1"
+              >
+                <BadgeCheck className="w-5 h-5 text-primary" />
+                <div>
+                  <span className="font-medium">
+                    Verified Creators Only
+                  </span>
+                  <p className="text-sm text-muted-foreground">
+                    Get engagement from creators with verified accounts (blue checkmark)
+                  </p>
+                </div>
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Campaign Package - Fetched from Contract */}
         {selectedPlatform === 'tiktok' && (
           <div>
             <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Campaign Package</h2>
             
             {/* Package Details Card */}
             <div className="p-4 border border-border rounded-lg bg-card space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Campaign Package:</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold">{BASE_RATES.likes.count}</span>
-                      <span className="text-base">Likes</span>
-                      <span className="text-sm text-muted-foreground">
-                        @ ${pricing.likePrice.toFixed(2)}/like
-                        {pricing.multipliers.combined > 1 && (
-                          <span className="text-xs ml-1">
-                            (base: ${BASE_RATES.likes.basePrice.toFixed(2)})
+              {contractData.loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading package details...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Campaign Package:</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold">{contractData.likes}</span>
+                          <span className="text-base">Likes</span>
+                          <span className="text-sm text-muted-foreground">
+                            @ ${(contractData.baseLikePrice / 1000000).toFixed(2)}/like
                           </span>
-                        )}
-                      </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold">{contractData.follows}</span>
+                          <span className="text-base">Follows</span>
+                          <span className="text-sm text-muted-foreground">
+                            @ ${(contractData.baseFollowPrice / 1000000).toFixed(2)}/follow
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold">{BASE_RATES.follows.count}</span>
-                      <span className="text-base">Follows</span>
-                      <span className="text-sm text-muted-foreground">
-                        @ ${pricing.followPrice.toFixed(2)}/follow
-                        {pricing.multipliers.combined > 1 && (
-                          <span className="text-xs ml-1">
-                            (base: ${BASE_RATES.follows.basePrice.toFixed(2)})
-                          </span>
-                        )}
-                      </span>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground mb-1">Total Package</p>
+                      <p className="text-2xl font-bold text-primary">
+                        ${basePackagePrice.toFixed(2)}
+                      </p>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Total Package</p>
-                  <p className="text-2xl font-bold text-primary">${estimatedCost.toFixed(2)}</p>
-                  {pricing.multipliers.combined > 1 && (
-                    <p className="text-xs text-muted-foreground">
-                      {pricing.multipliers.combined.toFixed(1)}x base price
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              {/* Target URLs */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="like-target" className="text-base font-medium">
-                    TikTok Post URL for Likes
-                  </Label>
-                  <Input
-                    id="like-target"
-                    type="url"
-                    placeholder="https://tiktok.com/@username/video/123456789"
-                    value={campaignTargets.likeTarget}
-                    onChange={(e) => setCampaignTargets(prev => ({ ...prev, likeTarget: e.target.value }))}
-                    className="font-mono text-base h-11"
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    This post will receive {BASE_RATES.likes.count} likes
-                  </p>
-                </div>
+                  {/* Target URLs */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="like-target" className="text-base font-medium">
+                        TikTok Post URL for Likes
+                      </Label>
+                      <Input
+                        id="like-target"
+                        type="url"
+                        placeholder="https://tiktok.com/@username/video/123456789"
+                        value={campaignTargets.likeTarget}
+                        onChange={(e) => setCampaignTargets(prev => ({ ...prev, likeTarget: e.target.value }))}
+                        className="font-mono text-base h-11"
+                        required
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        This post will receive {contractData.likes} likes
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="follow-target" className="text-base font-medium">
-                    TikTok Profile URL for Follows
-                  </Label>
-                  <Input
-                    id="follow-target"
-                    type="url"
-                    placeholder="https://tiktok.com/@username"
-                    value={campaignTargets.followTarget}
-                    onChange={(e) => setCampaignTargets(prev => ({ ...prev, followTarget: e.target.value }))}
-                    className="font-mono text-base h-11"
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    This profile will receive {BASE_RATES.follows.count} new followers
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="follow-target" className="text-base font-medium">
+                        TikTok Profile URL for Follows
+                      </Label>
+                      <Input
+                        id="follow-target"
+                        type="url"
+                        placeholder="https://tiktok.com/@username"
+                        value={campaignTargets.followTarget}
+                        onChange={(e) => setCampaignTargets(prev => ({ ...prev, followTarget: e.target.value }))}
+                        className="font-mono text-base h-11"
+                        required
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        This profile will receive {contractData.follows} new followers
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {/* Total - Shows dynamic pricing breakdown */}
+        {/* Total Campaign Cost - Simplified Display */}
         <div className="border-t border-border">
           <div className="py-6 px-4 sm:px-6">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1 space-y-2">
-                <h3 className="text-xl font-semibold">Total Campaign Cost</h3>
-                {pricing.multipliers.combined === 1 ? (
-                  <p className="text-sm text-muted-foreground">Base package price</p>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      Price multipliers applied:
-                    </p>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {pricing.multipliers.country !== 1 && (
-                        <span className="px-2 py-1 bg-muted rounded-md">
-                          Country: {pricing.multipliers.country}x
-                        </span>
-                      )}
-                      {pricing.multipliers.gender !== 1 && (
-                        <span className="px-2 py-1 bg-muted rounded-md">
-                          Gender: {pricing.multipliers.gender}x
-                        </span>
-                      )}
-                      {pricing.multipliers.age !== 1 && (
-                        <span className="px-2 py-1 bg-muted rounded-md">
-                          Age: {pricing.multipliers.age}x
-                        </span>
-                      )}
-                      {pricing.multipliers.verified !== 1 && (
-                        <span className="px-2 py-1 bg-blue-500/10 text-blue-700 rounded-md border border-blue-500/20">
-                          Verified: {pricing.multipliers.verified}x
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground pt-1">
-                      Total multiplier: {pricing.multipliers.combined.toFixed(2)}x
-                    </p>
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Total Campaign Cost</h3>
+              <div className="text-right">
+                {isCalculating ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-lg">Calculating...</span>
                   </div>
-                )}
-              </div>
-              <div className="text-right space-y-1">
-                <div className="text-3xl font-bold text-primary">
-                  ${estimatedCost.toFixed(2)}
-                </div>
-                {pricing.multipliers.combined === 1 ? (
-                  <p className="text-sm text-green-600">
-                    Base rate
-                  </p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Base: ${(BASE_RATES.likes.count * BASE_RATES.likes.basePrice + BASE_RATES.follows.count * BASE_RATES.follows.basePrice).toFixed(2)}
-                  </p>
+                  <div className="text-3xl font-bold text-primary">
+                    ${estimatedCost.toFixed(2)}
+                  </div>
                 )}
               </div>
             </div>
@@ -575,7 +649,9 @@ export function SimplifiedAdTargetingForm({
             disabled={
               isProcessingPayment ||
               !campaignTargets.likeTarget.trim() ||
-              !campaignTargets.followTarget.trim()
+              !campaignTargets.followTarget.trim() ||
+              contractData.loading ||
+              isCalculating
             }
             size="lg"
             className="w-full"

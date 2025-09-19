@@ -394,6 +394,7 @@ export class WebhookListenerService {
       const [campaign] = await db.insert(campaigns).values({
         id: campaignId,
         brandId: brand.id,
+        brandWalletAddress: senderAddress.toLowerCase(),
         platform: 'tiktok', // Default platform
         totalBudget: amountInCents,
         remainingBudget: amountInCents,

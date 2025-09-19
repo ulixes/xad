@@ -1,7 +1,8 @@
 // Payment Flow Service - Smart contract based campaign creation
 
-import { parseUnits } from 'viem'
-import { API_BASE_URL } from '../config/api'
+import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
+
+const networkConfig = getNetworkConfig()
 
 export interface PaymentDetails {
   campaignId: string
@@ -19,79 +20,13 @@ export interface Campaign {
   totalBudget: number
 }
 
-const USDC_ABI = [
-  {
-    inputs: [{ name: 'account', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [{ name: 'owner', type: 'address' }],
-    name: 'nonces',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [],
-    name: 'DOMAIN_SEPARATOR',
-    outputs: [{ name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function'
-  }
-] as const
 
-const CAMPAIGN_PAYMENTS_ABI = [
-  {
-    inputs: [
-      { name: 'campaignId', type: 'string' },
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' },
-      { name: 'deadline', type: 'uint256' },
-      { name: 'v', type: 'uint8' },
-      { name: 'r', type: 'bytes32' },
-      { name: 's', type: 'bytes32' }
-    ],
-    name: 'depositForCampaignWithPermit',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  {
-    inputs: [
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' }
-    ],
-    name: 'calculatePrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  }
-] as const
 
-const USDC_ADDRESSES = {
-  'base': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  'base-sepolia': '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
-} as const
 
 export class PaymentFlowService {
   static async generateCampaignId(): Promise<string> {
     // Generate a UUID for the campaign
     return crypto.randomUUID()
-  }
-
-  static getContractAddress(network: 'base' | 'base-sepolia'): string {
-    // Get contract address based on network
-    if (network === 'base') {
-      return '0x...' // TODO: Add mainnet address when deployed
-    }
-    return '0xB32856642B5Ec5742ed979D31B82AB5CE30383FB' // Base Sepolia
   }
 
   static async processSmartContractPayment(
@@ -136,7 +71,7 @@ export class PaymentFlowService {
     })
 
     // Get USDC contract address for the network
-    const usdcAddress = USDC_ADDRESSES[network]
+    const usdcAddress = networkConfig.usdcAddress
     
     // Step 1: Check USDC balance
     const balance = await publicClient.readContract({
@@ -203,7 +138,7 @@ export class PaymentFlowService {
     const domain = {
       name: 'USDC',  // Base Sepolia USDC implementation uses "USDC"
       version: '2',
-      chainId: 84532,  // Base Sepolia chain ID
+      chainId: networkConfig.chainId,
       verifyingContract: usdcAddress as `0x${string}`
     }
     
@@ -266,7 +201,6 @@ export class PaymentFlowService {
 
   static async createCampaignWithPayment(
     formData: any,
-    walletAddress: string,
     walletClient: any,
     publicClient: any
   ) {
@@ -276,8 +210,8 @@ export class PaymentFlowService {
       console.log('Generated campaign ID:', campaignId)
       
       // Step 2: Get contract address for current network
-      const network = 'base-sepolia' // TODO: Make this dynamic based on environment
-      const contractAddress = this.getContractAddress(network)
+      const network = networkConfig.network.name as 'base' | 'base-sepolia'
+      const contractAddress = networkConfig.campaignPaymentsContract
       
       // Step 3: Prepare targeting parameters for contract
       const targetingParams = {
