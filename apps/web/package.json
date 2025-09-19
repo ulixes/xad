@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenvx run -f .env.local -- vite",
+    "stage": "dotenvx run -f .env.staging -- vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
