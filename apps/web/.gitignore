@@ -29,6 +29,7 @@ storybook-static
 # Environment variables (dotenvx)
 .env.local
 .env.development
+.env.*
 .env.test
 .env.production.local
 .env.keys

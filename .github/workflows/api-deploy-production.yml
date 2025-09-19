@@ -50,12 +50,17 @@ jobs:
           [env.production.vars]
           ENVIRONMENT = "production"
           DATABASE_URL = "${{ secrets.DATABASE_URL }}"
+          JWT_SECRET = "${{ secrets.JWT_SECRET }}"
           ADMIN_AUTH_TOKEN = "${{ secrets.ADMIN_AUTH_TOKEN }}"
+          CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS = "${{ secrets.CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS }}"
+          BASE_SEPOLIA_RPC_URL = "${{ secrets.BASE_SEPOLIA_RPC_URL }}"
+          TENDERLY_WEBHOOK_SIGNING_KEY = "${{ secrets.TENDERLY_WEBHOOK_SIGNING_KEY }}"
+          NGROK_AUTHTOKEN = "${{ secrets.NGROK_AUTHTOKEN }}"
+          SERVICE_NAME = "${{ secrets.SERVICE_NAME || 'xad-api-production' }}"
+          PORT = "${{ secrets.PORT || '3001' }}"
           PRIVY_APP_ID = "${{ secrets.PRIVY_APP_ID }}"
           PRIVY_APP_SECRET = "${{ secrets.PRIVY_APP_SECRET }}"
-          PRIVY_VERIFICATION_KEY = "${{ secrets.PRIVY_VERIFICATION_KEY }}"
-          JWT_SECRET = "${{ secrets.JWT_SECRET }}"
-          ESCROW_ADDRESS = "${{ secrets.ESCROW_ADDRESS }}"
+          PRIVY_VERIFICATION_KEY = "${{ secrets.PRIVY_VERIFICATION_KEY || '' }}"
           LOG_LEVEL = "info"
           
           [env.production.observability]
