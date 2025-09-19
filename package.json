@@ -20,11 +20,20 @@
     "build:extension": "turbo run build --filter=@xad/extension",
     "zip:chrome": "bun run build:extension && cd apps/extension && bun run zip",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "contract:build": "cd contracts && forge build",
+    "contract:test": "cd contracts && forge test",
+    "contract:test:gas": "cd contracts && forge test --gas-report",
+    "contract:deploy": "./deploy-contracts.sh",
+    "contract:deploy:sepolia": "cd contracts && forge script script/DeployCampaignPayments.s.sol --rpc-url base_sepolia --broadcast",
+    "contract:deploy:mainnet": "cd contracts && forge script script/DeployCampaignPayments.s.sol --rpc-url base_mainnet --broadcast",
+    "contract:check": "./deploy-check.sh",
+    "contract:verify": "cd contracts && forge verify-contract"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "viem": "^2.37.6"
   },
   "resolutions": {
     "react": "^18.3.1",

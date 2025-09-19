@@ -18,23 +18,39 @@ export function Dashboard() {
 
     fetchCampaigns()
   }, [isConnected, address])
+  
+  // Also fetch when component mounts/updates (for navigation)
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchCampaigns()
+    }
+  }, [])
 
   const fetchCampaigns = async () => {
+    console.log('[Dashboard] fetchCampaigns called, address:', address)
     if (!address) return
 
     try {
       const token = localStorage.getItem('auth_token')
+      
+      console.log('[Dashboard] Auth token:', token ? 'exists' : 'missing')
+      console.log('[Dashboard] Wallet address:', address)
+      
       if (!token) {
         setError('Please sign in with your wallet first')
         setLoading(false)
         return
       }
 
-      // Use the configured API URL
+      // Use the configured API URL and wallet address instead of brandId
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-      const response = await fetch(`${apiUrl}/campaigns/brand/${address}`, {
+      const url = `${apiUrl}/campaigns/brand/${address}`
+      console.log('[Dashboard] Fetching campaigns from:', url)
+      
+      const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true'
         }
       })
 

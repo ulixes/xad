@@ -1,0 +1,1 @@
+ALTER TABLE "tiktok_viewer_demographics" ALTER COLUMN "range_days" SET DEFAULT 7;

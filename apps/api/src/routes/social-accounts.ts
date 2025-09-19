@@ -7,8 +7,8 @@ import {
   instagramAudienceDemographics, 
   instagramContentPerformance, 
   tiktokAccounts,
-  tiktokAudienceDemographics,
-  tiktokContentPerformance,
+  tiktokViewerDemographics,
+  tiktokViewerGeography,
   actions, 
   actionRuns 
 } from "../db/schema";
@@ -30,38 +30,41 @@ const createSocialAccountSchema = z.object({
 
 const createTikTokDataSchema = z.object({
   socialAccountId: z.string().uuid(),
-  tiktokUserId: z.string(),
-  secUid: z.string().optional(),
-  uniqueId: z.string(),
-  nickname: z.string().optional(),
-  avatarUrl: z.string().optional(), // Changed from avatar
-  bio: z.string().optional(), // Changed from signature
-  isVerified: z.boolean().default(false), // Changed from verified
-  isPrivate: z.boolean().default(false),
-  region: z.string().optional(),
-  language: z.string().optional(),
-  createTime: z.union([z.string(), z.number()]).optional(),
-  analyticsOn: z.boolean().default(false),
-  proAccountInfo: z.any().optional(),
-  followerCount: z.number().default(0),
-  followingCount: z.number().default(0),
-  likeCount: z.number().default(0), // Changed from heartCount
-  videoCount: z.number().default(0),
-  profileViewCount: z.number().default(0), // Changed from profileViews
-  friendCount: z.number().default(0),
-  videoViews30d: z.number().optional(),
-  profileViews30d: z.number().optional(),
-  shares30d: z.number().optional(),
-  comments30d: z.number().optional(),
-  engagementRate: z.number().optional(), // Simplified from engagementRate30d
-  avgWatchTime: z.number().optional(), // Simplified from avgWatchTime30d
-  completionRate: z.number().optional(), // Simplified from completionRate30d
-  audienceGenderSplit: z.any().optional(),
-  audienceAgeDistribution: z.any().optional(),
-  audienceTopCountries: z.any().optional(),
-  rawApiData: z.any().optional(),
-  collectionTimestamp: z.number().optional(),
-  topContent: z.array(z.any()).optional(),
+  // Essential fields only
+  uniqueId: z.string(), // @username (handle)
+  bio: z.string().optional(), // Profile description
+  isVerified: z.boolean().default(false), // Blue checkmark status
+  isPrivate: z.boolean().default(false), // Private account flag
+  analyticsOn: z.boolean().default(false), // Analytics enabled
+  region: z.string().optional(), // Account region
+  language: z.string().optional(), // Primary language
+  createTime: z.union([z.string(), z.number()]).optional(), // Account creation date
+  followers: z.number().default(0), // Follower count
+  following: z.number().default(0), // Following count
+  // Optional demographics data
+  demographics: z.object({
+    genderFemale: z.number().default(0),
+    genderMale: z.number().default(0),
+    genderOther: z.number().default(0),
+    age18to24: z.number().default(0),
+    age25to34: z.number().default(0),
+    age35to44: z.number().default(0),
+    age45to54: z.number().default(0),
+    age55plus: z.number().default(0),
+    uniqueViewers: z.number().default(0),
+    newViewers: z.number().default(0),
+    returningViewers: z.number().default(0),
+    geography: z.array(z.object({
+      rank: z.number(),
+      countryName: z.string(),
+      countryCode: z.string(),
+      countryPct: z.number(),
+      cities: z.array(z.object({
+        name: z.string(),
+        pct: z.number()
+      })).default([])
+    })).default([])
+  }).optional()
 });
 
 const createInstagramDataSchema = z.object({
@@ -144,22 +147,7 @@ socialAccountsRouter.get("/:id", async (c) => {
         .limit(10);
     }
 
-    // If it's a TikTok account, get demographics and performance data
-    if (account[0].tiktok_accounts) {
-      demographics = await db
-        .select()
-        .from(tiktokAudienceDemographics)
-        .where(eq(tiktokAudienceDemographics.tiktokAccountId, account[0].tiktok_accounts.id))
-        .orderBy(tiktokAudienceDemographics.createdAt)
-        .limit(1);
-
-      contentPerformance = await db
-        .select()
-        .from(tiktokContentPerformance)
-        .where(eq(tiktokContentPerformance.tiktokAccountId, account[0].tiktok_accounts.id))
-        .orderBy(tiktokContentPerformance.createdAt)
-        .limit(10);
-    }
+    // TikTok data is now simplified - no separate demographics/performance tables
 
     return c.json({
       ...account[0].social_accounts,
@@ -299,46 +287,19 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
       .where(eq(tiktokAccounts.socialAccountId, accountId))
       .limit(1);
 
-    // Extract content and audience data for separate tables, and remove fields not in DB
-    const { 
-      topContent, 
-      audienceGenderSplit,
-      audienceAgeDistribution,
-      audienceTopCountries,
-      collectionTimestamp,
-      ...tiktokData 
-    } = validatedData;
-
-    // Map fields to database column names
+    // Map fields to database column names (simplified)
     const dbData = {
-      socialAccountId: tiktokData.socialAccountId,
-      tiktokUserId: tiktokData.tiktokUserId,
-      secUid: tiktokData.secUid,
-      uniqueId: tiktokData.uniqueId,
-      nickname: tiktokData.nickname,
-      avatarUrl: tiktokData.avatarUrl,
-      bio: tiktokData.bio,
-      isVerified: tiktokData.isVerified,
-      isPrivate: tiktokData.isPrivate,
-      region: tiktokData.region,
-      language: tiktokData.language,
-      createTime: tiktokData.createTime ? String(tiktokData.createTime) : null,
-      analyticsOn: tiktokData.analyticsOn,
-      proAccountInfo: tiktokData.proAccountInfo,
-      followerCount: tiktokData.followerCount,
-      followingCount: tiktokData.followingCount,
-      likeCount: tiktokData.likeCount,
-      videoCount: tiktokData.videoCount,
-      profileViewCount: tiktokData.profileViewCount,
-      friendCount: tiktokData.friendCount,
-      videoViews30d: tiktokData.videoViews30d,
-      profileViews30d: tiktokData.profileViews30d,
-      shares30d: tiktokData.shares30d,
-      comments30d: tiktokData.comments30d,
-      engagementRate: tiktokData.engagementRate,
-      avgWatchTime: tiktokData.avgWatchTime,
-      completionRate: tiktokData.completionRate,
-      rawApiData: tiktokData.rawApiData,
+      socialAccountId: validatedData.socialAccountId,
+      uniqueId: validatedData.uniqueId,
+      bio: validatedData.bio,
+      isVerified: validatedData.isVerified,
+      isPrivate: validatedData.isPrivate,
+      analyticsOn: validatedData.analyticsOn,
+      region: validatedData.region,
+      language: validatedData.language,
+      createTime: validatedData.createTime ? String(validatedData.createTime) : null,
+      followers: validatedData.followers,
+      following: validatedData.following,
     };
 
     let tiktokAccountData;
@@ -364,75 +325,103 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
         .returning();
     }
 
-    // If we have content performance data, insert it
-    if (topContent && topContent.length > 0) {
-      const contentData = topContent.map((item: any) => ({
-        tiktokAccountId: tiktokAccountData[0].id,
-        contentId: item.itemId || item.id || '',
-        contentType: item.itemType ? String(item.itemType) : null,
-        description: item.description || item.desc,
-        createdTime: item.createTime ? String(item.createTime) : null,
-        duration: item.duration,
-        coverUrl: item.coverUrl,
-        playCount: String(item.playCount || 0),
-        likeCount: item.likeCount || 0,
-        commentCount: item.commentCount || 0,
-        shareCount: item.shareCount || 0,
-        favoriteCount: item.favoriteCount || 0,
-        visibility: item.visibility,
-        isPinned: item.isPinned || false,
-      }));
-
-      // Delete old content data and insert new
-      await db
-        .delete(tiktokContentPerformance)
-        .where(eq(tiktokContentPerformance.tiktokAccountId, tiktokAccountData[0].id));
-      
-      if (contentData.length > 0) {
-        await db.insert(tiktokContentPerformance).values(contentData);
-      }
-    }
-
-    // If we have audience demographics, insert it
-    if ((audienceGenderSplit || audienceAgeDistribution || audienceTopCountries) && 
-        (audienceGenderSplit || audienceAgeDistribution || audienceTopCountries)) {
-      const audienceData = {
-        tiktokAccountId: tiktokAccountData[0].id,
-        genderMalePct: audienceGenderSplit?.male || null,
-        genderFemalePct: audienceGenderSplit?.female || null,
-        genderOtherPct: audienceGenderSplit?.other || null,
-        age13_17Pct: audienceAgeDistribution?.['13-17'] || null,
-        age18_24Pct: audienceAgeDistribution?.['18-24'] || null,
-        age25_34Pct: audienceAgeDistribution?.['25-34'] || null,
-        age35_44Pct: audienceAgeDistribution?.['35-44'] || null,
-        age45_54Pct: audienceAgeDistribution?.['45-54'] || null,
-        age55PlusPct: audienceAgeDistribution?.['55+'] || null,
-        topCountries: audienceTopCountries || null,
-        topCities: null,
-        activeTimes: null,
-        devices: null,
-      };
-
-      // Delete old audience data and insert new
-      await db
-        .delete(tiktokAudienceDemographics)
-        .where(eq(tiktokAudienceDemographics.tiktokAccountId, tiktokAccountData[0].id));
-      
-      await db.insert(tiktokAudienceDemographics).values(audienceData);
-    }
-
     // Update social account verification status
     await db
       .update(socialAccounts)
       .set({
         isVerified: true,
         lastVerifiedAt: new Date(),
-        platformUserId: validatedData.tiktokUserId || account[0].platformUserId,
+        platformUserId: validatedData.uniqueId || account[0].platformUserId,
         updatedAt: new Date(),
       })
       .where(eq(socialAccounts.id, accountId));
 
-    return c.json(tiktokAccountData[0]);
+    // Handle demographics data if provided
+    let demographicsResult = null;
+    if (validatedData.demographics) {
+      try {
+        console.log("Processing TikTok demographics data...");
+        
+        // Get the TikTok account ID
+        const tiktokAccountId = tiktokAccountData[0].id;
+        
+        // Insert demographics record
+        const [demographicsRecord] = await db
+          .insert(tiktokViewerDemographics)
+          .values({
+            tiktokAccountId,
+            rangeDays: 7, // Default to 7 days
+            genderFemale: validatedData.demographics.genderFemale?.toString() || '0',
+            genderMale: validatedData.demographics.genderMale?.toString() || '0',
+            genderOther: validatedData.demographics.genderOther?.toString() || '0',
+            age18to24: validatedData.demographics.age18to24?.toString() || '0',
+            age25to34: validatedData.demographics.age25to34?.toString() || '0',
+            age35to44: validatedData.demographics.age35to44?.toString() || '0',
+            age45to54: validatedData.demographics.age45to54?.toString() || '0',
+            age55plus: validatedData.demographics.age55plus?.toString() || '0',
+            uniqueViewers: validatedData.demographics.uniqueViewers || 0,
+            newViewers: validatedData.demographics.newViewers || 0,
+            returningViewers: validatedData.demographics.returningViewers || 0,
+          })
+          .returning();
+
+        // Insert geography records if provided
+        if (validatedData.demographics.geography && Array.isArray(validatedData.demographics.geography)) {
+          const geographyRecords = [];
+          
+          for (const country of validatedData.demographics.geography) {
+            if (!country.cities || country.cities.length === 0) {
+              // Country without cities
+              geographyRecords.push({
+                demographicsId: demographicsRecord.id,
+                countryCode: country.countryCode,
+                countryName: country.countryName,
+                countryPct: country.countryPct?.toString() || '0',
+                cityName: null,
+                cityPct: null,
+                rank: country.rank,
+              });
+            } else {
+              // Country with cities - insert one record per city
+              for (const city of country.cities) {
+                geographyRecords.push({
+                  demographicsId: demographicsRecord.id,
+                  countryCode: country.countryCode,
+                  countryName: country.countryName,
+                  countryPct: country.countryPct?.toString() || '0',
+                  cityName: city.name,
+                  cityPct: city.pct?.toString() || '0',
+                  rank: country.rank,
+                });
+              }
+            }
+          }
+          
+          if (geographyRecords.length > 0) {
+            await db.insert(tiktokViewerGeography).values(geographyRecords);
+          }
+        }
+        
+        demographicsResult = {
+          demographicsId: demographicsRecord.id,
+          message: 'Demographics data saved successfully'
+        };
+        
+        console.log("TikTok demographics saved successfully:", demographicsResult);
+      } catch (demographicsError) {
+        console.error("Error saving TikTok demographics:", demographicsError);
+        // Don't fail the whole request if demographics saving fails
+        demographicsResult = {
+          error: 'Failed to save demographics data',
+          details: demographicsError.message
+        };
+      }
+    }
+
+    return c.json({
+      ...tiktokAccountData[0],
+      demographics: demographicsResult
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error("Validation error:", error.errors);
@@ -440,6 +429,97 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
     }
     console.error("Error updating TikTok data:", error);
     return c.json({ error: "Failed to update TikTok data", details: error.message }, 500);
+  }
+});
+
+// Save TikTok demographics data
+socialAccountsRouter.post("/:id/tiktok-demographics", async (c) => {
+  const accountId = c.req.param("id");
+  const db = c.get("db");
+
+  try {
+    const body = await c.req.json();
+    console.log("Received TikTok demographics for account:", accountId);
+    
+    // Verify the social account exists and get TikTok account
+    const tiktokAccount = await db
+      .select()
+      .from(tiktokAccounts)
+      .where(eq(tiktokAccounts.socialAccountId, accountId))
+      .limit(1);
+
+    if (!tiktokAccount.length) {
+      return c.json({ error: "TikTok account not found" }, 404);
+    }
+
+    const tiktokAccountId = tiktokAccount[0].id;
+    
+    // Insert demographics record
+    const [demographicsRecord] = await db
+      .insert(tiktokViewerDemographics)
+      .values({
+        tiktokAccountId,
+        rangeDays: body.rangeDays || 7,
+        genderFemale: body.genderFemale?.toString() || '0',
+        genderMale: body.genderMale?.toString() || '0',
+        genderOther: body.genderOther?.toString() || '0',
+        age18to24: body.age18to24?.toString() || '0',
+        age25to34: body.age25to34?.toString() || '0',
+        age35to44: body.age35to44?.toString() || '0',
+        age45to54: body.age45to54?.toString() || '0',
+        age55plus: body.age55plus?.toString() || '0',
+        uniqueViewers: body.uniqueViewers || 0,
+        newViewers: body.newViewers || 0,
+        returningViewers: body.returningViewers || 0,
+      })
+      .returning();
+
+    // Insert geography records if provided
+    if (body.geography && Array.isArray(body.geography)) {
+      const geographyRecords = [];
+      
+      for (const country of body.geography) {
+        // Insert country-level record
+        if (!country.cities || country.cities.length === 0) {
+          // Country without cities
+          geographyRecords.push({
+            demographicsId: demographicsRecord.id,
+            countryCode: country.countryCode,
+            countryName: country.countryName,
+            countryPct: country.countryPct?.toString() || '0',
+            cityName: null,
+            cityPct: null,
+            rank: country.rank,
+          });
+        } else {
+          // Country with cities - insert one record per city
+          for (const city of country.cities) {
+            geographyRecords.push({
+              demographicsId: demographicsRecord.id,
+              countryCode: country.countryCode,
+              countryName: country.countryName,
+              countryPct: country.countryPct?.toString() || '0',
+              cityName: city.name,
+              cityPct: city.pct?.toString() || '0',
+              rank: country.rank,
+            });
+          }
+        }
+      }
+      
+      if (geographyRecords.length > 0) {
+        await db.insert(tiktokViewerGeography).values(geographyRecords);
+      }
+    }
+
+    return c.json({ 
+      success: true, 
+      demographicsId: demographicsRecord.id,
+      message: 'Demographics collected successfully' 
+    });
+  } catch (error) {
+    console.error("Error saving TikTok demographics:", error);
+    return c.json({ error: "Failed to save TikTok demographics", details: error.message }, 500);
   }
 });
 

@@ -253,21 +253,39 @@ const AppContent = () => {
         } else {
           console.log('Cannot save: account or user missing', { account, user });
         }
-      } else if (message.type === 'tiktokDataCollected') {
-        const { payload, accountId, handle } = message;
-        console.log('TikTok data collected:', payload, 'for account:', accountId);
+      } else if (message.type === 'tiktokAccountComplete') {
+        const { accountId, handle, profileData, demographics, hasDemographics } = message;
+        console.log('TikTok account creation complete:', { 
+          accountId, 
+          handle, 
+          hasDemographics,
+          profileData 
+        });
         
         // Find the account by ID
         const account = socialAccounts.find(acc => acc.id === accountId);
-        console.log('Found TikTok account:', account, 'User:', user);
         
         if (account && user) {
           try {
-            console.log('Updating TikTok data for account:', account.id, 'handle:', account.handle);
+            // Save profile data with demographics in a single call
+            console.log('Saving TikTok profile data with demographics:', {
+              hasDemographics,
+              hasProfileData: !!profileData,
+              hasDemographicsData: !!(profileData.demographics)
+            });
             
-            // Save TikTok data to API with handle validation
-            const result = await apiClient.updateTikTokData(account.id, payload, account.handle);
-            console.log('TikTok data update result:', result);
+            const result = await apiClient.updateTikTokData(
+              account.id, 
+              profileData, 
+              account.handle, 
+              hasDemographics
+            );
+            
+            console.log('TikTok data saved successfully:', result);
+            
+            if (result.demographics) {
+              console.log('Demographics saved:', result.demographics);
+            }
             
             // Remove from verifying state
             setVerifyingAccounts(prev => {
@@ -278,18 +296,15 @@ const AppContent = () => {
             
             // Reload social accounts from API
             const updatedAccounts = await apiClient.getUserSocialAccounts(user.id);
-            console.log('Updated accounts from API after verification:', updatedAccounts);
-            console.log('First account structure:', updatedAccounts[0]);
             setSocialAccounts(updatedAccounts);
             
             // Fetch eligible actions for the updated accounts
             await fetchActionsForAccounts(updatedAccounts);
             
-            console.log('✅ TikTok account successfully added and verified!');
-            
+            console.log('✅ TikTok account successfully added' + 
+                       (hasDemographics ? ' with demographics!' : '!'));
           } catch (error) {
-            console.error('Failed to save TikTok data:', error);
-            // Remove from verifying state and remove account
+            console.error('❌ Failed to complete TikTok account creation:', error);
             setVerifyingAccounts(prev => {
               const newSet = new Set(prev);
               newSet.delete(accountId);
@@ -298,7 +313,7 @@ const AppContent = () => {
             setSocialAccounts(prev => prev.filter(acc => acc.id !== account.id));
           }
         } else {
-          console.log('Cannot save TikTok data: account or user missing', { account, user });
+          console.log('Cannot complete TikTok account: account or user missing', { account, user });
         }
       } else if (message.type === 'collectionError') {
         console.error('Collection error:', message.payload);

@@ -6,21 +6,89 @@ import type { ChainNamespace } from '@reown/appkit-common'
 import { API_BASE_URL } from './api'
 
 // Custom verifier that integrates with our backend
-class XADBackendVerifier extends SIWXVerifier {
+export class XADBackendVerifier extends SIWXVerifier {
   // Required property for SIWXVerifier interface
   readonly chainNamespace: ChainNamespace = 'eip155'
+  
+  // Cache JWT validation result to avoid multiple API calls
+  private jwtValidCache: { valid: boolean; timestamp: number } | null = null
+  private readonly CACHE_DURATION = 5000 // 5 seconds cache
+  
+  private async isJWTValid(): Promise<boolean> {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return false
+    
+    // Check cache
+    if (this.jwtValidCache && (Date.now() - this.jwtValidCache.timestamp) < this.CACHE_DURATION) {
+      return this.jwtValidCache.valid
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/session`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      const isValid = response.ok
+      
+      // Update cache
+      this.jwtValidCache = { valid: isValid, timestamp: Date.now() }
+      
+      if (!isValid) {
+        localStorage.removeItem('auth_token')
+      }
+      
+      return isValid
+    } catch (error) {
+      console.error('JWT validation error:', error)
+      localStorage.removeItem('auth_token')
+      this.jwtValidCache = { valid: false, timestamp: Date.now() }
+      return false
+    }
+  }
 
-  shouldVerify(_session: SIWXSession): boolean {
-    // Always verify with our backend
+  shouldVerify(session: SIWXSession): boolean {
+    // Check if session has the required data
+    const message = (session as any)?.message
+    const signature = (session as any)?.signature
+    
+    // If no message or signature, don't attempt to verify
+    if (!message || !signature) {
+      console.log('No message or signature in session, skipping verification')
+      return false
+    }
+    
+    // Check if this looks like a stale session (old timestamp)
+    try {
+      if (message.includes('Issued At:')) {
+        const issuedAtMatch = message.match(/Issued At: (.+)/)
+        if (issuedAtMatch) {
+          const issuedAt = new Date(issuedAtMatch[1])
+          const now = new Date()
+          const hoursSinceIssued = (now.getTime() - issuedAt.getTime()) / (1000 * 60 * 60)
+          
+          // If the message is older than 1 hour, consider it stale
+          if (hoursSinceIssued > 1) {
+            console.log('Session message is stale (>1 hour old), skipping verification')
+            return false
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error checking session staleness:', e)
+    }
+    
+    // Note: We can't use async here, so we'll check JWT in verify()
+    // Default to verify unless we know it's stale
     return true
   }
 
   async verify(session: SIWXSession): Promise<boolean> {
-    // Access message and signature from the session at the root level
-    const message = (session as any).message
-    let signature = (session as any).signature
+    // Access message and signature from the session
+    const message = (session as any)?.message
+    let signature = (session as any)?.signature
     
     if (!message || !signature) {
+      console.log('No message or signature in session')
       return false
     }
     
@@ -29,6 +97,7 @@ class XADBackendVerifier extends SIWXVerifier {
       signature = '0x' + signature
     }
     
+    console.log('Verifying signature with backend...')
     
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify`, {
@@ -41,15 +110,26 @@ class XADBackendVerifier extends SIWXVerifier {
       })
 
       if (!response.ok) {
+        console.log('Signature verification failed on backend')
         return false
       }
 
       const result = await response.json()
-      const { success, token } = result
+      const { success, token, brandId } = result
       
       if (success && token) {
         // Store JWT token for API requests
         localStorage.setItem('auth_token', token)
+        
+        // Store brandId for dashboard use
+        if (brandId) {
+          console.log('Storing brandId from auth:', brandId)
+          localStorage.setItem('brandId', brandId)
+        }
+        
+        console.log('New JWT token stored successfully')
+        // Clear cache to force revalidation next time
+        this.jwtValidCache = null
         return true
       }
       
@@ -96,13 +176,6 @@ export const siwxConfig = new DefaultSIWX({
   }),
   // Add our custom verifier to handle backend authentication
   verifiers: [new XADBackendVerifier()],
-  // Make signature optional - only required for protected routes
-  required: (() => {
-    if (typeof window === 'undefined') return false
-    
-    // Check if we're on a protected route
-    const path = window.location.hash.replace('#', '') || '/'
-    const protectedRoutes = ['/dashboard']
-    return protectedRoutes.some(route => path.startsWith(route))
-  })()
+  // Make SIWX optional - users can connect wallet without signing
+  required: false
 })

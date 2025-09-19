@@ -1,10 +1,13 @@
-import { AdTargetingFormBeta } from '../components/AdTargetingForm/AdTargetingFormBeta'
+import { SimplifiedAdTargetingForm } from '../components/AdTargetingForm/SimplifiedAdTargetingForm'
 import { useNavigate } from 'react-router-dom'
+import { useAppKitAccount } from '@reown/appkit/react'
 
 export default function Advertise() {
   const navigate = useNavigate()
+  const { address, isConnected } = useAppKitAccount()
 
-  const handleSave = () => {
+  const handleSave = (campaignData: any) => {
+    console.log('Campaign created:', campaignData)
     // After successful campaign creation, redirect to dashboard
     navigate('/dashboard')
   }
@@ -12,11 +15,15 @@ export default function Advertise() {
   return (
     <section className="py-8 sm:py-12 lg:py-16">
       <div className="container mx-auto px-4 max-w-4xl">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Create Campaign</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Create TikTok Campaign</h1>
         <p className="text-muted-foreground mb-6 sm:mb-8">
-          Launch your campaign on TikTok or Instagram. Beta version - no targeting requirements needed.
+          Launch your targeted advertising campaign with dynamic pricing
         </p>
-        <AdTargetingFormBeta onSave={handleSave} />
+        <SimplifiedAdTargetingForm 
+          onSave={handleSave} 
+          mockWalletConnected={isConnected}
+          mockWalletAddress={address}
+        />
       </div>
     </section>
   )

@@ -34,6 +34,35 @@ const wagmiAdapter = new WagmiAdapter({
   ssr: false
 })
 
+// Clear stale SIWX sessions on init (not wallet connection)
+// This prevents persistent stale data issues
+if (typeof window !== 'undefined') {
+  // Manually clear SIWX-related localStorage keys
+  try {
+    const keysToRemove: string[] = []
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key) {
+        // Remove SIWX session data but keep wallet connection data
+        if (key.includes('@appkit/siwx') || 
+            key.includes('appkit-siwx') ||
+            key.includes('@reown/appkit-siwx')) {
+          keysToRemove.push(key)
+        }
+      }
+    }
+    
+    // Remove the identified keys
+    keysToRemove.forEach(key => {
+      console.log('Clearing stale SIWX session:', key)
+      localStorage.removeItem(key)
+    })
+  } catch (error) {
+    console.error('Error clearing SIWX sessions:', error)
+  }
+}
+
 // Create modal with SIWX authentication  
 createAppKit({
   adapters: [wagmiAdapter],
@@ -41,8 +70,12 @@ createAppKit({
   projectId,
   metadata,
   siwx: siwxConfig,
+  // enableReconnect defaults to true - keep wallets connected across page loads
   features: {
-    analytics: true
+    analytics: true,
+    swaps: false,  // Disable swaps feature
+    onramp: false, // Disable onramp feature
+    email: false   // Disable email login
   },
   themeMode: 'dark'
 })

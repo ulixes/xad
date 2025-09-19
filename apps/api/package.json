@@ -4,13 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "dotenvx run -f .env -- wrangler dev",
+    "ngrok": " ngrok http 3001",
     "build": "echo 'No build step for API'",
-    "start": "dotenvx run -- bun index.ts",
-    "deploy": "wrangler deploy",
-    "db:generate": "dotenvx run -- drizzle-kit generate",
-    "db:migrate": "dotenvx run -- bun src/db/migrate.ts",
-    "db:seed": "dotenvx run -- bun src/db/seed.ts"
+    "start": "dotenvx run -f .env -- bun index.ts",
+    "db:generate": "dotenvx run -f .env -- drizzle-kit generate",
+    "db:migrate": "dotenvx run -f .env -- drizzle-kit migrate"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -24,11 +22,13 @@
     "@hono/node-server": "^1.19.2",
     "@hono/zod-validator": "^0.7.2",
     "@neondatabase/serverless": "^1.0.1",
+    "@ngrok/ngrok": "^1.5.2",
     "@privy-io/server-auth": "^1.32.2",
     "@types/uuid": "^10.0.0",
     "drizzle-orm": "^0.44.5",
     "hono": "^4.9.4",
     "jose": "^6.1.0",
+    "prisma": "^6.16.2",
     "uuid": "^11.1.0",
     "viem": "^2.37.5",
     "wrangler": "^4.33.2",

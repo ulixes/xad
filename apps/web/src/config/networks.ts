@@ -5,44 +5,34 @@ export const getNetworkConfig = () => {
   const networkEnv = import.meta.env.VITE_NETWORK_ENV || 'development'
   const isProduction = networkEnv === 'production'
   
-  // Payment currency configuration (ETH or USDC)
-  const paymentCurrency = (import.meta.env.VITE_PAYMENT_CURRENCY as 'ETH' | 'USDC') || 
-    (isProduction ? 'USDC' : 'ETH')
-  
   return {
     // Network selection
     network: isProduction ? base : baseSepolia,
     networkName: isProduction ? 'Base' : 'Base Sepolia',
+    chainId: isProduction ? 8453 : 84532,
     
-    // Payment configuration
-    paymentCurrency, // 'ETH' or 'USDC'
+    // Smart Contract (CampaignPayments)
+    campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
+      '0xB32856642B5Ec5742ed979D31B82AB5CE30383FB', // Base Sepolia deployment
     
-    // Contract addresses
-    escrowContract: import.meta.env.VITE_ESCROW_ADDRESS || '0x16a5274cCd454f90E99Ea013c89c38381b635f5b',
+    // USDC Token Address (payment currency)
+    usdcAddress: isProduction
+      ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // Base Mainnet USDC
+      : '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base Sepolia USDC
     
-    // Payment token (USDC) - only used when paymentCurrency === 'USDC'
-    paymentToken: isProduction
-      ? (import.meta.env.VITE_PAYMENT_TOKEN_MAINNET || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
-      : (import.meta.env.VITE_PAYMENT_TOKEN_SEPOLIA || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'),
-    
-    // ETH configuration - only used when paymentCurrency === 'ETH'
-    ethToUsdRate: parseFloat(import.meta.env.VITE_ETH_USD_RATE || '3000'), // Default $3000/ETH
-    
-    // RPC URLs (using free Base RPCs)
+    // RPC URLs
     rpcUrl: isProduction
       ? 'https://mainnet.base.org'
       : 'https://sepolia.base.org',
-      
-    // Chain IDs  
-    chainId: isProduction ? 8453 : 84532,
-    
-    // Faucet info for testnet
-    faucetUrl: isProduction ? null : 'https://www.coinbase.com/faucets/base-sepolia-faucet',
     
     // Block explorer
     blockExplorer: isProduction 
       ? 'https://basescan.org'
       : 'https://sepolia.basescan.org',
+    
+    // Faucet info for testnet
+    faucetUrl: isProduction ? null : 'https://www.alchemy.com/faucets/base-sepolia',
+    usdcFaucetUrl: isProduction ? null : 'https://faucet.circle.com/', // Circle's USDC faucet
       
     // Environment flags
     isProduction,
@@ -50,88 +40,61 @@ export const getNetworkConfig = () => {
   }
 }
 
-// USDC Contract ABI (for token payments)
+// USDC has 6 decimals
+export const USDC_DECIMALS = 6
+
+// Export commonly used ABIs
 export const USDC_ABI = [
   {
-    "inputs": [
-      { "name": "to", "type": "address" },
-      { "name": "amount", "type": "uint256" }
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
     ],
-    "name": "transfer",
-    "outputs": [{ "name": "", "type": "bool" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'approve',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function'
   },
   {
-    "inputs": [
-      { "name": "owner", "type": "address" },
-      { "name": "spender", "type": "address" }
-    ],
-    "name": "allowance",
-    "outputs": [{ "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ name: 'account', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   },
   {
-    "inputs": [
-      { "name": "spender", "type": "address" },
-      { "name": "amount", "type": "uint256" }
-    ],
-    "name": "approve",
-    "outputs": [{ "name": "", "type": "bool" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "name": "account", "type": "address" }],
-    "name": "balanceOf",
-    "outputs": [{ "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{ "name": "", "type": "uint8" }],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ name: 'spender', type: 'address' }],
+    name: 'allowance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const
 
-// Simple Escrow Contract ABI (you'll need to deploy this)
-export const ESCROW_ABI = [
+export const CAMPAIGN_PAYMENTS_ABI = [
   {
-    "inputs": [
-      { "name": "campaignId", "type": "bytes32" },
-      { "name": "token", "type": "address" },
-      { "name": "amount", "type": "uint256" }
+    inputs: [
+      { name: 'campaignId', type: 'string' },
+      { name: 'country', type: 'string' },
+      { name: 'targetGender', type: 'bool' },
+      { name: 'targetAge', type: 'bool' },
+      { name: 'verifiedOnly', type: 'bool' }
     ],
-    "name": "depositForCampaign",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'depositForCampaign',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'country', type: 'string' },
+      { name: 'targetGender', type: 'bool' },
+      { name: 'targetAge', type: 'bool' },
+      { name: 'verifiedOnly', type: 'bool' }
+    ],
+    name: 'calculatePrice',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const
-
-// Payment amount helpers
-export const formatPaymentAmount = (dollarAmount: number, tokenDecimals: number = 6): bigint => {
-  // For USDC: 6 decimals, so $100 = 100000000 (100 * 10^6)
-  return BigInt(Math.round(dollarAmount * Math.pow(10, tokenDecimals)))
-}
-
-export const formatDisplayAmount = (tokenAmount: bigint, tokenDecimals: number = 6): string => {
-  const divisor = Math.pow(10, tokenDecimals)
-  const amount = Number(tokenAmount) / divisor
-  return `$${amount.toFixed(2)}`
-}
-
-// Network validation
-export const validateNetwork = (chainId: number): boolean => {
-  const config = getNetworkConfig()
-  return chainId === config.chainId
-}
-
-export const getNetworkSwitchMessage = (): string => {
-  const config = getNetworkConfig()
-  return `Please switch to ${config.networkName} network to continue`
-}

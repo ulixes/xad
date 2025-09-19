@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { AuthService } from '../services/auth'
 import { authMiddleware } from '../middleware/auth'
 import { ConfigManager } from '../config'
-import { users } from '../db/schema'
+import { users, brands } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import type { Env } from '../types'
 
@@ -91,6 +91,18 @@ authRoutes.post('/verify', zValidator('json', verifySchema), async (c) => {
       user = newUser
     }
 
+    // Find or create brand for this wallet
+    let [brand] = await db.select().from(brands)
+      .where(eq(brands.walletAddress, address))
+      .limit(1)
+
+    if (!brand) {
+      // Create new brand for this wallet
+      [brand] = await db.insert(brands).values({
+        walletAddress: address
+      }).returning()
+    }
+
     // Create JWT token
     const config = ConfigManager.fromContext(c)
     const token = await AuthService.createToken(address, chainId, user[0]!.id, config)
@@ -102,7 +114,8 @@ authRoutes.post('/verify', zValidator('json', verifySchema), async (c) => {
         id: user[0]!.id,
         address: user[0]!.walletAddress,
         status: user[0]!.status
-      }
+      },
+      brandId: brand.id
     })
   } catch (error) {
     console.error('SIWX verification error:', error)
@@ -134,6 +147,11 @@ authRoutes.get('/session', authMiddleware, async (c) => {
       }, 404)
     }
 
+    // Get brand for this user
+    const [brand] = await db.select().from(brands)
+      .where(eq(brands.walletAddress, session.address))
+      .limit(1)
+
     return c.json({
       success: true,
       session: {
@@ -146,7 +164,8 @@ authRoutes.get('/session', authMiddleware, async (c) => {
           email: user[0]!.email,
           status: user[0]!.status
         }
-      }
+      },
+      brandId: brand?.id || null
     })
   } catch (error) {
     console.error('Session fetch error:', error)

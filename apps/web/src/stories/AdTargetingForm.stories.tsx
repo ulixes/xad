@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AdTargetingForm } from '../components/AdTargetingForm/AdTargetingForm';
+import { AdTargetingFormStorybook } from '../components/AdTargetingForm/AdTargetingFormStorybook';
 import type { TargetingRule } from '../types/platform-schemas';
 
-const meta: Meta<typeof AdTargetingForm> = {
+const meta: Meta<typeof AdTargetingFormStorybook> = {
   title: 'ZK Advertising/AdTargetingForm',
-  component: AdTargetingForm,
+  component: AdTargetingFormStorybook,
   parameters: {
     layout: 'fullscreen',
     docs: {
@@ -28,12 +28,15 @@ type Story = StoryObj<typeof meta>;
 export const Empty: Story = {
   args: {
     onSave: (rule) => console.log('Saved rule:', rule),
-    onCancel: () => console.log('Cancelled')
+    onCancel: () => console.log('Cancelled'),
+    mockWalletConnected: false
   }
 };
 
 export const TikTokHighEngagement: Story = {
   args: {
+    mockWalletConnected: true,
+    mockWalletAddress: '0xAbC123...789',
     initialRule: {
       id: 'tiktok-targeting-1',
       name: 'High-Engagement TikTok Creators',
@@ -86,6 +89,7 @@ export const TikTokHighEngagement: Story = {
 
 export const RedditPowerUsers: Story = {
   args: {
+    mockWalletConnected: true,
     initialRule: {
       id: 'reddit-targeting-1',
       name: 'Reddit Power Users & Top Contributors',
@@ -132,6 +136,7 @@ export const RedditPowerUsers: Story = {
 
 export const Web3SocialTargeting: Story = {
   args: {
+    mockWalletConnected: true,
     initialRule: {
       id: 'web3-targeting-1',
       name: 'Web3 Native Users',
@@ -160,6 +165,7 @@ export const Web3SocialTargeting: Story = {
 
 export const InstagramCreatorWithDemographics: Story = {
   args: {
+    mockWalletConnected: true,
     initialRule: {
       id: 'instagram-targeting-1',
       name: 'Fashion & Beauty Instagram Influencers',
@@ -236,6 +242,7 @@ export const InstagramCreatorWithDemographics: Story = {
 
 export const FacebookPageWithInsights: Story = {
   args: {
+    mockWalletConnected: true,
     initialRule: {
       id: 'facebook-targeting-1',
       name: 'High-Growth Facebook Pages',
@@ -312,6 +319,7 @@ export const FacebookPageWithInsights: Story = {
 
 export const InstagramLifestyleInfluencer: Story = {
   args: {
+    mockWalletConnected: true,
     initialRule: {
       id: 'instagram-targeting-2',
       name: 'Lifestyle Instagram Creators - Millennial Focus',
@@ -388,6 +396,7 @@ export const InstagramLifestyleInfluencer: Story = {
 
 export const BetaSimplified: Story = {
   args: {
+    mockWalletConnected: false,
     initialRule: {
       id: 'beta-simple-1',
       name: 'Simple Campaign',

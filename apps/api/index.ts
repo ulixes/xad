@@ -10,6 +10,7 @@ import withdrawalsRoutes from "./src/routes/withdrawals";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
+import { webhookListener } from "./src/services/webhookListener";
 
 // Define the Hono app with typed bindings
 const app = new Hono<{ Bindings: Env }>();
@@ -34,8 +35,16 @@ app.use("*", async (c, next) => {
       // Allow Chrome extensions, localhost, and specific production domains
       if (!requestOrigin) return null;
       if (allowedOriginPattern.test(requestOrigin)) return requestOrigin;
-      // Add your production domains here if needed
-      if (requestOrigin === "https://xad.com") return requestOrigin;
+      // Add production domains
+      const allowedDomains = [
+        "https://xad.com",
+        "https://xad.vercel.app",
+        "https://xad-web.vercel.app",
+        "https://xad-production.vercel.app"
+      ];
+      if (allowedDomains.includes(requestOrigin)) return requestOrigin;
+      // Allow any Vercel preview deployments
+      if (requestOrigin.includes('.vercel.app')) return requestOrigin;
       return null;
     },
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -43,6 +52,7 @@ app.use("*", async (c, next) => {
       "Content-Type",
       "Authorization",
       "X-Request-Id",
+      "ngrok-skip-browser-warning",
     ],
     exposeHeaders: ["X-Request-Id"],
     maxAge: 86400,
@@ -68,6 +78,9 @@ app.route("/api/users", usersRoutes);
 app.route("/api/social-accounts", socialAccountsRoutes);
 app.route("/api/action-runs", actionRunsRoutes);
 app.route("/api/withdrawals", withdrawalsRoutes);
+
+// Webhook routes (no auth required)
+app.route("/", webhookListener.getApp());
 
 // Error handling
 app.onError((err, c) => {

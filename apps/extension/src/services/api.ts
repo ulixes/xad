@@ -30,6 +30,7 @@ class APIClient {
     // Get Privy access token if available
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true', // Skip ngrok warning page
       ...options.headers,
     };
 
@@ -192,10 +193,11 @@ class APIClient {
   async updateTikTokData(
     socialAccountId: string,
     payload: any,
-    expectedHandle: string
+    expectedHandle: string,
+    hasDemographics: boolean = false
   ): Promise<any> {
-    // Extract the actual username from collected data
-    const collectedUsername = payload.profile?.uniqueId;
+    // Handle new enriched payload structure with optional demographics
+    const collectedUsername = payload.uniqueId;
     
     // Validate that the collected username matches the expected handle
     if (!collectedUsername) {
@@ -209,58 +211,79 @@ class APIClient {
     // Transform the payload to match the API schema
     const tiktokData = {
       socialAccountId,
-      tiktokUserId: payload.profile?.userId || payload.rawApiData?.userBase?.id,
-      secUid: payload.profile?.secUid || payload.rawApiData?.userBase?.secUid,
       uniqueId: collectedUsername,
-      nickname: payload.profile?.nickname,
-      avatarUrl: payload.profile?.avatar,
-      bio: payload.profile?.bio,
-      isVerified: payload.profile?.verified || false,
-      isPrivate: payload.profile?.isPrivate || false,
-      region: payload.profile?.region,
-      language: payload.profile?.language,
-      createTime: payload.profile?.createTime,
-      analyticsOn: payload.profile?.analyticsOn,
-      proAccountInfo: payload.profile?.proAccountInfo,
-      
-      // Stats
-      followerCount: payload.stats?.followers || 0,
-      followingCount: payload.stats?.following || 0,
-      likeCount: payload.stats?.likes || 0,
-      videoCount: payload.stats?.videos || 0,
-      profileViewCount: payload.stats?.profileViews || 0,
-      friendCount: payload.stats?.friends || 0,
-      
-      // Analytics data if available
-      videoViews30d: payload.analytics?.videoViews,
-      profileViews30d: payload.analytics?.profileViews,
-      shares30d: payload.analytics?.shares,
-      comments30d: payload.analytics?.comments,
-      engagementRate: payload.analytics?.engagementRate,
-      avgWatchTime: payload.analytics?.avgWatchTime,
-      completionRate: payload.analytics?.completionRate,
-      
-      // Audience demographics if available
-      audienceGenderSplit: payload.audience?.demographics?.gender,
-      audienceAgeDistribution: payload.audience?.demographics?.age,
-      audienceTopCountries: payload.audience?.demographics?.location,
-      
-      // Top content if available
-      topContent: payload.topContent?.slice(0, 10),
-      
-      // Raw API data for reference
-      rawApiData: payload.rawApiData,
-      collectionTimestamp: payload.collectionTimestamp || Date.now(),
+      bio: payload.bio || '',
+      isVerified: payload.isVerified || false,
+      isPrivate: payload.isPrivate || false,
+      analyticsOn: payload.analyticsOn || false,
+      region: payload.region || null,
+      language: payload.language || null,
+      createTime: payload.createTime || null,
+      // Include demographics if available
+      ...(hasDemographics && payload.demographics && {
+        demographics: {
+          genderFemale: payload.demographics.gender?.female || 0,
+          genderMale: payload.demographics.gender?.male || 0,
+          genderOther: payload.demographics.gender?.other || 0,
+          age18to24: payload.demographics.age?.['18-24'] || 0,
+          age25to34: payload.demographics.age?.['25-34'] || 0,
+          age35to44: payload.demographics.age?.['35-44'] || 0,
+          age45to54: payload.demographics.age?.['45-54'] || 0,
+          age55plus: payload.demographics.age?.['55+'] || 0,
+          uniqueViewers: payload.demographics.viewers?.unique || 0,
+          newViewers: payload.demographics.viewers?.new || 0,
+          returningViewers: payload.demographics.viewers?.returning || 0,
+          geography: payload.demographics.geography || []
+        }
+      })
     };
 
     console.log('Sending TikTok data to API:', {
       endpoint: `/api/social-accounts/${socialAccountId}/tiktok-data`,
-      data: tiktokData
+      data: tiktokData,
+      hasDemographics
     });
     
     return this.request(`/api/social-accounts/${socialAccountId}/tiktok-data`, {
       method: 'POST',
       body: JSON.stringify(tiktokData),
+    });
+  }
+
+  async saveTikTokDemographics(
+    socialAccountId: string,
+    demographics: {
+      genderFemale: number;
+      genderMale: number;
+      genderOther: number;
+      age18to24: number;
+      age25to34: number;
+      age35to44: number;
+      age45to54: number;
+      age55plus: number;
+      uniqueViewers: number;
+      newViewers: number;
+      returningViewers: number;
+      geography: Array<{
+        rank: number;
+        countryName: string;
+        countryCode: string;
+        countryPct: number;
+        cities: Array<{
+          name: string;
+          pct: number;
+        }>;
+      }>;
+    }
+  ): Promise<any> {
+    console.log('Sending TikTok demographics to API:', {
+      endpoint: `/api/social-accounts/${socialAccountId}/tiktok-demographics`,
+      data: demographics
+    });
+    
+    return this.request(`/api/social-accounts/${socialAccountId}/tiktok-demographics`, {
+      method: 'POST',
+      body: JSON.stringify(demographics),
     });
   }
 
