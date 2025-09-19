@@ -1,19 +1,13 @@
 import type { Context, Next } from 'hono'
-import { PrivyAuthService, type PrivyAuthSession } from '../services/privyAuth'
+import { PrivyAuthService } from '../services/privyAuth'
 import { ConfigManager } from '../config'
 import type { Env } from '../types'
 
-// Extend Hono context to include Privy auth session
-declare module 'hono' {
-  interface ContextVariableMap {
-    privySession: PrivyAuthSession
-  }
-}
-
 /**
- * Privy authentication middleware - verifies Privy access tokens
+ * User authentication middleware - for extension users
+ * Verifies Privy token for regular users (not brands)
  */
-export async function privyAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+export async function userAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   try {
     const config = ConfigManager.fromContext(c)
     const db = c.get('db')
@@ -40,12 +34,12 @@ export async function privyAuthMiddleware(c: Context<{ Bindings: Env }>, next: N
     // Get or create user session
     const session = await PrivyAuthService.getOrCreateUserFromPrivy(claims, db, config)
     
-    // Add session to context for use in protected routes
+    // Users don't need wallet addresses - they can use email or other auth methods
     c.set('privySession', session)
     
     await next()
   } catch (error) {
-    console.error('Privy auth middleware error:', error)
+    console.error('User auth middleware error:', error)
     return c.json({ 
       success: false, 
       error: 'Authentication failed' 
@@ -54,9 +48,9 @@ export async function privyAuthMiddleware(c: Context<{ Bindings: Env }>, next: N
 }
 
 /**
- * Optional Privy authentication middleware - doesn't block if no auth provided
+ * Optional user authentication - for endpoints that work with or without auth
  */
-export async function optionalPrivyAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+export async function optionalUserAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   try {
     const config = ConfigManager.fromContext(c)
     const db = c.get('db')
@@ -73,9 +67,8 @@ export async function optionalPrivyAuthMiddleware(c: Context<{ Bindings: Env }>,
     
     await next()
   } catch (error) {
-    console.error('Optional Privy auth middleware error:', error)
+    console.error('Optional user auth middleware error:', error)
     // Continue without auth if there's an error
     await next()
   }
 }
-

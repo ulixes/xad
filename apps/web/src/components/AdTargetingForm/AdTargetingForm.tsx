@@ -9,10 +9,10 @@ import { Checkbox } from '../ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { calculateCampaignPrice } from '../../utils/pricing-calculator';
-import { useAppKit, useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { PaymentFlowService } from '../../services/paymentFlow';
 import { getNetworkConfig } from '../../config/networks';
+import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 
 type Platform = 'tiktok' | 'reddit' | 'x' | 'instagram' | 'facebook' | 'farcaster';
 
@@ -81,9 +81,11 @@ interface AdTargetingFormProps {
 }
 
 export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
-  const { open } = useAppKit()
-  const { address, isConnected } = useAppKitAccount()
-  const { caipNetwork, switchNetwork } = useAppKitNetwork()
+  const { 
+    isPrivyAuthenticated,
+    walletAddress,
+    triggerSignIn
+  } = usePrivyAuth()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
   const networkConfig = getNetworkConfig()
@@ -136,26 +138,20 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
     
     // Debug wallet connection state
     console.log('Wallet connection state:', { 
-      isConnected, 
-      address, 
+      isPrivyAuthenticated, 
+      walletAddress, 
       hasWalletClient: !!walletClient,
-      currentNetwork: caipNetwork?.id,
       expectedChainId: networkConfig.chainId
     })
     
     // Check wallet connection
-    if (!isConnected || !address) {
+    if (!isPrivyAuthenticated || !walletAddress) {
       setPaymentError('Please connect your wallet first')
-      open()
+      await triggerSignIn()
       return
     }
 
-    // Check network
-    if (caipNetwork && caipNetwork.id !== networkConfig.chainId) {
-      setPaymentError(`Please switch to ${networkConfig.networkName} network`)
-      await switchNetwork(networkConfig.network)
-      return
-    }
+    // Network switching is handled by Privy and wagmi
 
     // Validate minimum amount
     if (!estimatedCost || estimatedCost.totalCost < 5) {
@@ -215,7 +211,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
       console.log('Starting unified payment flow...')
       const result = await PaymentFlowService.createCampaignWithPayment(
         campaignData,
-        address,
+        walletAddress,
         walletClient,
         publicClient
       )
@@ -548,7 +544,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
             )}
           </Button>
           <p className="text-muted-foreground mt-2">
-            {!isConnected ? 'Connect your wallet to proceed' : 'Minimum: $5'}
+            {!isPrivyAuthenticated ? 'Connect your wallet to proceed' : 'Minimum: $5'}
           </p>
         </div>
     </div>

@@ -1,50 +1,41 @@
-import { useAccount } from 'wagmi'
 import { useEffect, useState } from 'react'
 import { BrandDashboard, type Campaign } from '../components/BrandDashboard/BrandDashboard'
 import { useNavigate } from 'react-router-dom'
+import { usePrivyAuth } from '../hooks/usePrivyAuth'
 
 export function Dashboard() {
-  const { address, isConnected } = useAccount()
+  const { walletAddress, isPrivyAuthenticated, getAccessToken } = usePrivyAuth()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!isConnected || !address) {
+    if (!isPrivyAuthenticated) {
       setLoading(false)
       return
     }
 
     fetchCampaigns()
-  }, [isConnected, address])
-  
-  // Also fetch when component mounts/updates (for navigation)
-  useEffect(() => {
-    if (isConnected && address) {
-      fetchCampaigns()
-    }
-  }, [])
+  }, [isPrivyAuthenticated])
 
   const fetchCampaigns = async () => {
-    console.log('[Dashboard] fetchCampaigns called, address:', address)
-    if (!address) return
-
+    console.log('[Dashboard] fetchCampaigns called')
+    
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = await getAccessToken()
       
       console.log('[Dashboard] Auth token:', token ? 'exists' : 'missing')
-      console.log('[Dashboard] Wallet address:', address)
       
       if (!token) {
-        setError('Please sign in with your wallet first')
+        setError('Please sign in first')
         setLoading(false)
         return
       }
 
-      // Use the configured API URL and wallet address instead of brandId
+      // Use new endpoint that doesn't need wallet address
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-      const url = `${apiUrl}/campaigns/brand/${address}`
+      const url = `${apiUrl}/campaigns/my-campaigns`
       console.log('[Dashboard] Fetching campaigns from:', url)
       
       const response = await fetch(url, {
@@ -57,7 +48,6 @@ export function Dashboard() {
       if (!response.ok) {
         if (response.status === 401) {
           setError('Authentication required. Please sign in with your wallet.')
-          localStorage.removeItem('auth_token')
         } else {
           setError('Failed to fetch campaigns')
         }
@@ -103,8 +93,8 @@ export function Dashboard() {
       )}
       <BrandDashboard
         campaigns={campaigns}
-        isLoading={loading || !isConnected}
-        walletAddress={address}
+        isLoading={loading || !isPrivyAuthenticated}
+        walletAddress={walletAddress}
         onCreateCampaign={handleCreateCampaign}
         onRefresh={handleRefresh}
       />

@@ -2,7 +2,6 @@ import { Hono, type ExecutionContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import campaignRoutes from "./src/routes/campaigns";
-import authRoutes from "./src/routes/auth";
 import usersRoutes from "./src/routes/users";
 import socialAccountsRoutes from "./src/routes/social-accounts";
 import actionRunsRoutes from "./src/routes/action-runs";
@@ -72,7 +71,6 @@ app.get("/", (c) => {
 });
 
 // Routes
-app.route("/api/auth", authRoutes);
 app.route("/api/campaigns", campaignRoutes);
 app.route("/api/users", usersRoutes);
 app.route("/api/social-accounts", socialAccountsRoutes);

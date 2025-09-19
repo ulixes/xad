@@ -11,7 +11,6 @@
     "db:generate": "dotenvx run -f .env.local -- drizzle-kit generate",
     "db:migrate": "dotenvx run -f .env.local -- drizzle-kit migrate",
     "db:staging": "dotenvx run -f .env.staging -- drizzle-kit migrate"
-
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -26,7 +25,7 @@
     "@hono/zod-validator": "^0.7.2",
     "@neondatabase/serverless": "^1.0.1",
     "@ngrok/ngrok": "^1.5.2",
-    "@privy-io/server-auth": "^1.32.2",
+    "@privy-io/server-auth": "^1.32.5",
     "@types/uuid": "^10.0.0",
     "drizzle-orm": "^0.44.5",
     "hono": "^4.9.4",

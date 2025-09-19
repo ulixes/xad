@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { users, socialAccounts, instagramAccounts } from "../db/schema";
 import type { AppContext } from "../types";
-import { dualAuthMiddleware } from "../middleware/privyAuth";
+import { userAuthMiddleware } from "../middleware/userAuth";
 
 const usersRouter = new Hono<AppContext>();
 
@@ -20,7 +20,7 @@ const updateUserSchema = z.object({
 });
 
 // Get or create current user using Privy authentication
-usersRouter.post("/current", dualAuthMiddleware, async (c) => {
+usersRouter.post("/current", userAuthMiddleware, async (c) => {
   const db = c.get("db");
   const privySession = c.get("privySession");
   const authSession = c.get("authSession");

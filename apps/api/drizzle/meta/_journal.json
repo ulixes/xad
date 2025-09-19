@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1758187449727,
-      "tag": "0000_dear_siren",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1758208057802,
-      "tag": "0001_stiff_dark_phoenix",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1758208223457,
-      "tag": "0002_volatile_shatterstar",
+      "when": 1758282941726,
+      "tag": "0000_last_infant_terrible",
       "breakpoints": true
     }
   ]

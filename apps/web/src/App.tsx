@@ -9,11 +9,11 @@ import BlogPost from './pages/BlogPost'
 import Advertise from './pages/Advertise'
 import { Dashboard } from './pages/Dashboard'
 import { TestAuth } from './pages/TestAuth'
-import { AppKitProvider } from './config/appkit'
+import { PrivyAuthProvider } from './config/privy'
 
 function App() {
   return (
-    <AppKitProvider>
+    <PrivyAuthProvider>
       <Router>
         <div className="min-h-screen bg-background">
           <Header />
@@ -34,7 +34,7 @@ function App() {
           </div>
         </div>
       </Router>
-    </AppKitProvider>
+    </PrivyAuthProvider>
   )
 }
 

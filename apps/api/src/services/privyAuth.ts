@@ -8,7 +8,8 @@ export interface PrivyAuthSession {
   userId: string // Privy DID
   appId: string
   sessionId: string
-  walletAddress?: string // If user has connected wallet
+  walletAddress?: string // Primary wallet address (for backward compatibility)
+  walletAddresses: string[] // ALL wallet addresses from Privy
   email?: string // If user has connected email
   dbUserId?: string // Our database user ID
 }
@@ -68,14 +69,41 @@ export class PrivyAuthService {
       
       // Get full user details from Privy
       const privyUser = await privy.getUser(claims.userId)
+      // Debug: User linkedAccounts available in privyUser.linkedAccounts
       
-      // Extract wallet address if available
+      // Extract ALL wallet addresses
       let walletAddress: string | undefined
-      const walletAccount = privyUser.linkedAccounts?.find(
+      const walletAddresses: string[] = []
+      
+      // Find all wallet accounts
+      const walletAccounts = privyUser.linkedAccounts?.filter(
         account => account.type === 'wallet'
-      )
-      if (walletAccount && 'address' in walletAccount) {
-        walletAddress = walletAccount.address.toLowerCase()
+      ) || []
+      
+      // Found wallets in linkedAccounts
+      
+      // Collect ALL wallet addresses (should only be 1 with new config)
+      for (const wallet of walletAccounts) {
+        if ('address' in wallet && wallet.address) {
+          walletAddresses.push(wallet.address.toLowerCase())
+          // Wallet address stored
+        }
+      }
+      
+      if (walletAddresses.length > 0) {
+        // With 'all-users' config, each user has exactly ONE embedded wallet
+        // All users get an embedded wallet created automatically on login
+        if (walletAddresses.length > 1) {
+          console.warn('[PrivyAuth] WARNING: User has multiple wallets. This should not happen with current config.')
+        }
+        
+        // Just use the first (and should be only) wallet
+        const primaryWallet = walletAccounts[0]
+        
+        if (primaryWallet && 'address' in primaryWallet) {
+          walletAddress = primaryWallet.address.toLowerCase()
+          // Primary wallet set
+        }
       }
       
       // Extract email if available
@@ -136,7 +164,8 @@ export class PrivyAuthService {
         userId: claims.userId,
         appId: claims.appId,
         sessionId: claims.sessionId,
-        walletAddress,
+        walletAddress, // Primary wallet for backward compatibility
+        walletAddresses, // ALL wallets from Privy
         email,
         dbUserId: dbUser?.id
       }

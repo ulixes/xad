@@ -2,12 +2,13 @@ import { Hono } from "hono";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { actionRuns, actions, users, socialAccounts } from "../db/schema";
 import type { Context } from "../types";
-import { dualAuthMiddleware } from "../middleware/privyAuth";
+import { userAuthMiddleware } from "../middleware/userAuth";
 
 const app = new Hono<Context>();
 
 // Apply authentication to all routes
-app.use('*', dualAuthMiddleware);
+// Apply authentication to all routes - action runs are for extension users
+app.use('*', userAuthMiddleware);
 
 // Start a new action run (with duplicate check)
 app.post("/start", async (c) => {

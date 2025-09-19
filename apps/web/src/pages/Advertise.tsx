@@ -1,10 +1,10 @@
 import { SimplifiedAdTargetingForm } from '../components/AdTargetingForm/SimplifiedAdTargetingForm'
 import { useNavigate } from 'react-router-dom'
-import { useAppKitAccount } from '@reown/appkit/react'
+import { usePrivyAuth } from '../hooks/usePrivyAuth'
 
 export default function Advertise() {
   const navigate = useNavigate()
-  const { address, isConnected } = useAppKitAccount()
+  const { walletAddress, isPrivyAuthenticated } = usePrivyAuth()
 
   const handleSave = (campaignData: any) => {
     console.log('Campaign created:', campaignData)
@@ -21,8 +21,8 @@ export default function Advertise() {
         </p>
         <SimplifiedAdTargetingForm 
           onSave={handleSave} 
-          mockWalletConnected={isConnected}
-          mockWalletAddress={address}
+          mockWalletConnected={isPrivyAuthenticated}
+          mockWalletAddress={walletAddress}
         />
       </div>
     </section>

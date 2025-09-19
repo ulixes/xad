@@ -1,13 +1,16 @@
-import { base, baseSepolia } from '@reown/appkit/networks'
+import { base, baseSepolia } from 'viem/chains'
 
 // Environment-based network configuration
 export const getNetworkConfig = () => {
   const networkEnv = import.meta.env.VITE_NETWORK_ENV || 'development'
   const isProduction = networkEnv === 'production'
   
+  const viemChain = isProduction ? base : baseSepolia
+  
   return {
     // Network selection
-    network: isProduction ? base : baseSepolia,
+    network: viemChain,
+    viemChain, // For Privy and wagmi
     networkName: isProduction ? 'Base' : 'Base Sepolia',
     chainId: isProduction ? 8453 : 84532,
     

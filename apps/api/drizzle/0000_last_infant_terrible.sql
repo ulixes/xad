@@ -40,13 +40,14 @@ CREATE TABLE "actions" (
 --> statement-breakpoint
 CREATE TABLE "brands" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"wallet_address" text NOT NULL,
+	"owner_id" text NOT NULL,
+	"wallet_addresses" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"contact_email" text,
 	"total_spent" integer DEFAULT 0 NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "brands_wallet_address_unique" UNIQUE("wallet_address")
+	CONSTRAINT "brands_owner_id_unique" UNIQUE("owner_id")
 );
 --> statement-breakpoint
 CREATE TABLE "campaign_actions" (
@@ -201,6 +202,8 @@ CREATE TABLE "tiktok_accounts" (
 	"region" text,
 	"language" text,
 	"create_time" text,
+	"followers" integer DEFAULT 0 NOT NULL,
+	"following" integer DEFAULT 0 NOT NULL,
 	"last_collected_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -211,7 +214,7 @@ CREATE TABLE "tiktok_viewer_demographics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tiktok_account_id" uuid NOT NULL,
 	"collected_at" timestamp DEFAULT now() NOT NULL,
-	"range_days" integer DEFAULT 30 NOT NULL,
+	"range_days" integer DEFAULT 7 NOT NULL,
 	"gender_female" numeric(5, 2),
 	"gender_male" numeric(5, 2),
 	"gender_other" numeric(5, 2),

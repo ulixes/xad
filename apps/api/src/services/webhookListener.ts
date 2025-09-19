@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createHmac } from 'crypto'
 import { campaigns, payments, campaignActions, actions, brands } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { createPublicClient, http, parseAbiItem, decodeEventLog, decodeFunctionData } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import type { Env } from '../types'
@@ -372,25 +372,32 @@ export class WebhookListenerService {
       // Convert USDC (6 decimals) to cents for database storage
       const amountInCents = Math.round(Number(amount) / Math.pow(10, USDC_DECIMALS - 2))
       
-      // Find or create brand for this wallet address
-      let [brand] = await db
-        .select()
+      // Find brand that owns this wallet address
+      const senderLower = senderAddress.toLowerCase()
+      console.log('[WEBHOOK] Looking for brand with wallet (lowercase):', senderLower)
+      
+      const brandsResult = await db.select()
         .from(brands)
-        .where(eq(brands.walletAddress, senderAddress.toLowerCase()))
+        .where(sql`${brands.walletAddresses}::jsonb @> ${JSON.stringify([senderLower])}::jsonb`)
         .limit(1)
       
+      const brand = brandsResult[0]
+      
       if (!brand) {
-        console.log('[WEBHOOK] Creating new brand for wallet:', senderAddress)
-        [brand] = await db.insert(brands).values({
-          name: `Brand ${senderAddress.substring(0, 8)}`,
-          walletAddress: senderAddress.toLowerCase(),
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }).returning()
+        // Also try to debug what brands exist
+        const allBrands = await db.select().from(brands).limit(5)
+        console.log('[WEBHOOK] Sample brands in DB:', allBrands.map(b => ({ 
+          id: b.id, 
+          wallets: b.walletAddresses 
+        })))
+        console.log('[WEBHOOK] No brand found for wallet:', senderLower)
+        console.log('[WEBHOOK] Payment received but brand not registered - user must login first')
+        throw new Error(`No brand found for wallet ${senderLower}. User must authenticate first.`)
       }
       
-      // Create campaign with default values
+      console.log('[WEBHOOK] Found brand', brand.id, 'for wallet', senderAddress)
+      
+      // Create campaign with the brand we found
       const [campaign] = await db.insert(campaigns).values({
         id: campaignId,
         brandId: brand.id,

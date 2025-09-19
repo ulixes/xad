@@ -3,115 +3,13 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { Env } from '../types';
 import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, brands } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { authMiddleware, requireWalletOwnership } from '../middleware/auth';
+import { eq, and, desc, inArray } from 'drizzle-orm';
+import { brandAuthMiddleware, requireBrandWalletOwnership } from '../middleware/brandAuth';
 import { getContractConfig } from '../config/contracts';
 
 const campaignRoutes = new Hono<{ Bindings: Env }>();
 
-// Schema for campaign creation
-const createCampaignSchema = z.object({
-  platform: z.enum(['tiktok', 'x', 'instagram', 'reddit', 'facebook', 'farcaster']),
-  targetingRules: z.any(),
-  totalAmount: z.string(),
-  actions: z.array(z.object({
-    type: z.string(),
-    target: z.string(),
-    price: z.number(),
-    maxVolume: z.number()
-  })),
-  brandWalletAddress: z.string()
-});
 
-// Create draft campaign (Step 1: Before smart contract payment)
-campaignRoutes.post('/draft', authMiddleware, zValidator('json', createCampaignSchema), async (c) => {
-  const db = c.get('db');
-  const data = c.req.valid('json');
-
-  try {
-    // Get authenticated user from session
-    const session = c.get('authSession');
-    
-    // Verify the wallet address matches the authenticated user
-    if (session.address.toLowerCase() !== data.brandWalletAddress.toLowerCase()) {
-      return c.json({ 
-        success: false, 
-        error: 'Wallet address mismatch with authenticated session' 
-      }, 403);
-    }
-
-    // Find or create brand by wallet address
-    let [brand] = await db.select().from(brands)
-      .where(eq(brands.walletAddress, data.brandWalletAddress.toLowerCase()))
-      .limit(1);
-
-    if (!brand) {
-      // Create new brand
-      [brand] = await db.insert(brands).values({
-        walletAddress: data.brandWalletAddress.toLowerCase(),
-      }).returning();
-    }
-
-    // Calculate total budget in cents
-    const totalBudgetCents = Math.round(parseFloat(data.totalAmount) * 100);
-
-    // Create campaign in pending_payment status
-    const [campaign] = await db.insert(campaigns).values({
-      id: crypto.randomUUID(),
-      brandId: brand.id,
-      brandWalletAddress: data.brandWalletAddress.toLowerCase(),
-      platform: data.platform,
-      targetingRules: data.targetingRules,
-      totalBudget: totalBudgetCents,
-      remainingBudget: totalBudgetCents,
-      status: 'pending_payment'
-    }).returning();
-
-    // Create campaign actions
-    const validActionTypes = ['like', 'comment', 'share', 'follow', 'retweet', 'upvote', 'award'] as const;
-    const campaignActionsData = data.actions.map(action => ({
-      campaignId: campaign.id,
-      actionType: validActionTypes.includes(action.type as any) 
-        ? action.type as typeof validActionTypes[number]
-        : 'like',
-      target: action.target,
-      pricePerAction: action.price,
-      maxVolume: action.maxVolume
-    }));
-
-    await db.insert(campaignActions).values(campaignActionsData);
-
-    // Get contract configuration
-    const contractConfig = getContractConfig();
-    
-    console.log('Draft campaign created:', campaign.id);
-    console.log('Brand ID being returned:', brand.id);
-    
-    return c.json({ 
-      success: true, 
-      campaign: campaign,
-      brandId: brand.id,
-      paymentDetails: {
-        campaignId: campaign.id,
-        amount: data.totalAmount,
-        currency: 'USDC',
-        contractAddress: contractConfig.address,
-        network: contractConfig.network,
-        chainId: contractConfig.chainId
-      },
-      message: 'Campaign created. Please send USDC payment to smart contract.' 
-    });
-
-  } catch (error) {
-    console.error('Campaign creation error:', error);
-    
-    return c.json({ 
-      success: false, 
-      error: 'Failed to create campaign',
-      details: error instanceof Error ? error.message : String(error)
-    }, 500);
-  }
-});
 
 // Get campaign status (for polling after payment)
 campaignRoutes.get('/:id/status', async (c) => {
@@ -256,8 +154,48 @@ campaignRoutes.get('/actions/available', async (c) => {
   }
 });
 
+// Get campaigns for authenticated brand (no wallet param needed - uses token)
+campaignRoutes.get('/my-campaigns', brandAuthMiddleware, async (c) => {
+  const db = c.get('db');
+  const brand = c.get('brand'); // Brand already loaded by middleware using ownerId from token
+
+  try {
+    // Get all campaigns for this brand
+    const brandCampaigns = await db.select()
+      .from(campaigns)
+      .where(eq(campaigns.brandId, brand.id))
+      .orderBy(desc(campaigns.createdAt));
+
+    // Get action details for each campaign
+    const campaignIds = brandCampaigns.map(c => c.id);
+    const allActions = campaignIds.length > 0 
+      ? await db.select()
+          .from(campaignActions)
+          .where(inArray(campaignActions.campaignId, campaignIds))
+      : [];
+
+    // Format response with actions grouped by campaign
+    const campaignsWithActions = brandCampaigns.map(campaign => ({
+      ...campaign,
+      actions: allActions.filter(a => a.campaignId === campaign.id)
+    }));
+
+    return c.json({
+      success: true,
+      campaigns: campaignsWithActions
+    });
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Failed to fetch campaigns' 
+    }, 500);
+  }
+});
+
+// Legacy endpoint - kept for backward compatibility
 // Get campaigns for brand dashboard
-campaignRoutes.get('/brand/:walletAddress', authMiddleware, async (c) => {
+campaignRoutes.get('/brand/:walletAddress', brandAuthMiddleware, requireBrandWalletOwnership('walletAddress'), async (c) => {
   const db = c.get('db');
   const walletAddress = c.req.param('walletAddress');
   const session = c.get('authSession');

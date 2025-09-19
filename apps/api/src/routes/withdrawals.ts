@@ -2,12 +2,13 @@ import { Hono } from "hono";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { actionRuns, users, payments } from "../db/schema";
 import type { Context } from "../types";
-import { dualAuthMiddleware } from "../middleware/privyAuth";
+import { userAuthMiddleware } from "../middleware/userAuth";
 
 const app = new Hono<Context>();
 
 // Apply authentication to ALL routes
-app.use('*', dualAuthMiddleware);
+// Apply authentication to all routes - withdrawals are for extension users
+app.use('*', userAuthMiddleware);
 
 // Process a withdrawal request
 app.post("/", async (c) => {

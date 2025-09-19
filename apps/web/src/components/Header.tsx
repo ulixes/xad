@@ -1,20 +1,20 @@
 import { Button } from './ui/button'
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAccount } from 'wagmi'
-import { useAppKit, useAppKitAccount } from '@reown/appkit/react'
+import { usePrivyAuth } from '../hooks/usePrivyAuth'
+import { WalletDropdown } from './WalletDropdown'
 
 export default function Header() {
   const location = useLocation()
-  const { isConnected, address } = useAccount()
-  const { isConnected: appKitConnected, address: appKitAddress } = useAppKitAccount()
-  const { open } = useAppKit()
+  const { 
+    isPrivyAuthenticated, 
+    walletAddress, 
+    triggerSignIn, 
+    signOut,
+    checkAuthStatus 
+  } = usePrivyAuth()
   const [currentLang, setCurrentLang] = useState<'en' | 'zh'>('en')
   const [hasAuthToken, setHasAuthToken] = useState(false)
-  
-  // Use AppKit connection state as primary, fallback to wagmi
-  const walletConnected = appKitConnected || isConnected
-  const walletAddress = appKitAddress || address
   
   // Read the current locale from cookie and check auth token
   useEffect(() => {
@@ -32,19 +32,8 @@ export default function Header() {
   
   // Listen for auth token changes
   useEffect(() => {
-    const checkAuthToken = () => {
-      const token = localStorage.getItem('auth_token')
-      setHasAuthToken(!!token)
-    }
-    
-    // Check on mount and when storage changes
-    checkAuthToken()
-    window.addEventListener('storage', checkAuthToken)
-    
-    return () => {
-      window.removeEventListener('storage', checkAuthToken)
-    }
-  }, [walletConnected])
+    setHasAuthToken(checkAuthStatus())
+  }, [checkAuthStatus, isPrivyAuthenticated])
   
   const toggleLanguage = () => {
     const newLang = currentLang === 'en' ? 'zh' : 'en'
@@ -85,7 +74,7 @@ export default function Header() {
               >
                 Blog
               </Link>
-              {walletConnected && hasAuthToken && (
+              {isPrivyAuthenticated && hasAuthToken && (
                 <Link 
                   to="/dashboard" 
                   className={`text-sm font-medium transition-colors hover:text-primary ${
@@ -116,20 +105,21 @@ export default function Header() {
               {currentLang === 'en' ? 'EN' : '中文'}
             </Button>
             
-            {/* Custom Wallet Connect Button */}
-            <Button
-              onClick={() => open()}
-              variant="outline"
-              className="bg-background border-border hover:bg-accent/10"
-            >
-              {walletConnected ? (
-                <span className="text-sm">
-                  {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-                </span>
-              ) : (
-                'Connect Wallet'
-              )}
-            </Button>
+            {/* Wallet Connection/Dropdown */}
+            {isPrivyAuthenticated && walletAddress ? (
+              <WalletDropdown 
+                address={walletAddress}
+                onSignOut={signOut}
+              />
+            ) : (
+              <Button
+                onClick={triggerSignIn}
+                variant="outline"
+                className="bg-background border-border hover:bg-accent/10"
+              >
+                Connect Wallet
+              </Button>
+            )}
           </div>
         </div>
       </div>

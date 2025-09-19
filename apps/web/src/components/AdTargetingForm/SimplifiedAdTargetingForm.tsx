@@ -12,10 +12,11 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, CheckCircle, Loader2, BadgeCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
-import { PaymentFlowService } from '../../services/paymentFlow';
-import { useWalletClient, usePublicClient } from 'wagmi';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { PaymentFlowEmbeddedService } from '../../services/paymentFlowEmbedded';
+import { useWallets, useSendTransaction, useSignTypedData } from '@privy-io/react-auth';
+import { usePublicClient } from 'wagmi';
 import { formatUnits } from 'viem';
+import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -127,9 +128,18 @@ export function SimplifiedAdTargetingForm({
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   
   // Real wallet hooks (will be undefined in Storybook)
-  const { address: connectedAddress, isConnected } = useAppKitAccount();
-  const { data: walletClient } = useWalletClient();
+  const { wallets } = useWallets();
+  const { sendTransaction } = useSendTransaction();
+  const { signTypedData } = useSignTypedData();
   const publicClient = usePublicClient();
+  
+  // Privy auth hook
+  const { 
+    isPrivyAuthenticated,
+    walletAddress: connectedAddress,
+    triggerSignIn, 
+    checkAuthStatus 
+  } = usePrivyAuth();
   
   // Contract data
   const [contractData, setContractData] = useState({
@@ -265,7 +275,7 @@ export function SimplifiedAdTargetingForm({
     setPaymentSuccess(null);
     
     // Check wallet connection (use real wallet if available, otherwise mock)
-    const isWalletConnected = isConnected || mockWalletConnected;
+    const isWalletConnected = isPrivyAuthenticated || mockWalletConnected;
     const walletAddress = connectedAddress || mockWalletAddress;
     
     if (!isWalletConnected) {
@@ -273,9 +283,20 @@ export function SimplifiedAdTargetingForm({
       return;
     }
     
-    // Additional check for wallet client availability
-    if (!mockWalletConnected && (!walletClient || !publicClient)) {
-      setPaymentError('Wallet is connecting... Please try again in a moment');
+    // Check authentication for real wallet connections
+    if (!mockWalletConnected && !checkAuthStatus()) {
+      console.log('User not authenticated, triggering sign-in...');
+      const signedIn = await triggerSignIn();
+      if (!signedIn) {
+        setPaymentError('Please sign the message with your wallet to continue');
+        return;
+      }
+    }
+    
+    // Get embedded wallet (every user has one with email login)
+    const embeddedWallet = wallets?.find(w => w.walletClientType === 'privy') || wallets?.[0];
+    if (!mockWalletConnected && (!embeddedWallet || !publicClient)) {
+      setPaymentError('Wallet is initializing... Please try again in a moment');
       return;
     }
 
@@ -293,11 +314,10 @@ export function SimplifiedAdTargetingForm({
     setIsProcessingPayment(true);
 
     try {
-      // If we have real wallet clients, use actual payment flow
-      if (walletClient && publicClient) {
-        console.log('Processing real payment...');
-        console.log('Wallet client available:', !!walletClient);
-        console.log('Wallet account:', walletClient.account?.address);
+      // If we have embedded wallet and publicClient, use actual payment flow
+      if (embeddedWallet && publicClient && sendTransaction && signTypedData) {
+        console.log('Processing payment with embedded wallet...');
+        console.log('Embedded wallet:', embeddedWallet.address);
         
         const formData = {
           platform: selectedPlatform,
@@ -309,9 +329,11 @@ export function SimplifiedAdTargetingForm({
           followTarget: campaignTargets.followTarget
         };
         
-        const result = await PaymentFlowService.createCampaignWithPayment(
+        const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
           formData,
-          walletClient,
+          embeddedWallet,
+          signTypedData,
+          sendTransaction,
           publicClient
         );
         
