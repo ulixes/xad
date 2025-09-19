@@ -1,0 +1,82 @@
+name: API Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - develop
+    paths:
+      - 'apps/api/**'
+      - '!apps/api/README.md'
+      - '!apps/api/.env.example'
+      - '!apps/api/wrangler.toml.example'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging-api
+    defaults:
+      run:
+        working-directory: apps/api
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: |
+          cd ../..
+          bun install
+      
+      - name: Create wrangler.toml with staging secrets
+        run: |
+          cat > wrangler.toml << EOF
+          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}"
+          main = "index.ts"
+          compatibility_date = "2025-09-04"
+          compatibility_flags = ["nodejs_compat"]
+          account_id = "${{ secrets.CF_ACCOUNT_ID }}"
+          
+          [env.staging]
+          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-staging"
+          
+          [env.staging.vars]
+          ENVIRONMENT = "staging"
+          DATABASE_URL = "${{ secrets.DATABASE_URL }}"
+          ADMIN_AUTH_TOKEN = "${{ secrets.ADMIN_AUTH_TOKEN }}"
+          PRIVY_APP_ID = "${{ secrets.PRIVY_APP_ID }}"
+          PRIVY_APP_SECRET = "${{ secrets.PRIVY_APP_SECRET }}"
+          PRIVY_VERIFICATION_KEY = "${{ secrets.PRIVY_VERIFICATION_KEY }}"
+          JWT_SECRET = "${{ secrets.JWT_SECRET }}"
+          ESCROW_ADDRESS = "${{ secrets.ESCROW_ADDRESS }}"
+          LOG_LEVEL = "debug"
+          
+          [env.staging.observability]
+          enabled = true
+          EOF
+      
+      - name: Deploy to Cloudflare Workers (Staging)
+        working-directory: apps/api
+        run: bun run wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      
+      - name: Clean up sensitive files
+        if: always()
+        working-directory: apps/api
+        run: rm -f wrangler.toml
+      
+      - name: Create deployment notification
+        if: success()
+        run: |
+          echo "✅ API deployed to STAGING environment"
+          echo "Worker: ${{ secrets.CF_WORKER_NAME || 'xad-api' }}-staging"
+          echo "Deployment triggered by: ${{ github.actor }}"

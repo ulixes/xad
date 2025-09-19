@@ -29,6 +29,14 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Environment files
 .env.keys
+.env.local
+.env.development
+.env.test
+.env.production.local
+.env.keys
+.env.keys*
+.env.*
 
 # Wrangler
 .wrangler
+

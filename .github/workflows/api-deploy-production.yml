@@ -1,4 +1,4 @@
-name: API Deploy to Cloudflare Workers
+name: API Deploy to Production
 
 on:
   push:
@@ -10,24 +10,15 @@ on:
       - '!apps/api/.env.example'
       - '!apps/api/wrangler.toml.example'
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
 
 permissions:
   contents: read
   deployments: write
 
 jobs:
-  deploy:
+  deploy-production:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'production' }}
+    environment: production
     defaults:
       run:
         working-directory: apps/api
@@ -44,7 +35,7 @@ jobs:
           cd ../..
           bun install
       
-      - name: Create wrangler.toml with secrets
+      - name: Create wrangler.toml with production secrets
         run: |
           cat > wrangler.toml << EOF
           name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}"
@@ -69,36 +60,11 @@ jobs:
           
           [env.production.observability]
           enabled = true
-          
-          [env.staging]
-          name = "${{ secrets.CF_WORKER_NAME || 'xad-api' }}-staging"
-          
-          [env.staging.vars]
-          ENVIRONMENT = "staging"
-          DATABASE_URL = "${{ secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}"
-          ADMIN_AUTH_TOKEN = "${{ secrets.STAGING_ADMIN_AUTH_TOKEN || secrets.ADMIN_AUTH_TOKEN }}"
-          PRIVY_APP_ID = "${{ secrets.STAGING_PRIVY_APP_ID || secrets.PRIVY_APP_ID }}"
-          PRIVY_APP_SECRET = "${{ secrets.STAGING_PRIVY_APP_SECRET || secrets.PRIVY_APP_SECRET }}"
-          PRIVY_VERIFICATION_KEY = "${{ secrets.STAGING_PRIVY_VERIFICATION_KEY || secrets.PRIVY_VERIFICATION_KEY }}"
-          JWT_SECRET = "${{ secrets.STAGING_JWT_SECRET || secrets.JWT_SECRET }}"
-          ESCROW_ADDRESS = "${{ secrets.STAGING_ESCROW_ADDRESS || secrets.ESCROW_ADDRESS }}"
-          LOG_LEVEL = "debug"
-          
-          [env.staging.observability]
-          enabled = true
           EOF
       
       - name: Deploy to Cloudflare Workers (Production)
-        if: github.event_name == 'push' || github.event.inputs.environment == 'production'
         working-directory: apps/api
         run: bun run wrangler deploy --env production
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      
-      - name: Deploy to Cloudflare Workers (Staging)
-        if: github.event.inputs.environment == 'staging'
-        working-directory: apps/api
-        run: bun run wrangler deploy --env staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       
@@ -110,7 +76,6 @@ jobs:
       - name: Create deployment notification
         if: success()
         run: |
-          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
-          echo "✅ API deployed to $ENVIRONMENT environment"
-          echo "Worker: ${{ secrets.CF_WORKER_NAME || 'xad-api' }}-$ENVIRONMENT"
+          echo "✅ API deployed to PRODUCTION environment"
+          echo "Worker: ${{ secrets.CF_WORKER_NAME || 'xad-api' }}-production"
           echo "Deployment triggered by: ${{ github.actor }}"
