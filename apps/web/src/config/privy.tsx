@@ -70,7 +70,13 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
           createOnLogin: 'users-without-wallets', // Don't create for users with wallets
           showWalletUIs: false, // Hide embedded wallet UI
         },
-        
+
+        // Custom text
+        loginMessage: 'Sign in to zkAD',
+
+        // Disable wallet detection logs
+        _disableWalletDetectionPolling: true,
+
         // Events
         onSuccess: (user: any) => {
           console.log('Privy login success:', user)

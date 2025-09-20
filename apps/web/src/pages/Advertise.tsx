@@ -14,11 +14,7 @@ export default function Advertise() {
 
   return (
     <section className="py-8 sm:py-12 lg:py-16">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Advertise on TikTok</h1>
-        <p className="text-muted-foreground mb-6 sm:mb-8">
-          Reach your target audience with our blockchain-powered engagement platform
-        </p>
+      <div className="container mx-auto">
         <SimplifiedAdTargetingForm 
           onSave={handleSave} 
           mockWalletConnected={isPrivyAuthenticated}

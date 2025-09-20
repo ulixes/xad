@@ -124,6 +124,10 @@ export function SimplifiedAdTargetingForm({
   // Calculated price from contract
   const [calculatedPrice, setCalculatedPrice] = useState<bigint>(0n);
   const [isCalculating, setIsCalculating] = useState(false);
+
+  // USDC Balance
+  const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   
   // Load contract configuration
   useEffect(() => {
@@ -166,16 +170,16 @@ export function SimplifiedAdTargetingForm({
     const calculatePrice = async () => {
       if (!publicClient) {
         // Mock calculation for Storybook
-        const baseTotal = (contractData.likes * contractData.baseLikePrice + 
+        const baseTotal = (contractData.likes * contractData.baseLikePrice +
                           contractData.follows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
         return;
       }
-      
+
       setIsCalculating(true);
       try {
         const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
-        
+
         const price = await publicClient.readContract({
           address: contractAddress,
           abi: CAMPAIGN_PAYMENTS_ABI,
@@ -187,20 +191,64 @@ export function SimplifiedAdTargetingForm({
             requirements.verifiedOnly || false
           ]
         });
-        
+
         setCalculatedPrice(price);
       } catch (error) {
         console.error('Error calculating price:', error);
         // Fallback to base price
-        const baseTotal = (contractData.likes * contractData.baseLikePrice + 
+        const baseTotal = (contractData.likes * contractData.baseLikePrice +
                           contractData.follows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
       }
       setIsCalculating(false);
     };
-    
+
     calculatePrice();
   }, [requirements, contractData, publicClient]);
+
+  // Load USDC balance when wallet connects
+  useEffect(() => {
+    const loadUsdcBalance = async () => {
+      if (!publicClient || (!connectedAddress && !mockWalletAddress)) {
+        return;
+      }
+
+      setIsLoadingBalance(true);
+      try {
+        const walletAddress = connectedAddress || mockWalletAddress;
+
+        // Get network config to determine USDC address
+        const networkConfig = getNetworkConfig();
+        const usdcAddress = networkConfig.usdcAddress;
+
+        // ERC20 ABI for balanceOf function
+        const erc20Abi = [
+          {
+            constant: true,
+            inputs: [{ name: '_owner', type: 'address' }],
+            name: 'balanceOf',
+            outputs: [{ name: 'balance', type: 'uint256' }],
+            type: 'function'
+          }
+        ] as const;
+
+        const balance = await publicClient.readContract({
+          address: usdcAddress,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [walletAddress as `0x${string}`]
+        });
+
+        setUsdcBalance(balance);
+      } catch (error) {
+        console.error('Error loading USDC balance:', error);
+        setUsdcBalance(0n);
+      }
+      setIsLoadingBalance(false);
+    };
+
+    loadUsdcBalance();
+  }, [publicClient, connectedAddress, mockWalletAddress]);
   
   // Convert price to USD string
   const formatPrice = (price: bigint) => {
@@ -329,14 +377,13 @@ export function SimplifiedAdTargetingForm({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Campaign Setup</h1>
-          <p className="text-muted-foreground">Configure targeting and launch your engagement campaign</p>
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold">Create Campaign</h1>
         </div>
 
         {/* Platform Selection */}
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Select Platform</h2>
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Platform</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {platforms.map((platform) => (
               <button
@@ -345,20 +392,20 @@ export function SimplifiedAdTargetingForm({
                 disabled={!platform.available}
                 className={`
                   relative p-3 rounded-lg border-2 transition-all
-                  ${selectedPlatform === platform.id 
-                    ? 'border-primary bg-primary/10' 
+                  ${selectedPlatform === platform.id
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-muted-foreground/50'
                   }
-                  ${!platform.available 
-                    ? 'cursor-not-allowed' 
+                  ${!platform.available
+                    ? 'cursor-not-allowed opacity-50'
                     : 'cursor-pointer'
                   }
                 `}
               >
-                <img 
-                  src={platform.icon} 
+                <img
+                  src={platform.icon}
                   alt={platform.name}
-                  className="w-8 h-8 mx-auto mb-2 object-contain"
+                  className="w-8 h-8 mx-auto mb-2 object-contain rounded-lg"
                 />
                 <p className="text-xs font-medium">{platform.name}</p>
                 {!platform.available && (
@@ -369,16 +416,40 @@ export function SimplifiedAdTargetingForm({
           </div>
         </div>
 
-        {/* Audience Targeting */}
+        {/* Account Qualifications */}
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Audience Targeting</h2>
-          <p className="text-sm text-muted-foreground mb-3">Target creators whose audience matches these criteria</p>
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Account Qualifications</h2>
+          <div className="border border-border rounded-lg p-4 bg-card">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="verified-only"
+                checked={requirements.verifiedOnly}
+                onCheckedChange={(checked) =>
+                  setRequirements({...requirements, verifiedOnly: checked as boolean})
+                }
+              />
+              <Label
+                htmlFor="verified-only"
+                className="flex items-center gap-2 cursor-pointer flex-1"
+              >
+                <span className="text-base font-medium">
+                  Verified
+                </span>
+                <BadgeCheck className="w-5 h-5 text-primary" />
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        {/* Demographics of Account's Following */}
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Account's Following Demographics</h2>
           <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
             
             {/* Gender Targeting */}
             <div className="space-y-2">
               <Label htmlFor="gender-select" className="text-base font-medium">
-                Audience Gender
+                Gender
               </Label>
               <Select 
                 value={requirements.gender} 
@@ -398,7 +469,7 @@ export function SimplifiedAdTargetingForm({
             {/* Age Range Targeting */}
             <div className="space-y-2">
               <Label htmlFor="age-select" className="text-base font-medium">
-                Audience Age Range
+                Age Range
               </Label>
               <Select 
                 value={requirements.ageRange} 
@@ -422,7 +493,7 @@ export function SimplifiedAdTargetingForm({
             {/* Country Targeting */}
             <div className="space-y-2">
               <Label htmlFor="country-select" className="text-base font-medium">
-                Audience Country
+                Country
               </Label>
               <Select 
                 value={requirements.country} 
@@ -461,42 +532,12 @@ export function SimplifiedAdTargetingForm({
           </div>
         </div>
 
-        {/* Creator Targeting */}
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Creator Targeting</h2>
-          <p className="text-sm text-muted-foreground mb-3">Select the type of creators you want to engage with</p>
-          <div className="border border-border rounded-lg p-4 bg-card">
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="verified-only"
-                checked={requirements.verifiedOnly}
-                onCheckedChange={(checked) => 
-                  setRequirements({...requirements, verifiedOnly: checked as boolean})
-                }
-              />
-              <Label 
-                htmlFor="verified-only" 
-                className="flex items-center gap-2 cursor-pointer flex-1"
-              >
-                <BadgeCheck className="w-5 h-5 text-primary" />
-                <div>
-                  <span className="font-medium">
-                    Verified Creators Only
-                  </span>
-                  <p className="text-sm text-muted-foreground">
-                    Get engagement from creators with verified accounts (blue checkmark)
-                  </p>
-                </div>
-              </Label>
-            </div>
-          </div>
-        </div>
 
         {/* Fixed Campaign Package - Fetched from Contract */}
         {selectedPlatform === 'tiktok' && (
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Campaign Package</h2>
-            
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">Package (10 follows, 20 likes)</h2>
+
             {/* Package Details Card */}
             <div className="p-4 border border-border rounded-lg bg-card space-y-4">
               {contractData.loading ? (
@@ -506,39 +547,10 @@ export function SimplifiedAdTargetingForm({
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Campaign Package:</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold">{contractData.likes}</span>
-                          <span className="text-base">Likes</span>
-                          <span className="text-sm text-muted-foreground">
-                            @ ${(contractData.baseLikePrice / 1000000).toFixed(2)}/like
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold">{contractData.follows}</span>
-                          <span className="text-base">Follows</span>
-                          <span className="text-sm text-muted-foreground">
-                            @ ${(contractData.baseFollowPrice / 1000000).toFixed(2)}/follow
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground mb-1">Total Package</p>
-                      <p className="text-2xl font-bold text-primary">
-                        ${basePackagePrice.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Target URLs */}
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="like-target" className="text-base font-medium">
-                        TikTok Post URL for Likes
+                        URL for likes
                       </Label>
                       <Input
                         id="like-target"
@@ -549,14 +561,11 @@ export function SimplifiedAdTargetingForm({
                         className="font-mono text-base h-11"
                         required
                       />
-                      <p className="text-sm text-muted-foreground">
-                        This post will receive {contractData.likes} likes
-                      </p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="follow-target" className="text-base font-medium">
-                        TikTok Profile URL for Follows
+                        URL for follows
                       </Label>
                       <Input
                         id="follow-target"
@@ -567,9 +576,6 @@ export function SimplifiedAdTargetingForm({
                         className="font-mono text-base h-11"
                         required
                       />
-                      <p className="text-sm text-muted-foreground">
-                        This profile will receive {contractData.follows} new followers
-                      </p>
                     </div>
                   </div>
                 </>
@@ -579,22 +585,20 @@ export function SimplifiedAdTargetingForm({
         )}
 
         {/* Total Campaign Cost - Simplified Display */}
-        <div className="border-t border-border">
-          <div className="py-6 px-4 sm:px-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Total Campaign Cost</h3>
-              <div className="text-right">
-                {isCalculating ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-lg">Calculating...</span>
-                  </div>
-                ) : (
-                  <div className="text-3xl font-bold text-primary">
-                    ${estimatedCost.toFixed(2)}
-                  </div>
-                )}
-              </div>
+        <div className="border-t border-border pt-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-3xl font-bold">Total</h3>
+            <div className="text-right">
+              {isCalculating ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-lg">Calculating...</span>
+                </div>
+              ) : (
+                <div className="text-3xl font-bold text-primary">
+                  ${estimatedCost.toFixed(2)}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -618,8 +622,8 @@ export function SimplifiedAdTargetingForm({
 
         {/* Launch Campaign Button */}
         <div className="pt-6">
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={
               isProcessingPayment ||
               !campaignTargets.likeTarget.trim() ||
@@ -636,7 +640,7 @@ export function SimplifiedAdTargetingForm({
                 Processing Payment...
               </>
             ) : (
-              <>Launch Campaign - ${estimatedCost.toFixed(2)}</>
+              <>Pay</>
             )}
           </Button>
           {mockWalletConnected && (
@@ -644,6 +648,23 @@ export function SimplifiedAdTargetingForm({
               Pay ${estimatedCost.toFixed(2)} to launch your campaign
             </p>
           )}
+
+          {/* USDC Balance Display */}
+          <div className="text-left mt-3">
+            <p className="text-base text-muted-foreground">
+              Base USDC Balance: {' '}
+              {isLoadingBalance ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading...
+                </span>
+              ) : (
+                <span className="font-medium">
+                  ${formatPrice(usdcBalance)}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
     </div>
   );

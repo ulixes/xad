@@ -5,7 +5,7 @@ const steps = [
     icon: 'download',
     number: "1",
     title: "Install Extension",
-    description: "Add xAd to your Chrome or Firefox browser in one click"
+    description: "Add zkAd to your Chrome or Firefox browser in one click"
   },
   {
     icon: 'heart',

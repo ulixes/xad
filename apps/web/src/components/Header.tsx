@@ -48,7 +48,7 @@ export default function Header() {
   
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-8">
@@ -89,8 +89,8 @@ export default function Header() {
           
           {/* Right side buttons */}
           <div className="flex items-center gap-4">
-            {/* Language Switcher */}
-            <Button
+            {/* Language Switcher - Commented out for now */}
+            {/* <Button
               variant="ghost"
               size="sm"
               onClick={toggleLanguage}
@@ -103,8 +103,8 @@ export default function Header() {
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
               </svg>
               {currentLang === 'en' ? 'EN' : '中文'}
-            </Button>
-            
+            </Button> */}
+
             {/* Wallet Connection/Dropdown */}
             {isPrivyAuthenticated && walletAddress ? (
               <WalletDropdown 

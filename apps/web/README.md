@@ -1,6 +1,6 @@
-# XAD Web
+# zkAD Web
 
-Frontend application for XAD - Decentralized advertising platform.
+Frontend application for zkAD - Decentralized advertising platform.
 
 ## Quick Start
 
@@ -128,7 +128,7 @@ bun run start
 
 ## Browser Extension
 
-Users need to install the XAD extension:
+Users need to install the zkAD extension:
 
 1. Download from Chrome Web Store (coming soon)
 2. Or load locally:
@@ -154,6 +154,4 @@ Users need to install the XAD extension:
 
 ## Support
 
-- [Documentation](https://docs.xad.com)
-- [Discord](https://discord.gg/xad)
-- [GitHub Issues](https://github.com/xad/xad/issues)
+For support, please contact the development team.
