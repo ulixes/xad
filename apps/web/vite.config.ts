@@ -39,7 +39,6 @@ export default defineConfig({
     include: [
       'lucide-react',
       '@privy-io/react-auth',
-      '@privy-io/react-auth/connectors',
       'viem',
       'wagmi'
     ],
