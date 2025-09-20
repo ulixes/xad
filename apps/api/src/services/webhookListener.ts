@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createHmac } from 'crypto'
 import { campaigns, payments, campaignActions, actions, brands } from '../db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createPublicClient, http, parseAbiItem, decodeEventLog, decodeFunctionData } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import type { Env } from '../types'
@@ -401,7 +401,7 @@ export class WebhookListenerService {
       
       const brandsResult = await db.select()
         .from(brands)
-        .where(sql`${brands.walletAddresses}::jsonb @> ${JSON.stringify([senderLower])}::jsonb`)
+        .where(eq(brands.walletAddress, senderLower))
         .limit(1)
       
       const brand = brandsResult[0]
@@ -411,7 +411,7 @@ export class WebhookListenerService {
         const allBrands = await db.select().from(brands).limit(5)
         console.log('[WEBHOOK] Sample brands in DB:', allBrands.map(b => ({ 
           id: b.id, 
-          wallets: b.walletAddresses 
+          wallet: b.walletAddress 
         })))
         console.log('[WEBHOOK] No brand found for wallet:', senderLower)
         console.log('[WEBHOOK] Payment received but brand not registered - user must login first')

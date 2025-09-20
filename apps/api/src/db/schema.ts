@@ -12,15 +12,14 @@ export const userStatus = pgEnum("user_status", ['active', 'pending_verification
 
 export const brands = pgTable("brands", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
-	ownerId: text("owner_id").notNull(), // Auth provider user ID (Privy DID, etc)
-	walletAddresses: jsonb("wallet_addresses").default([]).notNull(), // Array of wallet addresses used by this brand
+	walletAddress: text("wallet_address").notNull(), // Single wallet address for this brand
 	contactEmail: text("contact_email"),
 	totalSpent: integer("total_spent").default(0).notNull(),
 	metadata: jsonb().default({}).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
-	unique("brands_owner_id_unique").on(table.ownerId),
+	unique("brands_wallet_address_unique").on(table.walletAddress),
 ]);
 
 export const campaigns = pgTable("campaigns", {
