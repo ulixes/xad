@@ -37,7 +37,7 @@ jobs:
       
       - name: Build application
         working-directory: apps/web
-        run: vite build
+        run: bun run vite build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
