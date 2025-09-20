@@ -90,6 +90,17 @@ export function SimplifiedAdTargetingForm({
   const { signTypedData } = useSignTypedData();
   const publicClient = usePublicClient();
   
+  // Debug log hook values on mount/update
+  useEffect(() => {
+    console.log('[SimplifiedAdTargetingForm] Hook values:', {
+      walletsLength: wallets?.length,
+      hasSendTransaction: !!sendTransaction,
+      hasSignTypedData: !!signTypedData,
+      hasPublicClient: !!publicClient,
+      walletTypes: wallets?.map(w => w.walletClientType)
+    });
+  }, [wallets, sendTransaction, signTypedData, publicClient]);
+  
   // Privy auth hook
   const { 
     isPrivyAuthenticated,
@@ -230,6 +241,11 @@ export function SimplifiedAdTargetingForm({
     }
     
     // Get embedded wallet (every user has one with email login)
+    console.log('[SimplifiedAdTargetingForm] Available wallets:', wallets?.map(w => ({
+      type: w.walletClientType,
+      address: w.address,
+      chainId: w.chainId
+    })));
     const embeddedWallet = wallets?.find(w => w.walletClientType === 'privy') || wallets?.[0];
     if (!mockWalletConnected && (!embeddedWallet || !publicClient)) {
       setPaymentError('Wallet is initializing... Please try again in a moment');
@@ -251,6 +267,13 @@ export function SimplifiedAdTargetingForm({
 
     try {
       // If we have embedded wallet and publicClient, use actual payment flow
+      console.log('[Payment] Check conditions:', {
+        hasEmbeddedWallet: !!embeddedWallet,
+        hasPublicClient: !!publicClient,
+        hasSendTransaction: !!sendTransaction,
+        hasSignTypedData: !!signTypedData,
+        walletType: embeddedWallet?.walletClientType
+      });
       if (embeddedWallet && publicClient && sendTransaction && signTypedData) {
         console.log('Processing payment with embedded wallet...');
         console.log('Embedded wallet:', embeddedWallet.address);
