@@ -34,3 +34,4 @@ storybook-static
 .env.production.local
 .env.keys
 .env.keys*
+.vercel
