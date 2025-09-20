@@ -330,8 +330,8 @@ export function SimplifiedAdTargetingForm({
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Create Your Campaign</h1>
-          <p className="text-muted-foreground">Launch your TikTok engagement campaign in minutes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Campaign Setup</h1>
+          <p className="text-muted-foreground">Configure targeting and launch your engagement campaign</p>
         </div>
 
         {/* Platform Selection */}

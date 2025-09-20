@@ -9,6 +9,8 @@ import BlogPost from './pages/BlogPost'
 import Advertise from './pages/Advertise'
 import { Dashboard } from './pages/Dashboard'
 import { TestAuth } from './pages/TestAuth'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import { PrivyAuthProvider } from './config/privy'
 
 function App() {
@@ -24,6 +26,8 @@ function App() {
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/advertise" element={<Advertise />} />
               <Route path="/test-auth" element={<TestAuth />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Footer() {
   const [language] = useState<'en' | 'zh'>(() => {
@@ -84,12 +85,12 @@ export default function Footer() {
               </p>
             </div>
             <div className="flex gap-4">
-              <a href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
                 {t[language].termsOfService}
-              </a>
-              <a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+              </Link>
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
                 {t[language].privacyPolicy}
-              </a>
+              </Link>
             </div>
           </div>
           <div className="grid lg:grid-cols-3 gap-10 items-start">
