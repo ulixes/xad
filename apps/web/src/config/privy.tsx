@@ -54,9 +54,6 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
           showWalletUIs: true,
         },
         
-        // Disable wallet detection logs
-        _disableWalletDetectionPolling: true,
-        
         // Events
         onSuccess: (user: any) => {
           console.log('Privy login success:', user)
