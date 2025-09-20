@@ -15,17 +15,18 @@ export function usePrivyAuth() {
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [authToken, setAuthToken] = useState<string | null>(null)
 
-  // Get embedded wallet - with 'all-users' config, every user has exactly ONE embedded wallet
-  const embeddedWallet = wallets?.find(w => w.walletClientType === 'privy') || wallets?.[0]
-  const walletAddress = embeddedWallet?.address || null
+  // Get connected external wallet - users must connect their own wallet
+  const connectedWallet = wallets?.[0] // Get the first (and usually only) connected wallet
+  const walletAddress = connectedWallet?.address || null
   
   // Log wallet selection for debugging (only in development)
   useEffect(() => {
-    if (embeddedWallet && import.meta.env.DEV) {
-      console.log('[usePrivyAuth] Embedded wallet:', walletAddress, 
+    if (connectedWallet && import.meta.env.DEV) {
+      console.log('[usePrivyAuth] Connected wallet:', walletAddress, 
+        'wallet type:', connectedWallet?.walletClientType,
         'total wallets:', wallets?.length)
     }
-  }, [embeddedWallet, walletAddress, wallets])
+  }, [connectedWallet, walletAddress, wallets])
 
   // Check if user is authenticated with Privy
   const checkAuthStatus = useCallback(() => {
@@ -66,10 +67,10 @@ export function usePrivyAuth() {
         walletsCount: wallets?.length || 0
       })
       
-      // If not authenticated with Privy, trigger login
+      // If not authenticated with Privy, trigger wallet connection
       if (!authenticated) {
-        console.log('Starting Privy login...')
-        await login()
+        console.log('Starting wallet connection...')
+        await login() // This will now prompt for wallet connection
         // Login is async, the useEffect above will handle token exchange
         return false
       }

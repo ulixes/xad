@@ -58,19 +58,17 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
         defaultChain: chain,
         supportedChains: [chain],
         
-        // Login methods - EMAIL ONLY
+        // Login methods - WALLET ONLY
         loginMethods: [
-          'email',  // Email login with OTP only
-          // No Google OAuth, no external wallets
+          'wallet',  // External wallet connection only (MetaMask, Coinbase Wallet, etc.)
+          // No email, no OAuth, wallet-only authentication
         ],
         
-        // Embedded wallets - ALWAYS create for ALL users
-        // Every user gets an embedded wallet, no exceptions
+        // Embedded wallets - DISABLED
+        // Users must connect their own external wallets
         embeddedWallets: {
-          ethereum: {
-            createOnLogin: 'all-users', // Changed from 'users-without-wallets'
-          },
-          showWalletUIs: true,
+          createOnLogin: 'users-without-wallets', // Don't create for users with wallets
+          showWalletUIs: false, // Hide embedded wallet UI
         },
         
         // Events

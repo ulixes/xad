@@ -1,4 +1,4 @@
-// Payment Flow Service - Using Privy's embedded wallets for seamless payments
+// Payment Flow Service - Using connected external wallets for payments
 
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
 import { encodeFunctionData } from 'viem'
@@ -114,9 +114,8 @@ export class PaymentFlowEmbeddedService {
 
   static async createCampaignWithPayment(
     formData: any,
-    embeddedWallet: any, // The embedded wallet from Privy
-    signTypedData: any,  // Privy's signTypedData function (works seamlessly with embedded)
-    sendTransaction: any, // Privy's sendTransaction function (works seamlessly with embedded)
+    walletAddress: string, // The connected wallet address
+    walletClient: any,     // Wagmi wallet client for signing
     publicClient: any
   ) {
     try {
@@ -124,11 +123,10 @@ export class PaymentFlowEmbeddedService {
       const campaignId = await this.generateCampaignId()
       console.log('Generated campaign ID:', campaignId)
       
-      // Step 2: Get contract address and wallet address
+      // Step 2: Get contract address
       const contractAddress = networkConfig.campaignPaymentsContract
-      const walletAddress = embeddedWallet.address
       
-      console.log('[PaymentFlowEmbedded] Using embedded wallet:', walletAddress)
+      console.log('[PaymentFlow] Using connected wallet:', walletAddress)
       
       // Step 3: Prepare targeting parameters
       const targetingParams = {
@@ -172,22 +170,22 @@ export class PaymentFlowEmbeddedService {
         publicClient
       )
       
-      console.log('Requesting permit signature from embedded wallet...')
+      console.log('Requesting permit signature from connected wallet...')
       
-      // Step 5: Sign permit with embedded wallet
-      const signResult = await signTypedData({
+      // Step 5: Sign permit with wagmi wallet client
+      const signature = await walletClient.signTypedData({
+        account: walletAddress as `0x${string}`,
         domain,
         types,
         primaryType: 'Permit',
         message: permitData
       })
       
-      console.log('Permit signature obtained seamlessly')
-      const signature = signResult.signature
+      console.log('Permit signature obtained from external wallet')
       
       // Split signature
-      const r = `0x${signature.slice(2, 66)}`
-      const s = `0x${signature.slice(66, 130)}`
+      const r = `0x${signature.slice(2, 66)}` as `0x${string}`
+      const s = `0x${signature.slice(66, 130)}` as `0x${string}`
       const v = parseInt(signature.slice(130, 132), 16)
       
       // Step 6: Encode the contract call (now with struct and encoded targets)
@@ -205,15 +203,15 @@ export class PaymentFlowEmbeddedService {
         ]
       })
       
-      // Step 7: Send transaction with embedded wallet (seamless)
-      console.log('Sending transaction with embedded wallet...')
-      const txResult = await sendTransaction({
-        to: contractAddress,
-        data: txData,
-        chainId: networkConfig.chainId
+      // Step 7: Send transaction with wagmi wallet client
+      console.log('Sending transaction with connected wallet...')
+      const hash = await walletClient.sendTransaction({
+        account: walletAddress as `0x${string}`,
+        to: contractAddress as `0x${string}`,
+        data: txData as `0x${string}`,
+        chain: networkConfig.viemChain
       })
       
-      const hash = txResult.hash
       console.log('Transaction sent! Hash:', hash)
       
       return {

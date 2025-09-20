@@ -22,7 +22,6 @@ export default function Advertise() {
         <SimplifiedAdTargetingForm 
           onSave={handleSave} 
           mockWalletConnected={isPrivyAuthenticated}
-          mockWalletAddress={walletAddress}
         />
       </div>
     </section>

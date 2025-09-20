@@ -13,8 +13,8 @@ import { AlertCircle, CheckCircle, Loader2, BadgeCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { PaymentFlowEmbeddedService } from '../../services/paymentFlowEmbedded';
-import { useWallets, useSendTransaction, useSignTypedData } from '@privy-io/react-auth';
-import { usePublicClient } from 'wagmi';
+import { useWallets } from '@privy-io/react-auth';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 import { CAMPAIGN_PAYMENTS_ABI } from '../../config/networks';
@@ -67,13 +67,11 @@ interface SimplifiedAdTargetingFormProps {
   onCancel?: () => void;
   // Storybook-specific props
   mockWalletConnected?: boolean;
-  mockWalletAddress?: string;
 }
 
 export function SimplifiedAdTargetingForm({ 
   onSave,
-  mockWalletConnected = false,
-  mockWalletAddress = '0x1234567890123456789012345678901234567890'
+  mockWalletConnected = false
 }: SimplifiedAdTargetingFormProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
@@ -86,25 +84,22 @@ export function SimplifiedAdTargetingForm({
   
   // Real wallet hooks (will be undefined in Storybook)
   const { wallets } = useWallets();
-  const { sendTransaction } = useSendTransaction();
-  const { signTypedData } = useSignTypedData();
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   
   // Debug log hook values on mount/update
   useEffect(() => {
     console.log('[SimplifiedAdTargetingForm] Hook values:', {
       walletsLength: wallets?.length,
-      hasSendTransaction: !!sendTransaction,
-      hasSignTypedData: !!signTypedData,
+      hasWalletClient: !!walletClient,
       hasPublicClient: !!publicClient,
       walletTypes: wallets?.map(w => w.walletClientType)
     });
-  }, [wallets, sendTransaction, signTypedData, publicClient]);
+  }, [wallets, walletClient, publicClient]);
   
   // Privy auth hook
   const { 
     isPrivyAuthenticated,
-    walletAddress: connectedAddress,
     triggerSignIn, 
     checkAuthStatus 
   } = usePrivyAuth();
@@ -149,12 +144,12 @@ export function SimplifiedAdTargetingForm({
         // TODO: Update this to fetch actual contract data once contract functions are available
         // const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
         
-        // For now, use default values
+        // Use default package values - these define the campaign package
         setContractData({
-          likes: 0,
-          follows: 0,
-          baseLikePrice: 0,
-          baseFollowPrice: 0,
+          likes: 20,
+          follows: 10,
+          baseLikePrice: 200000, // 0.2 USDC per like (6 decimals)
+          baseFollowPrice: 400000, // 0.4 USDC per follow (6 decimals)
           loading: false
         });
       } catch (error) {
@@ -240,15 +235,15 @@ export function SimplifiedAdTargetingForm({
       }
     }
     
-    // Get embedded wallet (every user has one with email login)
+    // Get connected external wallet (users must connect their own wallet)
     console.log('[SimplifiedAdTargetingForm] Available wallets:', wallets?.map(w => ({
       type: w.walletClientType,
       address: w.address,
       chainId: w.chainId
     })));
-    const embeddedWallet = wallets?.find(w => w.walletClientType === 'privy') || wallets?.[0];
-    if (!mockWalletConnected && (!embeddedWallet || !publicClient)) {
-      setPaymentError('Wallet is initializing... Please try again in a moment');
+    const connectedWallet = wallets?.[0]; // Get the first connected wallet
+    if (!mockWalletConnected && (!connectedWallet || !publicClient || !walletClient)) {
+      setPaymentError('Please connect your wallet to continue');
       return;
     }
 
@@ -266,17 +261,16 @@ export function SimplifiedAdTargetingForm({
     setIsProcessingPayment(true);
 
     try {
-      // If we have embedded wallet and publicClient, use actual payment flow
+      // If we have connected wallet and publicClient, use actual payment flow
       console.log('[Payment] Check conditions:', {
-        hasEmbeddedWallet: !!embeddedWallet,
+        hasConnectedWallet: !!connectedWallet,
         hasPublicClient: !!publicClient,
-        hasSendTransaction: !!sendTransaction,
-        hasSignTypedData: !!signTypedData,
-        walletType: embeddedWallet?.walletClientType
+        hasWalletClient: !!walletClient,
+        walletType: connectedWallet?.walletClientType
       });
-      if (embeddedWallet && publicClient && sendTransaction && signTypedData) {
-        console.log('Processing payment with embedded wallet...');
-        console.log('Embedded wallet:', embeddedWallet.address);
+      if (connectedWallet && publicClient && walletClient) {
+        console.log('Processing payment with connected wallet...');
+        console.log('Connected wallet:', connectedWallet.address);
         
         const formData = {
           platform: selectedPlatform,
@@ -290,9 +284,8 @@ export function SimplifiedAdTargetingForm({
         
         const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
           formData,
-          embeddedWallet,
-          signTypedData,
-          sendTransaction,
+          connectedWallet.address,
+          walletClient,
           publicClient
         );
         

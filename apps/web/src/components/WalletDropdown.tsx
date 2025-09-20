@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Wallet, ExternalLink, Plus, LogOut } from 'lucide-react'
-import { useFundWallet } from '@privy-io/react-auth'
+import { Copy, Check, Wallet, ExternalLink, LogOut } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,19 +12,13 @@ import { Button } from './ui/button'
 interface WalletDropdownProps {
   address: string
   onSignOut?: () => void
-  // For Storybook
-  mockFundWallet?: boolean
 }
 
 export function WalletDropdown({ 
   address, 
-  onSignOut,
-  mockFundWallet = false 
+  onSignOut
 }: WalletDropdownProps) {
   const [copied, setCopied] = useState(false)
-  
-  // Only use the hook if not in Storybook
-  const { fundWallet } = mockFundWallet ? { fundWallet: async () => {} } : useFundWallet()
 
   // Format address for display
   const formatAddress = (addr: string) => {
@@ -39,14 +32,6 @@ export function WalletDropdown({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Handle add funds
-  const handleAddFunds = async () => {
-    if (!mockFundWallet) {
-      await fundWallet(address)
-    } else {
-      console.log('Mock: Opening fund wallet modal for', address)
-    }
-  }
 
   return (
     <DropdownMenu>
@@ -84,19 +69,6 @@ export function WalletDropdown({
             </button>
           </div>
         </div>
-
-        {/* Add Funds */}
-        <DropdownMenuItem 
-          onClick={handleAddFunds}
-          className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-800 focus:bg-gray-800"
-        >
-          <Plus className="w-4 h-4 text-indigo-400" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-100">Add Funds</div>
-            <div className="text-xs text-gray-400">Buy ETH & USDC with card</div>
-          </div>
-          <ExternalLink className="w-4 h-4 text-gray-500" />
-        </DropdownMenuItem>
 
         {/* View on Explorer */}
         <DropdownMenuItem asChild>
