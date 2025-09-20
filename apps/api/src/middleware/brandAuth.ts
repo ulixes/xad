@@ -39,14 +39,13 @@ export async function brandAuthMiddleware(c: Context<{ Bindings: Env }>, next: N
     console.log('[brandAuth] Session wallet:', session.walletAddress)
 
     // Check if this user (by ownerId) has a brand account
-    const [brand] = await db.select().from(brands)
+    let [brand] = await db.select().from(brands)
       .where(eq(brands.ownerId, claims.userId)) // Use auth provider ID, not wallet
       .limit(1)
 
     if (!brand) {
       // Create brand account if it doesn't exist
       console.log('[brandAuth] Creating new brand for owner:', claims.userId)
-      // With 'users-without-wallets' config, user should have exactly 1 wallet
       const walletAddresses = session.walletAddresses
       
       if (walletAddresses.length === 0) {
@@ -61,6 +60,7 @@ export async function brandAuthMiddleware(c: Context<{ Bindings: Env }>, next: N
       }).returning()
       console.log('[brandAuth] Created brand ID:', newBrand.id, 'with wallet:', walletAddresses[0])
       
+      brand = newBrand
       c.set('brand', newBrand)
     } else {
       // Check if wallet needs to be updated (shouldn't happen often with single wallet)

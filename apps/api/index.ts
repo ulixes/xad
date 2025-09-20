@@ -6,6 +6,7 @@ import usersRoutes from "./src/routes/users";
 import socialAccountsRoutes from "./src/routes/social-accounts";
 import actionRunsRoutes from "./src/routes/action-runs";
 import withdrawalsRoutes from "./src/routes/withdrawals";
+import { brandRoutes } from "./src/routes/brands";
 import { initDB } from "./src/db/index";
 import { ConfigManager } from "./src/config";
 import type { Env } from "./src/types";
@@ -71,6 +72,7 @@ app.get("/", (c) => {
 });
 
 // Routes
+app.route("/api/brands", brandRoutes);
 app.route("/api/campaigns", campaignRoutes);
 app.route("/api/users", usersRoutes);
 app.route("/api/social-accounts", socialAccountsRoutes);
