@@ -37,13 +37,12 @@ jobs:
       
       - name: Build application
         working-directory: apps/web
-        run: bun run build
+        run: vite build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
-          VITE_BASE_SEPOLIA_RPC_URL: ${{ secrets.VITE_BASE_SEPOLIA_RPC_URL }}
-          VITE_CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS: ${{ secrets.VITE_CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS }}
-          VITE_ENVIRONMENT: staging
+          VITE_CONTRACT_ADDRESS: ${{ secrets.VITE_CONTRACT_ADDRESS }}
+          VITE_NETWORK_ENV: ${{ secrets.VITE_NETWORK_ENV }}
       
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25

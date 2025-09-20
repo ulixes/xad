@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
-import { usePaymentFlow } from '../services/paymentFlow'
+import { usePaymentFlow } from '../services/paymentFlowEmbedded'
 import type { TargetingRule } from '../types/platform-schemas'
 
 interface PaymentState {

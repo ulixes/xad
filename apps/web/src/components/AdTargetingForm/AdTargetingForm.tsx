@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { calculateCampaignPrice } from '../../utils/pricing-calculator';
 import { useWalletClient, usePublicClient } from 'wagmi';
-import { PaymentFlowService } from '../../services/paymentFlow';
+import { PaymentFlowEmbeddedService } from '../../services/paymentFlowEmbedded';
 import { getNetworkConfig } from '../../config/networks';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 
@@ -194,7 +194,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
               maxVolume: config.maxVolume
             }
           }),
-        brandWalletAddress: address
+        brandWalletAddress: walletAddress || ''
       }
 
       console.log('Campaign data:', campaignData)
@@ -209,7 +209,7 @@ export function AdTargetingForm({ initialRule, onSave }: AdTargetingFormProps) {
 
       // Use the new unified payment flow
       console.log('Starting unified payment flow...')
-      const result = await PaymentFlowService.createCampaignWithPayment(
+      const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
         campaignData,
         walletAddress,
         walletClient,

@@ -17,7 +17,7 @@ import { useWallets, useSendTransaction, useSignTypedData } from '@privy-io/reac
 import { usePublicClient } from 'wagmi';
 import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
-import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig } from '../../config/networks';
+import { CAMPAIGN_PAYMENTS_ABI } from '../../config/networks';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -135,36 +135,15 @@ export function SimplifiedAdTargetingForm({
       }
       
       try {
-        const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
+        // TODO: Update this to fetch actual contract data once contract functions are available
+        // const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
         
-        const [likes, follows, likePrice, followPrice] = await Promise.all([
-          publicClient.readContract({
-            address: contractAddress,
-            abi: CAMPAIGN_PAYMENTS_ABI,
-            functionName: 'campaignLikes'
-          }),
-          publicClient.readContract({
-            address: contractAddress,
-            abi: CAMPAIGN_PAYMENTS_ABI,
-            functionName: 'campaignFollows'
-          }),
-          publicClient.readContract({
-            address: contractAddress,
-            abi: CAMPAIGN_PAYMENTS_ABI,
-            functionName: 'baseLikePrice'
-          }),
-          publicClient.readContract({
-            address: contractAddress,
-            abi: CAMPAIGN_PAYMENTS_ABI,
-            functionName: 'baseFollowPrice'
-          })
-        ]);
-        
+        // For now, use default values
         setContractData({
-          likes: Number(likes),
-          follows: Number(follows),
-          baseLikePrice: Number(likePrice),
-          baseFollowPrice: Number(followPrice),
+          likes: 0,
+          follows: 0,
+          baseLikePrice: 0,
+          baseFollowPrice: 0,
           loading: false
         });
       } catch (error) {
@@ -233,7 +212,7 @@ export function SimplifiedAdTargetingForm({
     
     // Check wallet connection (use real wallet if available, otherwise mock)
     const isWalletConnected = isPrivyAuthenticated || mockWalletConnected;
-    const walletAddress = connectedAddress || mockWalletAddress;
+    // const walletAddress = connectedAddress || mockWalletAddress;
     
     if (!isWalletConnected) {
       setPaymentError('Please connect your wallet first');
