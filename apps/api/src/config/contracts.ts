@@ -34,10 +34,24 @@ export function getContractConfig(): ContractConfig {
 export const CAMPAIGN_PAYMENTS_ABI = [
   {
     "inputs": [
-      { "internalType": "string", "name": "campaignId", "type": "string" },
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      { "name": "campaignId", "type": "string" },
+      { 
+        "name": "params", 
+        "type": "tuple",
+        "components": [
+          { "name": "country", "type": "string" },
+          { "name": "targetGender", "type": "bool" },
+          { "name": "targetAge", "type": "bool" },
+          { "name": "verifiedOnly", "type": "bool" }
+        ]
+      },
+      { "name": "targets", "type": "string" },
+      { "name": "deadline", "type": "uint256" },
+      { "name": "v", "type": "uint8" },
+      { "name": "r", "type": "bytes32" },
+      { "name": "s", "type": "bytes32" }
     ],
-    "name": "depositForCampaign",
+    "name": "depositForCampaignWithPermit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -45,12 +59,25 @@ export const CAMPAIGN_PAYMENTS_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      { "indexed": true, "internalType": "string", "name": "campaignId", "type": "string" },
-      { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+      { "indexed": true, "name": "campaignId", "type": "string" },
+      { "indexed": true, "name": "sender", "type": "address" },
+      { "indexed": false, "name": "amount", "type": "uint256" },
+      { "indexed": false, "name": "timestamp", "type": "uint256" },
+      { "indexed": false, "name": "targets", "type": "string" }
     ],
     "name": "CampaignPaymentReceived",
     "type": "event"
+  },
+  {
+    "inputs": [
+      { "name": "country", "type": "string" },
+      { "name": "targetGender", "type": "bool" },
+      { "name": "targetAge", "type": "bool" },
+      { "name": "verifiedOnly", "type": "bool" }
+    ],
+    "name": "calculatePrice",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;

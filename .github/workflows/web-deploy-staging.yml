@@ -1,0 +1,61 @@
+name: Web Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - develop
+    paths:
+      - 'apps/web/**'
+      - '!apps/web/README.md'
+      - '!apps/web/.env.example'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging-web
+    defaults:
+      run:
+        working-directory: apps/web
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: |
+          cd ../..
+          bun install
+      
+      - name: Build application
+        working-directory: apps/web
+        run: bun run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_BASE_SEPOLIA_RPC_URL: ${{ secrets.VITE_BASE_SEPOLIA_RPC_URL }}
+          VITE_CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS: ${{ secrets.VITE_CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS }}
+          VITE_ENVIRONMENT: staging
+      
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./apps/web
+      
+      - name: Create deployment notification
+        if: success()
+        run: |
+          echo "✅ Web app deployed to STAGING environment"
+          echo "Deployment triggered by: ${{ github.actor }}"

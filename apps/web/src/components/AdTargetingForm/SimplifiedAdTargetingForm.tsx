@@ -17,6 +17,7 @@ import { useWallets, useSendTransaction, useSignTypedData } from '@privy-io/reac
 import { usePublicClient } from 'wagmi';
 import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
+import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig } from '../../config/networks';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -28,50 +29,6 @@ const platforms = [
   { id: 'reddit', name: 'Reddit', icon: '/social-logos/reddit.png', available: false },
   { id: 'farcaster', name: 'Farcaster', icon: '/social-logos/farcaster.png', available: false },
 ];
-
-// Contract ABI for reading configuration
-const CAMPAIGN_PAYMENTS_ABI = [
-  {
-    inputs: [],
-    name: 'campaignLikes',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [],
-    name: 'campaignFollows',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [],
-    name: 'baseLikePrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [],
-    name: 'baseFollowPrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' }
-    ],
-    name: 'calculatePrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  }
-] as const;
 
 // Country list with codes matching contract
 const COUNTRIES = [
@@ -325,8 +282,8 @@ export function SimplifiedAdTargetingForm({
           gender: requirements.gender,
           ageRange: requirements.ageRange,
           verifiedOnly: requirements.verifiedOnly,
-          likeTarget: campaignTargets.likeTarget,
-          followTarget: campaignTargets.followTarget
+          likeUrl: campaignTargets.likeTarget,    // Changed from likeTarget to likeUrl
+          followUrl: campaignTargets.followTarget  // Changed from followTarget to followUrl
         };
         
         const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(

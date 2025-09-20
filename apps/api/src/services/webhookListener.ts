@@ -6,12 +6,13 @@ import { eq, sql } from 'drizzle-orm'
 import { createPublicClient, http, parseAbiItem, decodeEventLog, decodeFunctionData } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import type { Env } from '../types'
+import { parseTargetsFromBlockchain } from '../utils/targetEncoder'
 
 const USDC_DECIMALS = 6
 
 // CampaignPaymentReceived event ABI
 const CAMPAIGN_PAYMENT_EVENT_ABI = parseAbiItem(
-  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp)'
+  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp, string targets)'
 )
 
 // PriceCalculated event ABI
@@ -19,17 +20,24 @@ const PRICE_CALCULATED_EVENT_ABI = parseAbiItem(
   'event PriceCalculated(string indexed campaignId, uint256 totalPrice, string country, bool targetGender, bool targetAge, bool verifiedOnly)'
 )
 
-// Contract ABI for depositForCampaignWithPermit function (to decode campaign ID from input)
+// Contract ABI for depositForCampaignWithPermit function (with struct and encodedTargets)
 const DEPOSIT_FOR_CAMPAIGN_ABI = [
   {
     name: 'depositForCampaignWithPermit',
     type: 'function',
     inputs: [
       { name: 'campaignId', type: 'string' },
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' },
+      { 
+        name: 'params', 
+        type: 'tuple',
+        components: [
+          { name: 'country', type: 'string' },
+          { name: 'targetGender', type: 'bool' },
+          { name: 'targetAge', type: 'bool' },
+          { name: 'verifiedOnly', type: 'bool' }
+        ]
+      },
+      { name: 'targets', type: 'string' },
       { name: 'deadline', type: 'uint256' },
       { name: 'v', type: 'uint8' },
       { name: 'r', type: 'bytes32' },
@@ -144,17 +152,21 @@ export class WebhookListenerService {
         
         if (decoded.functionName === 'depositForCampaignWithPermit') {
           const campaignId = decoded.args[0] as string
-          const country = decoded.args[1] as string
-          const targetGender = decoded.args[2] as boolean
-          const targetAge = decoded.args[3] as boolean
-          const verifiedOnly = decoded.args[4] as boolean
+          const params = decoded.args[1] as {
+            country: string
+            targetGender: boolean
+            targetAge: boolean
+            verifiedOnly: boolean
+          }
+          const targets = decoded.args[2] as string // "handle:videoId|handle"
           
           console.log('[WEBHOOK] Decoded campaign payment:', {
             campaignId,
-            country,
-            targetGender,
-            targetAge,
-            verifiedOnly,
+            country: params.country,
+            targetGender: params.targetGender,
+            targetAge: params.targetAge,
+            verifiedOnly: params.verifiedOnly,
+            targets, // "handle:videoId|handle"
             from: tx.from,
             hash: tx.hash
           })
@@ -200,12 +212,8 @@ export class WebhookListenerService {
             transactionHash: tx.hash,
             blockNumber: tx.block_number,
             timestamp,
-            targetingParams: {
-              country,
-              targetGender,
-              targetAge,
-              verifiedOnly
-            }
+            targetingParams: params,
+            targets
           }, db)
           
           console.log('[WEBHOOK] Campaign payment processed successfully')
@@ -230,47 +238,45 @@ export class WebhookListenerService {
       targetGender: boolean,
       targetAge: boolean,
       verifiedOnly: boolean
-    }
+    },
+    targets: string // "handle:videoId|handle"
   }, db: any) {
-    const { campaignId, amount, senderAddress, transactionHash, blockNumber, timestamp, targetingParams } = data
+    const { campaignId, amount, senderAddress, transactionHash, blockNumber, timestamp, targetingParams, targets } = data
     
     console.log('[WEBHOOK] Processing campaign payment for:', campaignId)
     
     try {
-      // Fetch campaign
-      let [campaign] = await db
-        .select()
-        .from(campaigns)
-        .where(eq(campaigns.id, campaignId))
-        .limit(1)
-
+      // Decode obfuscated targets from contract
+      const decodedTargets = parseTargetsFromBlockchain(targets)
+      
+      // Build TikTok URLs from decoded data
+      const likeUrl = `https://www.tiktok.com/@${decodedTargets.likeHandle}/video/${decodedTargets.videoId}`
+      const followUrl = `https://www.tiktok.com/@${decodedTargets.followHandle}`
+      
+      console.log('[WEBHOOK] Decoded and built URLs from contract data:', {
+        likeUrl,
+        followUrl,
+        decoded: decodedTargets
+      })
+      
+      // Create new campaign from payment data
+      console.log(`[WEBHOOK] Creating new campaign: ${campaignId}`)
+      const campaign = await this.createCampaignFromPayment({
+        campaignId,
+        amount,
+        senderAddress,
+        targetingParams,
+        likeUrl,
+        followUrl
+      }, db)
+      
       if (!campaign) {
-        console.log(`[WEBHOOK] Campaign not found, creating new campaign: ${campaignId}`)
-        campaign = await this.createCampaignFromPayment({
-          campaignId,
-          amount,
-          senderAddress,
-          targetingParams
-        }, db)
-        
-        if (!campaign) {
-          console.error(`[WEBHOOK] Failed to create campaign: ${campaignId}`)
-          return
-        }
-      }
-
-      if (campaign.status !== 'pending_payment') {
-        console.warn(`[WEBHOOK] WARNING: Campaign ${campaignId} is not pending payment, status: ${campaign.status}`)
+        console.error(`[WEBHOOK] Failed to create campaign: ${campaignId}`)
         return
       }
 
       // Convert USDC (6 decimals) to cents for database storage
       const amountInCents = Math.round(Number(amount) / Math.pow(10, USDC_DECIMALS - 2))
-      
-      if (amountInCents < campaign.totalBudget) {
-        console.error(`[WEBHOOK] ERROR: Insufficient payment. Expected: ${campaign.totalBudget} cents, Received: ${amountInCents} cents`)
-        return
-      }
 
       // Record payment
       await db.insert(payments).values({
@@ -313,16 +319,22 @@ export class WebhookListenerService {
         .from(campaignActions)
         .where(eq(campaignActions.campaignId, campaignId))
 
+      if (campaignActionsData.length === 0) {
+        console.error(`[WEBHOOK] ERROR: No campaign actions found for campaign ${campaignId}`)
+        throw new Error('No campaign actions to activate')
+      }
+
       console.log(`[WEBHOOK] Creating ${campaignActionsData.length} actions for extension users...`)
 
       // Create trackable actions for extension users
-      // IMPORTANT: We use the campaignAction.id as the action.id to maintain the relationship
-      for (const campaignAction of campaignActionsData) {
-        await db.insert(actions).values({
+      // IMPORTANT: We use the campaignAction.id as the action.id to maintain the 1:1 relationship
+      const actionsToInsert = campaignActionsData.map((campaignAction) => {
+        // The target is already set correctly in campaignActions
+        return {
           id: campaignAction.id, // Use the same ID to maintain relationship!
           platform: campaign.platform,
           actionType: campaignAction.actionType,
-          target: campaignAction.target,
+          target: campaignAction.target, // Use target from campaignAction
           title: `${campaign.platform} ${campaignAction.actionType}`,
           description: `${campaignAction.actionType} on ${campaign.platform}`,
           price: campaignAction.pricePerAction,
@@ -335,14 +347,23 @@ export class WebhookListenerService {
           },
           createdAt: timestamp,
           updatedAt: timestamp
-        })
+        }
+      })
+
+      // Bulk insert all actions at once
+      const insertedActions = await db.insert(actions).values(actionsToInsert).returning()
+
+      // Validate that we created the exact same number of actions as campaign_actions
+      if (insertedActions.length !== campaignActionsData.length) {
+        console.error(`[WEBHOOK] ERROR: Action count mismatch! Expected ${campaignActionsData.length}, got ${insertedActions.length}`)
+        throw new Error(`Failed to create all actions. Expected ${campaignActionsData.length}, created ${insertedActions.length}`)
       }
 
       console.log(`[WEBHOOK] SUCCESS: Campaign ${campaignId} activated`)
       console.log(`[WEBHOOK] - Status: pending_payment -> active`)
       console.log(`[WEBHOOK] - Payment: ${amountInCents} cents`)
       console.log(`[WEBHOOK] - Transaction: ${transactionHash}`)
-      console.log(`[WEBHOOK] - Created ${campaignActionsData.length} trackable actions`)
+      console.log(`[WEBHOOK] - Created ${insertedActions.length} trackable actions (verified count)`)
     } catch (error) {
       console.error(`[WEBHOOK] ERROR: Failed to process payment for campaign ${campaignId}:`, error)
     }
@@ -357,9 +378,11 @@ export class WebhookListenerService {
       targetGender: boolean,
       targetAge: boolean,
       verifiedOnly: boolean
-    }
+    },
+    likeUrl: string,
+    followUrl: string
   }, db: any) {
-    const { campaignId, amount, senderAddress, targetingParams } = data
+    const { campaignId, amount, senderAddress, targetingParams, likeUrl, followUrl } = data
     
     console.log('[WEBHOOK] Creating new campaign from payment:', {
       campaignId,
@@ -419,24 +442,23 @@ export class WebhookListenerService {
       
       console.log('[WEBHOOK] Campaign created:', campaign.id)
       
-      // Create default campaign actions based on the fixed package
-      // 20 likes + 10 follows as per the contract
+      // Create campaign actions with the provided targets
       const defaultActions = [
         {
           campaignId: campaign.id,
           actionType: 'like',
-          target: 'pending',
+          target: likeUrl,
           pricePerAction: 20, // $0.20 in cents
-          maxVolume: 20,
+          maxVolume: 20, // 20 likes total
           currentVolume: 0,
           isActive: false
         },
         {
           campaignId: campaign.id,
           actionType: 'follow',
-          target: 'pending',
-          pricePerAction: 40, // $0.40 in cents
-          maxVolume: 10,
+          target: followUrl,
+          pricePerAction: 40, // $0.40 in cents  
+          maxVolume: 10, // 10 follows total
           currentVolume: 0,
           isActive: false
         }

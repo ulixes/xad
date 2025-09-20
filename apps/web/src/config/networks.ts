@@ -16,7 +16,7 @@ export const getNetworkConfig = () => {
     
     // Smart Contract (CampaignPayments)
     campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
-      '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6', // Base Sepolia deployment with dynamic pricing
+      '0xF3501e3C6387188F61e2a001E2179519eEcD4A4E', // Base Sepolia deployment with dynamic pricing
     
     // USDC Token Address (payment currency)
     usdcAddress: isProduction
@@ -75,10 +75,17 @@ export const CAMPAIGN_PAYMENTS_ABI = [
   {
     inputs: [
       { name: 'campaignId', type: 'string' },
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' },
+      { 
+        name: 'params', 
+        type: 'tuple',
+        components: [
+          { name: 'country', type: 'string' },
+          { name: 'targetGender', type: 'bool' },
+          { name: 'targetAge', type: 'bool' },
+          { name: 'verifiedOnly', type: 'bool' }
+        ]
+      },
+      { name: 'targets', type: 'string' },
       { name: 'deadline', type: 'uint256' },
       { name: 'v', type: 'uint8' },
       { name: 'r', type: 'bytes32' },

@@ -40,18 +40,12 @@ contract CampaignPayments {
     // Country multipliers (1000 = 1.0x)
     mapping(string => uint256) public countryMultipliers;
     
-    // Store action targets for each campaign (minimal data)
-    // Format: "h:v|h" where h=handle(without @), v=videoId
-    // Example: "jacoboestreicher:7551115162124635447|jacoboestreicher"
-    mapping(string => string) public campaignTargets;
-    
     // Events
     event CampaignPaymentReceived(
         string indexed campaignId,
         address indexed sender,
         uint256 amount,
-        uint256 timestamp,
-        string targets
+        uint256 timestamp
     );
     
     event PriceCalculated(
@@ -92,7 +86,6 @@ contract CampaignPayments {
     error PermitFailed();
     error InsufficientPayment();
     error InvalidMultiplier();
-    error InvalidTargets();
     
     modifier onlyOwner() {
         if (msg.sender != owner) revert OnlyOwner();
@@ -199,31 +192,21 @@ contract CampaignPayments {
         return (campaignLikes * likePrice) + (campaignFollows * followPrice);
     }
     
-    // Struct to avoid stack too deep error
-    struct CampaignParams {
-        string country;
-        bool targetGender;
-        bool targetAge;
-        bool verifiedOnly;
-    }
-    
     function depositForCampaignWithPermit(
         string calldata campaignId,
-        CampaignParams calldata params,
-        string calldata targets, // Simple string: "likeUrl|followUrl"
+        string calldata country,
+        bool targetGender,
+        bool targetAge,
+        bool verifiedOnly,
         uint256 deadline,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external {
         if (bytes(campaignId).length == 0) revert InvalidCampaignId();
-        if (bytes(targets).length == 0) revert InvalidTargets();
-        
-        // Store the targets (simple string)
-        campaignTargets[campaignId] = targets;
         
         // Calculate required payment
-        uint256 requiredAmount = calculatePrice(params.country, params.targetGender, params.targetAge, params.verifiedOnly);
+        uint256 requiredAmount = calculatePrice(country, targetGender, targetAge, verifiedOnly);
         
         // Call permit on USDC to set allowance via signature
         try IERC20Permit(usdcToken).permit(
@@ -251,24 +234,18 @@ contract CampaignPayments {
         emit PriceCalculated(
             campaignId,
             requiredAmount,
-            params.country,
-            params.targetGender,
-            params.targetAge,
-            params.verifiedOnly
+            country,
+            targetGender,
+            targetAge,
+            verifiedOnly
         );
         
         emit CampaignPaymentReceived(
             campaignId,
             msg.sender,
             requiredAmount,
-            block.timestamp,
-            targets
+            block.timestamp
         );
-    }
-    
-    // Function to retrieve targets for a campaign
-    function getCampaignTargets(string calldata campaignId) external view returns (string memory) {
-        return campaignTargets[campaignId];
     }
     
     function withdrawUSDC(address to, uint256 amount) external onlyOwner {

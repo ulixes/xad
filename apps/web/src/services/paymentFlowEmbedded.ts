@@ -2,6 +2,7 @@
 
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
 import { encodeFunctionData } from 'viem'
+import { encodeTargetsSimple } from '@/utils/targetEncoder'
 
 const networkConfig = getNetworkConfig()
 
@@ -137,6 +138,25 @@ export class PaymentFlowEmbeddedService {
         verifiedOnly: formData.verifiedOnly || false
       }
       
+      // Step 3.5: Prepare action targets (extract handle and videoId)
+      // Get the SINGLE like URL and SINGLE follow URL from form
+      const likeUrl = formData.likeUrl || 'https://www.tiktok.com/@defaultuser/video/1234567890'
+      const followUrl = formData.followUrl || 'https://www.tiktok.com/@defaultuser'
+      
+      // Extract handle and videoId from URLs
+      const extractFromTikTokUrl = (url: string) => {
+        const match = url.match(/@([^\/]+)(?:\/video\/(\d+))?/)
+        if (!match) throw new Error('Invalid TikTok URL')
+        return { handle: match[1], videoId: match[2] }
+      }
+      
+      const likeData = extractFromTikTokUrl(likeUrl)
+      const followData = extractFromTikTokUrl(followUrl)
+      
+      // Encode targets for privacy (obfuscated before storing on-chain)
+      const targets = encodeTargetsSimple(likeData.handle, likeData.videoId, followData.handle)
+      console.log('Encoded targets for blockchain (obfuscated):', targets)
+      
       // Step 4: Get payment data and check balance
       const {
         calculatedAmount,
@@ -170,16 +190,14 @@ export class PaymentFlowEmbeddedService {
       const s = `0x${signature.slice(66, 130)}`
       const v = parseInt(signature.slice(130, 132), 16)
       
-      // Step 6: Encode the contract call
+      // Step 6: Encode the contract call (now with struct and encoded targets)
       const txData = encodeFunctionData({
         abi: CAMPAIGN_PAYMENTS_ABI,
         functionName: 'depositForCampaignWithPermit',
         args: [
           campaignId,
-          targetingParams.country,
-          targetingParams.targetGender,
-          targetingParams.targetAge,
-          targetingParams.verifiedOnly,
+          targetingParams, // Now passed as a struct
+          targets, // Simple string "likeUrl|followUrl"
           deadline,
           v,
           r,
