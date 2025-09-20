@@ -8,6 +8,15 @@ import { http } from 'viem'
 // Get the Privy app ID from environment
 const privyAppId = import.meta.env.VITE_PRIVY_APP_ID || ''
 
+// Debug logging - always log in production to diagnose issues
+console.log('[Privy Init] Starting with config:', {
+  appId: privyAppId ? `${privyAppId.substring(0, 10)}...` : 'MISSING',
+  hasAppId: !!privyAppId,
+  env: import.meta.env.MODE,
+  network: import.meta.env.VITE_NETWORK_ENV,
+  host: window.location.hostname
+})
+
 // Setup React Query client
 const queryClient = new QueryClient()
 
@@ -23,6 +32,16 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
       [chain.id]: http(networkConfig.rpcUrl)
     }
   } as any)
+  
+  // Critical: Check if Privy app ID is configured
+  if (!privyAppId) {
+    console.error('[Privy] ERROR: VITE_PRIVY_APP_ID is not configured!')
+    return (
+      <div style={{ padding: '20px', color: 'red' }}>
+        Error: Privy App ID not configured. Please check environment variables.
+      </div>
+    )
+  }
   
   return (
     <PrivyProvider

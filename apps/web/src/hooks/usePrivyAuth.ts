@@ -1,6 +1,5 @@
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useEffect, useState, useCallback } from 'react'
-import { API_BASE_URL } from '../config/api'
 
 export function usePrivyAuth() {
   const { 
@@ -59,6 +58,14 @@ export function usePrivyAuth() {
     setIsAuthenticating(true)
     
     try {
+      // Debug log the Privy state
+      console.log('[usePrivyAuth] triggerSignIn called:', {
+        authenticated,
+        ready,
+        hasPrivyUser: !!privyUser,
+        walletsCount: wallets?.length || 0
+      })
+      
       // If not authenticated with Privy, trigger login
       if (!authenticated) {
         console.log('Starting Privy login...')
