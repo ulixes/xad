@@ -22,7 +22,7 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
     transports: {
       [chain.id]: http(networkConfig.rpcUrl)
     }
-  })
+  } as any)
   
   return (
     <PrivyProvider
@@ -48,19 +48,17 @@ export function PrivyAuthProvider({ children }: { children: ReactNode }) {
         // Embedded wallets - ALWAYS create for ALL users
         // Every user gets an embedded wallet, no exceptions
         embeddedWallets: {
-          createOnLogin: 'all-users', // Changed from 'users-without-wallets'
-          requireUserPasswordOnCreate: false, // Seamless wallet creation
-          showWalletLoginFirst: false, // Don't show wallet login
+          ethereum: {
+            createOnLogin: 'all-users', // Changed from 'users-without-wallets'
+          },
+          showWalletUIs: true,
         },
-        
-        // Custom text
-        loginMessage: 'Sign in to XAD',
         
         // Disable wallet detection logs
         _disableWalletDetectionPolling: true,
         
         // Events
-        onSuccess: (user) => {
+        onSuccess: (user: any) => {
           console.log('Privy login success:', user)
         },
       }}

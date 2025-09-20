@@ -36,11 +36,28 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['lucide-react']
+    include: [
+      'lucide-react',
+      '@privy-io/react-auth',
+      '@privy-io/react-auth/connectors',
+      'viem',
+      'wagmi'
+    ],
+    esbuildOptions: {
+      target: 'esnext'
+    }
   },
   build: {
     commonjsOptions: {
       include: [/lucide-react/, /node_modules/]
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'privy': ['@privy-io/react-auth'],
+          'crypto': ['viem', 'wagmi']
+        }
+      }
     }
   }
 })
