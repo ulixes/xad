@@ -87,7 +87,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       {error && (
         <div className="text-red-500 mb-4">{error}</div>
       )}

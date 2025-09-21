@@ -16,9 +16,9 @@ function App() {
   return (
     <PrivyAuthProvider>
       <Router>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background flex flex-col">
           <Header />
-          <div>
+          <main className="flex-1">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/blog" element={<Blog />} />
@@ -32,8 +32,8 @@ function App() {
                 </ProtectedRoute>
               } />
             </Routes>
-            <Footer />
-          </div>
+          </main>
+          <Footer />
         </div>
       </Router>
     </PrivyAuthProvider>

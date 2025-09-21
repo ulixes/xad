@@ -71,12 +71,11 @@ export function BrandDashboard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Brand Dashboard</h1>
-          <p className="text-muted-foreground">Manage your advertising campaigns</p>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
         </div>
         <div className="flex gap-2">
           {onRefresh && (
-            <Button variant="outline" size="icon" onClick={onRefresh} disabled={isLoading}>
+            <Button variant="outline" onClick={onRefresh} disabled={isLoading} size="default">
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -154,12 +153,10 @@ export function BrandDashboard({
             <TabsTrigger value="completed">Completed ({completedCampaigns.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
+          <TabsContent value="all" className="space-y-4 mt-6">
             {campaigns.length === 0 ? (
-              <EmptyState 
+              <EmptyState
                 message="No campaigns yet"
-                actionMessage="Create Your First Campaign"
-                onCreateCampaign={onCreateCampaign}
               />
             ) : (
               campaigns.map(campaign => (
@@ -171,11 +168,10 @@ export function BrandDashboard({
             )}
           </TabsContent>
 
-          <TabsContent value="active" className="space-y-4">
+          <TabsContent value="active" className="space-y-4 mt-6">
             {activeCampaigns.length === 0 ? (
-              <EmptyState 
+              <EmptyState
                 message="No active campaigns"
-                onCreateCampaign={onCreateCampaign}
               />
             ) : (
               activeCampaigns.map(campaign => (
@@ -187,11 +183,10 @@ export function BrandDashboard({
             )}
           </TabsContent>
 
-          <TabsContent value="completed" className="space-y-4">
+          <TabsContent value="completed" className="space-y-4 mt-6">
             {completedCampaigns.length === 0 ? (
-              <EmptyState 
+              <EmptyState
                 message="No completed campaigns"
-                onCreateCampaign={onCreateCampaign}
               />
             ) : (
               completedCampaigns.map(campaign => (
@@ -209,23 +204,16 @@ export function BrandDashboard({
 }
 
 // Empty State Component
-function EmptyState({ 
-  message, 
-  actionMessage = "Create Campaign",
-  onCreateCampaign 
-}: { 
+function EmptyState({
+  message
+}: {
   message: string
-  actionMessage?: string
-  onCreateCampaign?: () => void 
 }) {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="text-center space-y-4">
+        <div className="text-center">
           <p className="text-muted-foreground">{message}</p>
-          {onCreateCampaign && (
-            <Button onClick={onCreateCampaign}>{actionMessage}</Button>
-          )}
         </div>
       </CardContent>
     </Card>
