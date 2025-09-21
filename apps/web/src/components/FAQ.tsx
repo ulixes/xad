@@ -80,8 +80,7 @@ export default function FAQ() {
 
   return (
     <section id="faq" className="py-16 lg:py-24">
-      <div className="container mx-auto">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6">
           {/* Section Header */}
           <div className="mb-8">
             <h4 className="text-3xl md:text-5xl tracking-tighter font-regular text-left">
@@ -119,7 +118,6 @@ export default function FAQ() {
             ))}
           </div>
         </div>
-      </div>
     </section>
   )
 }
