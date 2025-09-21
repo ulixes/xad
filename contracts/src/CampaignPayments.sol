@@ -171,23 +171,23 @@ contract CampaignPayments {
         locationMultipliers["MN"] = 250;        // 0.25x - Mongolia CPM ~$2-4
         locationMultipliers["KZ"] = 350;        // 0.35x - Kazakhstan CPM ~$4-6
         
-        // Initialize language multipliers based on global ad demand
-        languageMultipliers["all"] = 1000;      // 1.0x baseline
-        languageMultipliers["en"] = 1300;       // 1.3x - Highest ad demand
-        languageMultipliers["es"] = 900;        // 0.9x - Spanish markets mid-low CPM
-        languageMultipliers["fr"] = 800;        // 0.8x - Align with FR country
-        languageMultipliers["de"] = 800;        // 0.8x - Align with DE country
-        languageMultipliers["it"] = 700;        // 0.7x - Align with IT country
-        languageMultipliers["pt"] = 700;        // 0.7x - For BR/Portugal
-        languageMultipliers["ru"] = 800;        // 0.8x - Russia CPM ~$4-6
-        languageMultipliers["ja"] = 600;        // 0.6x - Align with JP
-        languageMultipliers["ko"] = 600;        // 0.6x - Align with KR
-        languageMultipliers["zh"] = 500;        // 0.5x - China CPM low
-        languageMultipliers["ar"] = 800;        // 0.8x - Arabic markets vary
-        languageMultipliers["hi"] = 300;        // 0.3x - Very cheap per IN data
-        languageMultipliers["id"] = 300;        // 0.3x - Align with ID
-        languageMultipliers["th"] = 400;        // 0.4x - Thailand CPM ~$3-5
-        languageMultipliers["vi"] = 400;        // 0.4x - Vietnam similar
+        // Initialize language multipliers - FIXED 25% premium for all specific languages
+        languageMultipliers["all"] = 1000;      // 1.0x baseline (no language targeting)
+        languageMultipliers["en"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["es"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["fr"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["de"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["it"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["pt"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ru"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ja"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ko"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["zh"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ar"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["hi"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["id"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["th"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["vi"] = 1250;       // 1.25x - Fixed 25% premium
     }
     
     // Owner functions to update configuration
