@@ -210,11 +210,12 @@ const AppContent = () => {
           }));
         }
       } else if (message.type === 'tiktokAccountComplete') {
-        const { accountId, handle, profileData, demographics, hasDemographics } = message;
+        const { accountId, handle, profileData, hasViewerDemographics, hasFollowerDemographics } = message;
         console.log('TikTok account creation complete:', { 
           accountId, 
           handle, 
-          hasDemographics,
+          hasViewerDemographics,
+          hasFollowerDemographics,
           profileData 
         });
         
@@ -223,24 +224,30 @@ const AppContent = () => {
         
         if (account && user) {
           try {
-            // Save profile data with demographics in a single call
+            // Save profile data with all demographics in a single call
             console.log('Saving TikTok profile data with demographics:', {
-              hasDemographics,
+              hasViewerDemographics,
+              hasFollowerDemographics,
               hasProfileData: !!profileData,
-              hasDemographicsData: !!(profileData.demographics)
+              hasViewerDemographicsData: !!(profileData.viewerDemographics),
+              hasFollowerDemographicsData: !!(profileData.followerDemographics)
             });
             
             const result = await apiClient.updateTikTokData(
               account.id, 
               profileData, 
               account.handle, 
-              hasDemographics
+              hasViewerDemographics,
+              hasFollowerDemographics
             );
             
             console.log('TikTok data saved successfully:', result);
             
-            if (result.demographics) {
-              console.log('Demographics saved:', result.demographics);
+            if (result.viewerDemographics) {
+              console.log('Viewer demographics saved:', result.viewerDemographics);
+            }
+            if (result.followerDemographics) {
+              console.log('Follower demographics saved:', result.followerDemographics);
             }
             
             // Remove from verifying state
@@ -257,8 +264,12 @@ const AppContent = () => {
             // Fetch eligible actions for the updated accounts
             await fetchActionsForAccounts(updatedAccounts);
             
+            const demographicsStatus = [];
+            if (hasViewerDemographics) demographicsStatus.push('viewer demographics');
+            if (hasFollowerDemographics) demographicsStatus.push('follower demographics');
+            
             console.log('✅ TikTok account successfully added' + 
-                       (hasDemographics ? ' with demographics!' : '!'));
+                       (demographicsStatus.length > 0 ? ` with ${demographicsStatus.join(' and ')}!` : '!'));
           } catch (error) {
             console.error('❌ Failed to complete TikTok account creation:', error);
             setVerifyingAccounts(prev => {

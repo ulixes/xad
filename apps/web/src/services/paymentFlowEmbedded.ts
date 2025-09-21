@@ -128,11 +128,11 @@ export class PaymentFlowEmbeddedService {
       
       console.log('[PaymentFlow] Using connected wallet:', walletAddress)
       
-      // Step 3: Prepare targeting parameters
+      // Step 3: Prepare targeting parameters (using accountLocation for contract compatibility)
       const targetingParams = {
-        country: formData.country || 'all',
-        targetGender: formData.gender !== 'all',
-        targetAge: formData.ageRange !== 'all',
+        country: formData.accountLocation || 'all',
+        targetGender: false, // Deprecated, keeping for contract compatibility
+        targetAge: false, // Deprecated, keeping for contract compatibility
         verifiedOnly: formData.verifiedOnly || false
       }
       

@@ -56,11 +56,12 @@ type CampaignTargets = {
   followTarget: string;
 };
 
-type TargetingRequirements = {
-  gender?: 'all' | 'male' | 'female';
-  ageRange?: string;
-  country?: string;
+type AccountRequirements = {
   verifiedOnly?: boolean;
+  minFollowers?: number;
+  minUniqueViews28Days?: number;
+  accountLocation?: string;
+  accountLanguage?: string;
 };
 
 interface SimplifiedAdTargetingFormProps {
@@ -116,12 +117,13 @@ export function SimplifiedAdTargetingForm({
     loading: true
   });
   
-  // Simplified targeting requirements
-  const [requirements, setRequirements] = useState<TargetingRequirements>({
-    gender: 'all',
-    ageRange: 'all',
-    country: 'all',
-    verifiedOnly: false
+  // Account requirements
+  const [requirements, setRequirements] = useState<AccountRequirements>({
+    verifiedOnly: false,
+    minFollowers: 1000,
+    minUniqueViews28Days: 10000,
+    accountLocation: 'all',
+    accountLanguage: 'all'
   });
   
   // Calculated price from contract
@@ -188,9 +190,9 @@ export function SimplifiedAdTargetingForm({
           abi: CAMPAIGN_PAYMENTS_ABI,
           functionName: 'calculatePrice',
           args: [
-            requirements.country || 'all',
-            requirements.gender !== 'all',
-            requirements.ageRange !== 'all',
+            requirements.accountLocation || 'all',
+            false, // was targetGender, now unused
+            false, // was targetAge, now unused
             requirements.verifiedOnly || false
           ]
         });
@@ -438,7 +440,8 @@ export function SimplifiedAdTargetingForm({
         {/* Account Qualifications */}
         <div>
           <h2 className="text-lg sm:text-xl font-semibold mb-4">Account Qualifications</h2>
-          <div className="border border-border rounded-lg p-4 bg-card">
+          <div className="border border-border rounded-lg p-4 bg-card space-y-4">
+            {/* Verified Account */}
             <div className="flex items-center space-x-3">
               <Checkbox
                 id="verified-only"
@@ -452,74 +455,55 @@ export function SimplifiedAdTargetingForm({
                 className="flex items-center gap-2 cursor-pointer flex-1"
               >
                 <span className="text-base font-medium">
-                  Verified
+                  Verified Account
                 </span>
                 <BadgeCheck className="w-5 h-5 text-primary" />
               </Label>
             </div>
-          </div>
-        </div>
 
-        {/* Demographics of Account's Following */}
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Account's Following Demographics</h2>
-          <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-            
-            {/* Gender Targeting */}
+            {/* Minimum Followers */}
             <div className="space-y-2">
-              <Label htmlFor="gender-select" className="text-base font-medium">
-                Gender
+              <Label htmlFor="min-followers" className="text-base font-medium">
+                Minimum Followers
               </Label>
-              <Select 
-                value={requirements.gender} 
-                onValueChange={(value) => setRequirements({...requirements, gender: value as any})}
-              >
-                <SelectTrigger id="gender-select" className="w-full">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Genders</SelectItem>
-                  <SelectItem value="male">Primarily Male (60%+)</SelectItem>
-                  <SelectItem value="female">Primarily Female (60%+)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="min-followers"
+                type="number"
+                min="0"
+                placeholder="Enter minimum followers (e.g., 1000)"
+                value={requirements.minFollowers || ''}
+                onChange={(e) => setRequirements({...requirements, minFollowers: parseInt(e.target.value) || 0})}
+                className="w-full"
+              />
             </div>
 
-            {/* Age Range Targeting */}
+            {/* Minimum Unique Views (28 days) */}
             <div className="space-y-2">
-              <Label htmlFor="age-select" className="text-base font-medium">
-                Age Range
+              <Label htmlFor="min-views" className="text-base font-medium">
+                Minimum Unique Views (Last 28 Days)
               </Label>
-              <Select 
-                value={requirements.ageRange} 
-                onValueChange={(value) => setRequirements({...requirements, ageRange: value})}
-              >
-                <SelectTrigger id="age-select" className="w-full">
-                  <SelectValue placeholder="Select age range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ages</SelectItem>
-                  <SelectItem value="13-17">13-17 years</SelectItem>
-                  <SelectItem value="18-24">18-24 years</SelectItem>
-                  <SelectItem value="25-34">25-34 years</SelectItem>
-                  <SelectItem value="35-44">35-44 years</SelectItem>
-                  <SelectItem value="45-54">45-54 years</SelectItem>
-                  <SelectItem value="55+">55+ years</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="min-views"
+                type="number"
+                min="0"
+                placeholder="Enter minimum views (e.g., 10000)"
+                value={requirements.minUniqueViews28Days || ''}
+                onChange={(e) => setRequirements({...requirements, minUniqueViews28Days: parseInt(e.target.value) || 0})}
+                className="w-full"
+              />
             </div>
 
-            {/* Country Targeting */}
+            {/* Account Location */}
             <div className="space-y-2">
-              <Label htmlFor="country-select" className="text-base font-medium">
-                Country
+              <Label htmlFor="account-location" className="text-base font-medium">
+                Account Location
               </Label>
               <Select 
-                value={requirements.country} 
-                onValueChange={(value) => setRequirements({...requirements, country: value})}
+                value={requirements.accountLocation} 
+                onValueChange={(value) => setRequirements({...requirements, accountLocation: value})}
               >
-                <SelectTrigger id="country-select" className="w-full">
-                  <SelectValue placeholder="Select country" />
+                <SelectTrigger id="account-location" className="w-full">
+                  <SelectValue placeholder="Select account location" />
                 </SelectTrigger>
                 <SelectContent>
                   {COUNTRIES.map(country => (
@@ -531,25 +515,41 @@ export function SimplifiedAdTargetingForm({
               </Select>
             </div>
 
-            {/* Display Audience Targeting Summary */}
-            {(requirements.gender !== 'all' || requirements.ageRange !== 'all' || requirements.country !== 'all') && (
-              <div className="mt-4 p-3 bg-muted/50 rounded-md">
-                <p className="text-sm font-medium mb-1">Audience Filters:</p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  {requirements.gender !== 'all' && (
-                    <li>• Audience Gender: {requirements.gender === 'male' ? 'Primarily Male (60%+)' : 'Primarily Female (60%+)'}</li>
-                  )}
-                  {requirements.ageRange !== 'all' && (
-                    <li>• Audience Age: {requirements.ageRange}</li>
-                  )}
-                  {requirements.country !== 'all' && (
-                    <li>• Audience Location: {COUNTRIES.find(c => c.code === requirements.country)?.name}</li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {/* Account Language */}
+            <div className="space-y-2">
+              <Label htmlFor="account-language" className="text-base font-medium">
+                Account Language
+              </Label>
+              <Select 
+                value={requirements.accountLanguage} 
+                onValueChange={(value) => setRequirements({...requirements, accountLanguage: value})}
+              >
+                <SelectTrigger id="account-language" className="w-full">
+                  <SelectValue placeholder="Select account language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Languages</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="it">Italian</SelectItem>
+                  <SelectItem value="pt">Portuguese</SelectItem>
+                  <SelectItem value="ru">Russian</SelectItem>
+                  <SelectItem value="ja">Japanese</SelectItem>
+                  <SelectItem value="ko">Korean</SelectItem>
+                  <SelectItem value="zh">Chinese</SelectItem>
+                  <SelectItem value="ar">Arabic</SelectItem>
+                  <SelectItem value="hi">Hindi</SelectItem>
+                  <SelectItem value="id">Indonesian</SelectItem>
+                  <SelectItem value="th">Thai</SelectItem>
+                  <SelectItem value="vi">Vietnamese</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
 
 
         {/* Fixed Campaign Package - Fetched from Contract */}
