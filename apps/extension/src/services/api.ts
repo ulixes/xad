@@ -194,9 +194,10 @@ class APIClient {
     socialAccountId: string,
     payload: any,
     expectedHandle: string,
-    hasDemographics: boolean = false
+    hasViewerDemographics: boolean = false,
+    hasFollowerDemographics: boolean = false
   ): Promise<any> {
-    // Handle new enriched payload structure with optional demographics
+    // Handle new enriched payload structure with optional viewer and follower demographics
     const collectedUsername = payload.uniqueId;
     
     // Validate that the collected username matches the expected handle
@@ -219,21 +220,42 @@ class APIClient {
       region: payload.region || null,
       language: payload.language || null,
       createTime: payload.createTime || null,
-      // Include demographics if available
-      ...(hasDemographics && payload.demographics && {
-        demographics: {
-          genderFemale: payload.demographics.gender?.female || 0,
-          genderMale: payload.demographics.gender?.male || 0,
-          genderOther: payload.demographics.gender?.other || 0,
-          age18to24: payload.demographics.age?.['18-24'] || 0,
-          age25to34: payload.demographics.age?.['25-34'] || 0,
-          age35to44: payload.demographics.age?.['35-44'] || 0,
-          age45to54: payload.demographics.age?.['45-54'] || 0,
-          age55plus: payload.demographics.age?.['55+'] || 0,
-          uniqueViewers: payload.demographics.viewers?.unique || 0,
-          newViewers: payload.demographics.viewers?.new || 0,
-          returningViewers: payload.demographics.viewers?.returning || 0,
-          geography: payload.demographics.geography || []
+      // Include VIEWER demographics if available
+      ...(hasViewerDemographics && payload.viewerDemographics && {
+        viewerDemographics: {
+          genderFemale: payload.viewerDemographics.gender?.female || 0,
+          genderMale: payload.viewerDemographics.gender?.male || 0,
+          genderOther: payload.viewerDemographics.gender?.other || 0,
+          age18to24: payload.viewerDemographics.age?.['18-24'] || 0,
+          age25to34: payload.viewerDemographics.age?.['25-34'] || 0,
+          age35to44: payload.viewerDemographics.age?.['35-44'] || 0,
+          age45to54: payload.viewerDemographics.age?.['45-54'] || 0,
+          age55plus: payload.viewerDemographics.age?.['55+'] || 0,
+          uniqueViewers: payload.viewerDemographics.viewers?.unique || 0,
+          newViewers: payload.viewerDemographics.viewers?.new || 0,
+          returningViewers: payload.viewerDemographics.viewers?.returning || 0,
+          geography: payload.viewerDemographics.geography || []
+        }
+      }),
+      // Include viewer metrics time-series data if available
+      ...(payload.viewerMetrics && {
+        viewerMetrics: payload.viewerMetrics
+      }),
+      // Include FOLLOWER demographics if available
+      ...(hasFollowerDemographics && payload.followerDemographics && {
+        followerDemographics: {
+          followerCount: payload.followerDemographics.followerCount || 0,
+          genderFemale: payload.followerDemographics.gender?.female || 0,
+          genderMale: payload.followerDemographics.gender?.male || 0,
+          genderOther: payload.followerDemographics.gender?.other || 0,
+          age18to24: payload.followerDemographics.age?.['18-24'] || 0,
+          age25to34: payload.followerDemographics.age?.['25-34'] || 0,
+          age35to44: payload.followerDemographics.age?.['35-44'] || 0,
+          age45to54: payload.followerDemographics.age?.['45-54'] || 0,
+          age55plus: payload.followerDemographics.age?.['55+'] || 0,
+          activeFollowers: payload.followerDemographics.activity?.active || 0,
+          inactiveFollowers: payload.followerDemographics.activity?.inactive || 0,
+          geography: payload.followerDemographics.geography || []
         }
       })
     };
@@ -241,7 +263,8 @@ class APIClient {
     console.log('Sending TikTok data to API:', {
       endpoint: `/api/social-accounts/${socialAccountId}/tiktok-data`,
       data: tiktokData,
-      hasDemographics
+      hasViewerDemographics,
+      hasFollowerDemographics
     });
     
     return this.request(`/api/social-accounts/${socialAccountId}/tiktok-data`, {

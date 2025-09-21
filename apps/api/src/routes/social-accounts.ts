@@ -9,6 +9,9 @@ import {
   tiktokAccounts,
   tiktokViewerDemographics,
   tiktokViewerGeography,
+  tiktokViewerMetrics,
+  tiktokFollowerDemographics,
+  tiktokFollowerGeography,
   actions, 
   actionRuns 
 } from "../db/schema";
@@ -41,8 +44,8 @@ const createTikTokDataSchema = z.object({
   createTime: z.union([z.string(), z.number()]).optional(), // Account creation date
   followers: z.number().default(0), // Follower count
   following: z.number().default(0), // Following count
-  // Optional demographics data
-  demographics: z.object({
+  // Optional VIEWER demographics data (people who WATCH content)
+  viewerDemographics: z.object({
     genderFemale: z.number().default(0),
     genderMale: z.number().default(0),
     genderOther: z.number().default(0),
@@ -54,6 +57,42 @@ const createTikTokDataSchema = z.object({
     uniqueViewers: z.number().default(0),
     newViewers: z.number().default(0),
     returningViewers: z.number().default(0),
+    geography: z.array(z.object({
+      rank: z.number(),
+      countryName: z.string(),
+      countryCode: z.string(),
+      countryPct: z.number(),
+      cities: z.array(z.object({
+        name: z.string(),
+        pct: z.number()
+      })).default([])
+    })).default([])
+  }).optional(),
+  // Optional viewer metrics time-series data (28-day history)
+  viewerMetrics: z.object({
+    rangeDays: z.number().default(28),
+    totalUniqueViewers: z.number().default(0),
+    totalNewViewers: z.number().default(0),
+    totalReturningViewers: z.number().default(0),
+    newViewersSeries: z.array(z.any()).optional(),
+    returningViewersSeries: z.array(z.any()).optional(),
+    uniqueViewersSeries: z.array(z.any()).optional(),
+    viewerActiveHours: z.array(z.any()).optional(),
+    viewerActiveDays: z.array(z.any()).optional(),
+  }).optional(),
+  // Optional FOLLOWER demographics data (people who FOLLOW the account)
+  followerDemographics: z.object({
+    followerCount: z.number().default(0),
+    genderFemale: z.number().default(0),
+    genderMale: z.number().default(0),
+    genderOther: z.number().default(0),
+    age18to24: z.number().default(0),
+    age25to34: z.number().default(0),
+    age35to44: z.number().default(0),
+    age45to54: z.number().default(0),
+    age55plus: z.number().default(0),
+    activeFollowers: z.number().default(0),
+    inactiveFollowers: z.number().default(0),
     geography: z.array(z.object({
       rank: z.number(),
       countryName: z.string(),
@@ -336,40 +375,40 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
       })
       .where(eq(socialAccounts.id, accountId));
 
-    // Handle demographics data if provided
-    let demographicsResult = null;
-    if (validatedData.demographics) {
+    // Handle VIEWER demographics data if provided
+    let viewerDemographicsResult = null;
+    if (validatedData.viewerDemographics) {
       try {
-        console.log("Processing TikTok demographics data...");
+        console.log("Processing TikTok VIEWER demographics data...");
         
         // Get the TikTok account ID
         const tiktokAccountId = tiktokAccountData[0].id;
         
-        // Insert demographics record
+        // Insert viewer demographics record
         const [demographicsRecord] = await db
           .insert(tiktokViewerDemographics)
           .values({
             tiktokAccountId,
             rangeDays: 7, // Default to 7 days
-            genderFemale: validatedData.demographics.genderFemale?.toString() || '0',
-            genderMale: validatedData.demographics.genderMale?.toString() || '0',
-            genderOther: validatedData.demographics.genderOther?.toString() || '0',
-            age18to24: validatedData.demographics.age18to24?.toString() || '0',
-            age25to34: validatedData.demographics.age25to34?.toString() || '0',
-            age35to44: validatedData.demographics.age35to44?.toString() || '0',
-            age45to54: validatedData.demographics.age45to54?.toString() || '0',
-            age55plus: validatedData.demographics.age55plus?.toString() || '0',
-            uniqueViewers: validatedData.demographics.uniqueViewers || 0,
-            newViewers: validatedData.demographics.newViewers || 0,
-            returningViewers: validatedData.demographics.returningViewers || 0,
+            genderFemale: validatedData.viewerDemographics.genderFemale?.toString() || '0',
+            genderMale: validatedData.viewerDemographics.genderMale?.toString() || '0',
+            genderOther: validatedData.viewerDemographics.genderOther?.toString() || '0',
+            age18to24: validatedData.viewerDemographics.age18to24?.toString() || '0',
+            age25to34: validatedData.viewerDemographics.age25to34?.toString() || '0',
+            age35to44: validatedData.viewerDemographics.age35to44?.toString() || '0',
+            age45to54: validatedData.viewerDemographics.age45to54?.toString() || '0',
+            age55plus: validatedData.viewerDemographics.age55plus?.toString() || '0',
+            uniqueViewers: validatedData.viewerDemographics.uniqueViewers || 0,
+            newViewers: validatedData.viewerDemographics.newViewers || 0,
+            returningViewers: validatedData.viewerDemographics.returningViewers || 0,
           })
           .returning();
 
         // Insert geography records if provided
-        if (validatedData.demographics.geography && Array.isArray(validatedData.demographics.geography)) {
+        if (validatedData.viewerDemographics.geography && Array.isArray(validatedData.viewerDemographics.geography)) {
           const geographyRecords = [];
           
-          for (const country of validatedData.demographics.geography) {
+          for (const country of validatedData.viewerDemographics.geography) {
             if (!country.cities || country.cities.length === 0) {
               // Country without cities
               geographyRecords.push({
@@ -402,25 +441,151 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
           }
         }
         
-        demographicsResult = {
+        viewerDemographicsResult = {
           demographicsId: demographicsRecord.id,
-          message: 'Demographics data saved successfully'
+          message: 'Viewer demographics data saved successfully'
         };
         
-        console.log("TikTok demographics saved successfully:", demographicsResult);
+        console.log("TikTok VIEWER demographics saved successfully:", viewerDemographicsResult);
       } catch (demographicsError) {
-        console.error("Error saving TikTok demographics:", demographicsError);
+        console.error("Error saving TikTok VIEWER demographics:", demographicsError);
         // Don't fail the whole request if demographics saving fails
-        demographicsResult = {
-          error: 'Failed to save demographics data',
+        viewerDemographicsResult = {
+          error: 'Failed to save viewer demographics data',
           details: demographicsError.message
+        };
+      }
+    }
+
+    // Handle FOLLOWER demographics data if provided
+    let followerDemographicsResult = null;
+    if (validatedData.followerDemographics) {
+      try {
+        console.log("Processing TikTok FOLLOWER demographics data...");
+        
+        // Get the TikTok account ID
+        const tiktokAccountId = tiktokAccountData[0].id;
+        
+        // Insert follower demographics record
+        const [demographicsRecord] = await db
+          .insert(tiktokFollowerDemographics)
+          .values({
+            tiktokAccountId,
+            rangeDays: 7, // Default to 7 days
+            followerCount: validatedData.followerDemographics.followerCount || 0,
+            genderFemale: validatedData.followerDemographics.genderFemale?.toString() || '0',
+            genderMale: validatedData.followerDemographics.genderMale?.toString() || '0',
+            genderOther: validatedData.followerDemographics.genderOther?.toString() || '0',
+            age18to24: validatedData.followerDemographics.age18to24?.toString() || '0',
+            age25to34: validatedData.followerDemographics.age25to34?.toString() || '0',
+            age35to44: validatedData.followerDemographics.age35to44?.toString() || '0',
+            age45to54: validatedData.followerDemographics.age45to54?.toString() || '0',
+            age55plus: validatedData.followerDemographics.age55plus?.toString() || '0',
+            activeFollowers: validatedData.followerDemographics.activeFollowers || 0,
+            inactiveFollowers: validatedData.followerDemographics.inactiveFollowers || 0,
+          })
+          .returning();
+
+        // Insert geography records if provided
+        if (validatedData.followerDemographics.geography && Array.isArray(validatedData.followerDemographics.geography)) {
+          const geographyRecords = [];
+          
+          for (const country of validatedData.followerDemographics.geography) {
+            if (!country.cities || country.cities.length === 0) {
+              // Country without cities
+              geographyRecords.push({
+                demographicsId: demographicsRecord.id,
+                countryCode: country.countryCode,
+                countryName: country.countryName,
+                countryPct: country.countryPct?.toString() || '0',
+                cityName: null,
+                cityPct: null,
+                rank: country.rank,
+              });
+            } else {
+              // Country with cities - insert one record per city
+              for (const city of country.cities) {
+                geographyRecords.push({
+                  demographicsId: demographicsRecord.id,
+                  countryCode: country.countryCode,
+                  countryName: country.countryName,
+                  countryPct: country.countryPct?.toString() || '0',
+                  cityName: city.name,
+                  cityPct: city.pct?.toString() || '0',
+                  rank: country.rank,
+                });
+              }
+            }
+          }
+          
+          if (geographyRecords.length > 0) {
+            await db.insert(tiktokFollowerGeography).values(geographyRecords);
+          }
+        }
+        
+        followerDemographicsResult = {
+          demographicsId: demographicsRecord.id,
+          message: 'Follower demographics data saved successfully'
+        };
+        
+        console.log("TikTok FOLLOWER demographics saved successfully:", followerDemographicsResult);
+      } catch (demographicsError) {
+        console.error("Error saving TikTok FOLLOWER demographics:", demographicsError);
+        // Don't fail the whole request if demographics saving fails
+        followerDemographicsResult = {
+          error: 'Failed to save follower demographics data',
+          details: demographicsError.message
+        };
+      }
+    }
+
+    // Handle viewer metrics time-series data if provided
+    let viewerMetricsResult = null;
+    if (validatedData.viewerMetrics) {
+      try {
+        console.log("Processing TikTok viewer metrics time-series data...");
+        
+        // Get the TikTok account ID
+        const tiktokAccountId = tiktokAccountData[0].id;
+        
+        // Insert viewer metrics record
+        const [metricsRecord] = await db
+          .insert(tiktokViewerMetrics)
+          .values({
+            tiktokAccountId,
+            rangeDays: validatedData.viewerMetrics.rangeDays || 28,
+            totalUniqueViewers: validatedData.viewerMetrics.totalUniqueViewers || 0,
+            totalNewViewers: validatedData.viewerMetrics.totalNewViewers || 0,
+            totalReturningViewers: validatedData.viewerMetrics.totalReturningViewers || 0,
+            newViewersSeries: validatedData.viewerMetrics.newViewersSeries || null,
+            returningViewersSeries: validatedData.viewerMetrics.returningViewersSeries || null,
+            uniqueViewersSeries: validatedData.viewerMetrics.uniqueViewersSeries || null,
+            viewerActiveHours: validatedData.viewerMetrics.viewerActiveHours || null,
+            viewerActiveDays: validatedData.viewerMetrics.viewerActiveDays || null,
+          })
+          .returning();
+        
+        viewerMetricsResult = {
+          metricsId: metricsRecord.id,
+          message: 'Viewer metrics time-series data saved successfully'
+        };
+        
+        console.log("TikTok viewer metrics saved successfully:", viewerMetricsResult);
+      } catch (metricsError) {
+        console.error("Error saving TikTok viewer metrics:", metricsError);
+        // Don't fail the whole request if metrics saving fails
+        viewerMetricsResult = {
+          error: 'Failed to save viewer metrics data',
+          details: metricsError.message
         };
       }
     }
 
     return c.json({
       ...tiktokAccountData[0],
-      demographics: demographicsResult
+      viewerDemographics: viewerDemographicsResult,
+      followerDemographics: followerDemographicsResult,
+      viewerMetrics: viewerMetricsResult
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -432,7 +597,7 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
   }
 });
 
-// Save TikTok demographics data
+// Save TikTok VIEWER demographics data (from /analytics/viewers page)
 socialAccountsRouter.post("/:id/tiktok-demographics", async (c) => {
   const accountId = c.req.param("id");
   const db = c.get("db");
@@ -520,6 +685,96 @@ socialAccountsRouter.post("/:id/tiktok-demographics", async (c) => {
   } catch (error) {
     console.error("Error saving TikTok demographics:", error);
     return c.json({ error: "Failed to save TikTok demographics", details: error.message }, 500);
+  }
+});
+
+// Save TikTok FOLLOWER demographics data (from /analytics/followers page)
+socialAccountsRouter.post("/:id/tiktok-follower-demographics", async (c) => {
+  const accountId = c.req.param("id");
+  const db = c.get("db");
+
+  try {
+    const body = await c.req.json();
+    console.log("Received TikTok follower demographics for account:", accountId);
+    
+    // Verify the social account exists and get TikTok account
+    const tiktokAccount = await db
+      .select()
+      .from(tiktokAccounts)
+      .where(eq(tiktokAccounts.socialAccountId, accountId))
+      .limit(1);
+
+    if (!tiktokAccount.length) {
+      return c.json({ error: "TikTok account not found" }, 404);
+    }
+
+    const tiktokAccountId = tiktokAccount[0].id;
+    
+    // Insert follower demographics record
+    const [demographicsRecord] = await db
+      .insert(tiktokFollowerDemographics)
+      .values({
+        tiktokAccountId,
+        rangeDays: body.rangeDays || 7,
+        followerCount: body.followerCount || 0,
+        genderFemale: body.genderFemale?.toString() || '0',
+        genderMale: body.genderMale?.toString() || '0',
+        genderOther: body.genderOther?.toString() || '0',
+        age18to24: body.age18to24?.toString() || '0',
+        age25to34: body.age25to34?.toString() || '0',
+        age35to44: body.age35to44?.toString() || '0',
+        age45to54: body.age45to54?.toString() || '0',
+        age55plus: body.age55plus?.toString() || '0',
+        activeFollowers: body.activeFollowers || 0,
+        inactiveFollowers: body.inactiveFollowers || 0,
+      })
+      .returning();
+
+    // Insert geography records if provided
+    if (body.geography && Array.isArray(body.geography)) {
+      const geographyRecords = [];
+      
+      for (const country of body.geography) {
+        if (!country.cities || country.cities.length === 0) {
+          // Country without cities
+          geographyRecords.push({
+            demographicsId: demographicsRecord.id,
+            countryCode: country.countryCode,
+            countryName: country.countryName,
+            countryPct: country.countryPct?.toString() || '0',
+            cityName: null,
+            cityPct: null,
+            rank: country.rank,
+          });
+        } else {
+          // Country with cities - insert one record per city
+          for (const city of country.cities) {
+            geographyRecords.push({
+              demographicsId: demographicsRecord.id,
+              countryCode: country.countryCode,
+              countryName: country.countryName,
+              countryPct: country.countryPct?.toString() || '0',
+              cityName: city.name,
+              cityPct: city.pct?.toString() || '0',
+              rank: country.rank,
+            });
+          }
+        }
+      }
+      
+      if (geographyRecords.length > 0) {
+        await db.insert(tiktokFollowerGeography).values(geographyRecords);
+      }
+    }
+
+    return c.json({ 
+      success: true, 
+      demographicsId: demographicsRecord.id,
+      message: 'Follower demographics collected successfully' 
+    });
+  } catch (error) {
+    console.error("Error saving TikTok follower demographics:", error);
+    return c.json({ error: "Failed to save TikTok follower demographics", details: error.message }, 500);
   }
 });
 

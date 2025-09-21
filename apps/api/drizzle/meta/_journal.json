@@ -8,6 +8,20 @@
       "when": 1758282941726,
       "tag": "0000_last_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758447056792,
+      "tag": "0001_chief_sway",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1758449446241,
+      "tag": "0002_crazy_rockslide",
+      "breakpoints": true
     }
   ]
 }

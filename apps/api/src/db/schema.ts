@@ -258,6 +258,10 @@ export const tiktokAccounts = pgTable("tiktok_accounts", {
 	unique("tiktok_accounts_social_account_id_unique").on(table.socialAccountId),
 ]);
 
+// ============================================
+// TikTok VIEWER Demographics Tables
+// (Analytics for people who WATCH/VIEW the content)
+// ============================================
 export const tiktokViewerDemographics = pgTable("tiktok_viewer_demographics", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	tiktokAccountId: uuid("tiktok_account_id").notNull(),
@@ -293,6 +297,7 @@ export const tiktokViewerDemographics = pgTable("tiktok_viewer_demographics", {
 	index("idx_tvd_account_collected").on(table.tiktokAccountId, table.collectedAt),
 ]);
 
+// VIEWER Geography (where viewers are located)
 export const tiktokViewerGeography = pgTable("tiktok_viewer_geography", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	demographicsId: uuid("demographics_id").notNull(),
@@ -319,6 +324,111 @@ export const tiktokViewerGeography = pgTable("tiktok_viewer_geography", {
 	index("idx_tvg_demographics").on(table.demographicsId),
 	index("idx_tvg_country").on(table.countryCode),
 	index("idx_tvg_rank").on(table.demographicsId, table.rank),
+]);
+
+// ============================================
+// TikTok FOLLOWER Demographics Tables  
+// (Analytics for people who FOLLOW the account)
+// ============================================
+export const tiktokFollowerDemographics = pgTable("tiktok_follower_demographics", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	tiktokAccountId: uuid("tiktok_account_id").notNull(),
+	
+	// Collection metadata
+	collectedAt: timestamp("collected_at", { mode: 'string' }).defaultNow().notNull(),
+	rangeDays: integer("range_days").default(7).notNull(),
+	
+	// Total follower count
+	followerCount: integer("follower_count").default(0).notNull(),
+	
+	// Gender distribution (percentages)
+	genderFemale: numeric("gender_female", { precision: 5, scale: 2 }),
+	genderMale: numeric("gender_male", { precision: 5, scale: 2 }),
+	genderOther: numeric("gender_other", { precision: 5, scale: 2 }),
+	
+	// Age distribution (percentages)  
+	age18to24: numeric("age_18_24", { precision: 5, scale: 2 }),
+	age25to34: numeric("age_25_34", { precision: 5, scale: 2 }),
+	age35to44: numeric("age_35_44", { precision: 5, scale: 2 }),
+	age45to54: numeric("age_45_54", { precision: 5, scale: 2 }),
+	age55plus: numeric("age_55_plus", { precision: 5, scale: 2 }),
+	
+	// Activity patterns
+	activeFollowers: integer("active_followers"),
+	inactiveFollowers: integer("inactive_followers"),
+	
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+		columns: [table.tiktokAccountId],
+		foreignColumns: [tiktokAccounts.id],
+		name: "tiktok_follower_demographics_tiktok_account_id_fk"
+	}).onDelete("cascade"),
+	index("idx_tfd_account_collected").on(table.tiktokAccountId, table.collectedAt),
+]);
+
+// FOLLOWER Geography (where followers are located)
+export const tiktokFollowerGeography = pgTable("tiktok_follower_geography", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	demographicsId: uuid("demographics_id").notNull(),
+	
+	// Country data
+	countryCode: text("country_code").notNull(), // 2-letter ISO code
+	countryName: text("country_name").notNull(),
+	countryPct: numeric("country_pct", { precision: 5, scale: 2 }).notNull(),
+	
+	// City data (optional - may be null for country-only entries)
+	cityName: text("city_name"),
+	cityPct: numeric("city_pct", { precision: 5, scale: 2 }),
+	
+	// Ranking (1 = top country, 2 = second, etc.)
+	rank: integer().notNull(),
+	
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+		columns: [table.demographicsId], 
+		foreignColumns: [tiktokFollowerDemographics.id],
+		name: "tiktok_follower_geography_demographics_id_fk"
+	}).onDelete("cascade"),
+	index("idx_tfg_demographics").on(table.demographicsId),
+	index("idx_tfg_country").on(table.countryCode),
+	index("idx_tfg_rank").on(table.demographicsId, table.rank),
+]);
+
+// ============================================
+// TikTok Viewer Metrics Tables
+// (Time-series data for viewer analytics)
+// ============================================
+export const tiktokViewerMetrics = pgTable("tiktok_viewer_metrics", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	tiktokAccountId: uuid("tiktok_account_id").notNull(),
+	collectedAt: timestamp("collected_at").defaultNow().notNull(),
+	rangeDays: integer("range_days").default(28).notNull(), // 7, 28, 60 days
+	
+	// Aggregated totals
+	totalUniqueViewers: integer("total_unique_viewers").default(0),
+	totalNewViewers: integer("total_new_viewers").default(0), 
+	totalReturningViewers: integer("total_returning_viewers").default(0),
+	
+	// Time series data as JSONB arrays
+	newViewersSeries: jsonb("new_viewers_series"), // Array of {day, value, status}
+	returningViewersSeries: jsonb("returning_viewers_series"),
+	uniqueViewersSeries: jsonb("unique_viewers_series"),
+	
+	// Additional viewer activity patterns
+	viewerActiveHours: jsonb("viewer_active_hours"), // Hourly activity data
+	viewerActiveDays: jsonb("viewer_active_days"), // Daily activity patterns
+	
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+		columns: [table.tiktokAccountId],
+		foreignColumns: [tiktokAccounts.id],
+		name: "tiktok_viewer_metrics_tiktok_account_id_fk"
+	}).onDelete("cascade"),
+	index("idx_tvm_account_collected").on(table.tiktokAccountId, table.collectedAt),
+	index("idx_tvm_range").on(table.tiktokAccountId, table.rangeDays),
 ]);
 
 
@@ -461,6 +571,7 @@ export const tiktokAccountsRelations = relations(tiktokAccounts, ({one, many}) =
 		references: [socialAccounts.id]
 	}),
 	viewerDemographics: many(tiktokViewerDemographics),
+	followerDemographics: many(tiktokFollowerDemographics),
 }));
 
 export const tiktokViewerDemographicsRelations = relations(tiktokViewerDemographics, ({one, many}) => ({
@@ -475,6 +586,21 @@ export const tiktokViewerGeographyRelations = relations(tiktokViewerGeography, (
 	demographics: one(tiktokViewerDemographics, {
 		fields: [tiktokViewerGeography.demographicsId],
 		references: [tiktokViewerDemographics.id]
+	}),
+}));
+
+export const tiktokFollowerDemographicsRelations = relations(tiktokFollowerDemographics, ({one, many}) => ({
+	tiktokAccount: one(tiktokAccounts, {
+		fields: [tiktokFollowerDemographics.tiktokAccountId],
+		references: [tiktokAccounts.id]
+	}),
+	geography: many(tiktokFollowerGeography),
+}));
+
+export const tiktokFollowerGeographyRelations = relations(tiktokFollowerGeography, ({one}) => ({
+	demographics: one(tiktokFollowerDemographics, {
+		fields: [tiktokFollowerGeography.demographicsId],
+		references: [tiktokFollowerDemographics.id]
 	}),
 }));
 

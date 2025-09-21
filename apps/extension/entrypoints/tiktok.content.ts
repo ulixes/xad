@@ -66,6 +66,26 @@ export default defineContentScript({
             sendResponse({ acknowledged: true });
           }
           
+          if (message.type === 'START_FOLLOWER_DEMOGRAPHICS_COLLECTION') {
+            this.accountId = message.accountId;
+            this.handle = message.handle;
+            this.isCollecting = true;
+            console.log('[TikTok Tracker] Starting FOLLOWER demographics collection for:', this.handle);
+            
+            // Process any already captured follower demographics
+            this.processCapturedApiCalls();
+            
+            // If no follower demographics found, actively fetch them
+            setTimeout(() => {
+              if (!this.hasFollowerDemographicsData()) {
+                console.log('[TikTok Tracker] No follower demographics captured, attempting active fetch...');
+                this.fetchFollowerDemographicsData();
+              }
+            }, 2000);
+            
+            sendResponse({ acknowledged: true });
+          }
+          
           if (message.type === 'CHECK_STATUS') {
             sendResponse({ 
               isActive: true, 
@@ -148,16 +168,16 @@ export default defineContentScript({
           }
         }
         
-        // Demographics API endpoint - contains viewer analytics
+        // Demographics API endpoint - contains viewer OR follower analytics
         if (url.includes('/aweme/v2/data/insight/') || url.includes('type_requests')) {
           console.log('[TikTok Tracker] 🎯 DEMOGRAPHICS API INTERCEPTED!');
           
-          // Check if this response has demographics data
+          // Check if this response has VIEWER demographics data
           if (data?.viewer_gender_percent || 
               data?.viewer_age_distribution ||
               data?.viewer_country_city_percent) {
             
-            console.log('[TikTok Tracker] ✅ Found demographics data, sending immediately...');
+            console.log('[TikTok Tracker] ✅ Found VIEWER demographics data, sending immediately...');
             
             const demographics = {
               genderFemale: this.extractPercentValue(data.viewer_gender_percent, 'Female') * 100,
@@ -173,16 +193,72 @@ export default defineContentScript({
               geography: this.extractGeography(data.viewer_country_city_percent)
             };
             
-            // Send demographics immediately
+            // Also extract viewer metrics time-series data if available
+            let viewerMetrics = null;
+            if (data.new_viewer || data.returning_viewer || data.unique_viewer) {
+              viewerMetrics = {
+                rangeDays: 28, // Default to 28 days from URL parameter
+                totalUniqueViewers: data.unique_viewer_num?.value || 0,
+                totalNewViewers: data.new_viewer_num?.value || 0,
+                totalReturningViewers: (data.unique_viewer_num?.value || 0) - (data.new_viewer_num?.value || 0),
+                newViewersSeries: data.new_viewer || [],
+                returningViewersSeries: data.returning_viewer || [],
+                uniqueViewersSeries: data.unique_viewer || [],
+                viewerActiveHours: data.viewer_active_history_hours || [],
+                viewerActiveDays: data.viewer_active_history_days || []
+              };
+              console.log('[TikTok Tracker] 📊 Extracted viewer metrics time-series data');
+            }
+            
+            // Send viewer demographics and metrics immediately
             browser.runtime.sendMessage({
               type: 'TIKTOK_DEMOGRAPHICS_COLLECTED',
               accountId: this.accountId,
               handle: this.handle,
-              demographics: demographics
+              demographics: demographics,
+              viewerMetrics: viewerMetrics
             }).then(() => {
-              console.log('[TikTok Tracker] ✅ Demographics sent to background');
-              // Close tab after sending
-              if (window.location.pathname.includes('/analytics/')) {
+              console.log('[TikTok Tracker] ✅ Viewer demographics sent to background');
+              // Close tab after sending if we're on viewers page
+              if (window.location.pathname.includes('/analytics/viewers')) {
+                window.close();
+              }
+            });
+          }
+          
+          // Check if this response has FOLLOWER demographics data
+          if (data?.follower_gender_percent || 
+              data?.follower_age_distribution ||
+              data?.follower_location_percent) {
+            
+            console.log('[TikTok Tracker] ✅ Found FOLLOWER demographics data, sending immediately...');
+            
+            const followerDemographics = {
+              followerCount: data.follower_num?.value || 0,
+              genderFemale: this.extractPercentValue(data.follower_gender_percent, 'Female') * 100,
+              genderMale: this.extractPercentValue(data.follower_gender_percent, 'Male') * 100,
+              genderOther: this.extractPercentValue(data.follower_gender_percent, 'Other') * 100,
+              age18to24: this.extractPercentValue(data.follower_age_distribution, '18-24') * 100,
+              age25to34: this.extractPercentValue(data.follower_age_distribution, '25-34') * 100,
+              age35to44: this.extractPercentValue(data.follower_age_distribution, '35-44') * 100,
+              age45to54: this.extractPercentValue(data.follower_age_distribution, '45-54') * 100,
+              age55plus: this.extractPercentValue(data.follower_age_distribution, '55+') * 100,
+              geography: this.extractFollowerGeography(data.follower_location_percent),
+              // Add activity patterns if available
+              activeFollowers: data.follower_active_num?.value || 0,
+              inactiveFollowers: data.follower_inactive_num?.value || 0
+            };
+            
+            // Send follower demographics immediately
+            browser.runtime.sendMessage({
+              type: 'TIKTOK_FOLLOWER_DEMOGRAPHICS_COLLECTED',
+              accountId: this.accountId,
+              handle: this.handle,
+              followerDemographics: followerDemographics
+            }).then(() => {
+              console.log('[TikTok Tracker] ✅ Follower demographics sent to background');
+              // Close tab after sending if we're on followers page
+              if (window.location.pathname.includes('/analytics/followers')) {
                 window.close();
               }
             });
@@ -212,6 +288,27 @@ export default defineContentScript({
             cities: (country.city_percent_list || []).map((city: any) => ({
               name: city.key,
               pct: (city.value || 0) * 100
+            }))
+          }));
+      }
+
+      private extractFollowerGeography(geoData: any): any[] {
+        // Similar to viewer geography but handles follower_location_percent format
+        if (!geoData?.country_percent_list) return [];
+        
+        const countries = geoData.country_percent_list;
+        if (!Array.isArray(countries)) return [];
+        
+        return countries
+          .filter((country: any) => country.country_name !== 'Others')
+          .map((country: any, index: number) => ({
+            rank: index + 1,
+            countryName: country.country_name,
+            countryCode: country.country_name,
+            countryPct: (country.country_vv_percent || country.country_percent || 0) * 100,
+            cities: (country.city_percent_list || []).map((city: any) => ({
+              name: city.key || city.city_name,
+              pct: (city.value || city.city_percent || 0) * 100
             }))
           }));
       }
@@ -309,6 +406,17 @@ export default defineContentScript({
           if (userResponse.ok) {
             const userData = await userResponse.json();
             this.processApiResponse('/api/web/user', userData);
+            
+            // Extract userId for relation count API
+            let userId = null;
+            if (userData.userBaseInfo?.UserProfile?.UserBase?.UserId) {
+              userId = userData.userBaseInfo.UserProfile.UserBase.UserId;
+            }
+            
+            // Fetch follower/following counts if we have userId
+            if (userId) {
+              await this.fetchRelationCounts(userId);
+            }
           }
         } catch (e) {
           console.log('[TikTok Tracker] Failed to fetch user data:', e);
@@ -328,6 +436,39 @@ export default defineContentScript({
           console.log('[TikTok Tracker] Failed to fetch app context:', e);
         }
       }
+      
+      private async fetchRelationCounts(userId: string) {
+        console.log('[TikTok Tracker] Fetching follower/following counts for userId:', userId);
+        
+        try {
+          // Build the relation count API URL
+          const url = `/tiktokstudio/api/web/relation/multiGetFollowRelationCount?userId=${userId}`;
+          
+          const response = await fetch(url, {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json,*/*;q=0.8'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('[TikTok Tracker] Relation counts fetched:', data);
+            
+            // Extract follower and following counts
+            if (data.FollowerCount && data.FollowerCount[userId]) {
+              this.collectedData.followers = parseInt(data.FollowerCount[userId]) || 0;
+            }
+            if (data.FollowingCount && data.FollowingCount[userId]) {
+              this.collectedData.following = parseInt(data.FollowingCount[userId]) || 0;
+            }
+            
+            console.log('[TikTok Tracker] Updated counts - Followers:', this.collectedData.followers, 'Following:', this.collectedData.following);
+          }
+        } catch (e) {
+          console.log('[TikTok Tracker] Failed to fetch relation counts:', e);
+        }
+      }
 
       private hasRequiredData(): boolean {
         // We need at least uniqueId to identify the account
@@ -335,12 +476,22 @@ export default defineContentScript({
       }
 
       private hasDemographicsData(): boolean {
-        // Check if we've captured demographics data in our API calls
+        // Check if we've captured VIEWER demographics data in our API calls
         return this.capturedApiCalls.some(call => {
           const data = call.data;
           return data?.viewer_gender_percent || 
                  data?.viewer_age_distribution ||
                  data?.viewer_country_city_percent;
+        });
+      }
+
+      private hasFollowerDemographicsData(): boolean {
+        // Check if we've captured FOLLOWER demographics data in our API calls
+        return this.capturedApiCalls.some(call => {
+          const data = call.data;
+          return data?.follower_gender_percent || 
+                 data?.follower_age_distribution ||
+                 data?.follower_location_percent;
         });
       }
 
@@ -378,6 +529,44 @@ export default defineContentScript({
           // Send failure message
           browser.runtime.sendMessage({
             type: 'TIKTOK_DEMOGRAPHICS_FAILED',
+            accountId: this.accountId,
+            handle: this.handle,
+            reason: 'fetch_failed'
+          });
+        }
+      }
+
+      private async fetchFollowerDemographicsData() {
+        console.log('[TikTok Tracker] Attempting to fetch FOLLOWER demographics data...');
+        
+        // Build the type_requests parameter for follower demographics
+        const typeRequests = encodeURIComponent(JSON.stringify([
+          {insigh_type: "follower_num"},
+          {insigh_type: "follower_gender_percent", range: 1},
+          {insigh_type: "follower_age_distribution", range: 1},
+          {insigh_type: "follower_location_percent", range: 1}
+        ]));
+        
+        try {
+          // Try to fetch follower demographics API directly
+          const response = await fetch(`/aweme/v2/data/insight/?type_requests=${typeRequests}`, {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json, text/plain, */*'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('[TikTok Tracker] Follower demographics fetched successfully');
+            this.processApiResponse('/aweme/v2/data/insight/', data);
+          }
+        } catch (error) {
+          console.error('[TikTok Tracker] Failed to fetch follower demographics:', error);
+          
+          // Send failure message
+          browser.runtime.sendMessage({
+            type: 'TIKTOK_FOLLOWER_DEMOGRAPHICS_FAILED',
             accountId: this.accountId,
             handle: this.handle,
             reason: 'fetch_failed'
