@@ -367,9 +367,15 @@ export class WebhookListenerService {
       }
 
       // Check if actions already exist (they should have been created with campaign_actions)
-      const existingActions = await db.select()
-        .from(actions)
-        .where(inArray(actions.id, campaignActionsData.map(ca => ca.id)))
+      let existingActions = []
+      if (campaignActionsData.length > 0) {
+        const actionIds = campaignActionsData.map(ca => ca.id).filter(id => id != null)
+        if (actionIds.length > 0) {
+          existingActions = await db.select()
+            .from(actions)
+            .where(inArray(actions.id, actionIds))
+        }
+      }
       
       console.log(`[WEBHOOK] Found ${existingActions.length} existing actions out of ${campaignActionsData.length} campaign_actions`)
       
