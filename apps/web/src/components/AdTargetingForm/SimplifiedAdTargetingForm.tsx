@@ -268,11 +268,11 @@ export function SimplifiedAdTargetingForm({
         ] as const;
 
         const balance = await publicClient.readContract({
-          address: usdcAddress,
+          address: usdcAddress as `0x${string}`,
           abi: erc20Abi,
           functionName: 'balanceOf',
           args: [address as `0x${string}`]
-        });
+        }) as bigint;
 
         console.log('[USDC Balance] Loaded balance:', {
           balanceRaw: balance.toString(),
@@ -296,7 +296,6 @@ export function SimplifiedAdTargetingForm({
   };
   
   const estimatedCost = Number(formatPrice(calculatedPrice));
-  const totalActions = (campaignTargets.likeTargets.filter(url => url.trim()).length || 1) * campaignTargets.likeCountPerPost + campaignTargets.followCount;
 
   const handleSave = async () => {
     // Reset previous states
@@ -766,7 +765,7 @@ export function SimplifiedAdTargetingForm({
             onClick={handleSave}
             disabled={
               isProcessingPayment ||
-              !campaignTargets.likeTarget.trim() ||
+              campaignTargets.likeTargets.filter(url => url.trim()).length === 0 ||
               !campaignTargets.followTarget.trim() ||
               contractData.loading ||
               isCalculating
