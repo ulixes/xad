@@ -118,7 +118,7 @@ contract CampaignPaymentsTest is Test {
         
         // Test base price (no multipliers)
         uint256 basePrice = campaignPayments.calculatePrice(baseReqs);
-        uint256 expectedBase = (20 * 200000) + (10 * 400000); // 20 likes + 10 follows
+        uint256 expectedBase = (40 * 200000) + (20 * 400000); // 40 likes + 20 follows
         assertEq(basePrice, expectedBase);
         
         // Test with location multiplier (US = 1.5x)
@@ -161,7 +161,7 @@ contract CampaignPaymentsTest is Test {
             accountLanguage: "all"
         });
         uint256 newPrice = campaignPayments.calculatePrice(reqs);
-        uint256 expectedPrice = (30 * 200000) + (15 * 400000); // 30 likes + 15 follows
+        uint256 expectedPrice = (30 * 200000) + (15 * 400000); // 30 likes + 15 follows (after update)
         assertEq(newPrice, expectedPrice);
         
         // Test zero values revert
@@ -184,7 +184,7 @@ contract CampaignPaymentsTest is Test {
             accountLanguage: "all"
         });
         uint256 newPrice = campaignPayments.calculatePrice(reqs);
-        uint256 expectedPrice = (20 * 300000) + (10 * 500000);
+        uint256 expectedPrice = (40 * 300000) + (20 * 500000); // 40 likes + 20 follows with new prices
         assertEq(newPrice, expectedPrice);
     }
     

@@ -110,8 +110,8 @@ export function SimplifiedAdTargetingForm({
   
   // Contract data
   const [contractData, setContractData] = useState({
-    likes: 20,
-    follows: 10,
+    likes: 40,
+    follows: 20,
     baseLikePrice: 200000, // in USDC (6 decimals)
     baseFollowPrice: 400000,
     loading: true
@@ -155,8 +155,8 @@ export function SimplifiedAdTargetingForm({
         
         // Use default package values - these define the campaign package
         setContractData({
-          likes: 20,
-          follows: 10,
+          likes: 40,
+          follows: 20,
           baseLikePrice: 200000, // 0.2 USDC per like (6 decimals)
           baseFollowPrice: 400000, // 0.4 USDC per follow (6 decimals)
           loading: false
@@ -557,7 +557,7 @@ export function SimplifiedAdTargetingForm({
         {/* Fixed Campaign Package - Fetched from Contract */}
         {selectedPlatform === 'tiktok' && (
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">Package (10 follows, 20 likes)</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">Package ({contractData.follows} follows, {contractData.likes} likes)</h2>
 
             {/* Package Details Card */}
             <div className="p-4 border border-border rounded-lg bg-card space-y-4">

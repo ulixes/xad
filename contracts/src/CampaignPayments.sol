@@ -24,8 +24,8 @@ contract CampaignPayments {
     address public immutable usdcToken;
     
     // Campaign package (configurable by owner)
-    uint256 public campaignLikes = 20;
-    uint256 public campaignFollows = 10;
+    uint256 public campaignLikes = 40;
+    uint256 public campaignFollows = 20;
     
     // Base prices in USDC (6 decimals) - configurable by owner
     uint256 public baseLikePrice = 200000;    // $0.20
