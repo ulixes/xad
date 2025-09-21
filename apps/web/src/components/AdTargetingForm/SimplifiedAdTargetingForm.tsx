@@ -721,7 +721,7 @@ export function SimplifiedAdTargetingForm({
                         <Label htmlFor="follow-count" className="text-sm font-medium">
                           Number of Follows
                         </Label>
-                        <Input
+                        <input
                           id="follow-count"
                           type="number"
                           min="1"
@@ -730,7 +730,7 @@ export function SimplifiedAdTargetingForm({
                             const value = parseInt(e.target.value) || 0;
                             setCampaignTargets(prev => ({ ...prev, followCount: Math.max(1, value) }));
                           }}
-                          className="text-base h-11"
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                           placeholder="e.g., 100"
                         />
                       </div>
@@ -757,11 +757,11 @@ export function SimplifiedAdTargetingForm({
                     </div>
                     {campaignTargets.likeEnabled && (
                       <>
-                        <div className="flex items-center gap-3">
+                        <div className="space-y-2">
                           <Label htmlFor="like-count" className="text-sm font-medium">
-                            Likes per Post:
+                            Likes per Post
                           </Label>
-                          <Input
+                          <input
                             id="like-count"
                             type="number"
                             min="1"
@@ -770,7 +770,7 @@ export function SimplifiedAdTargetingForm({
                               const value = parseInt(e.target.value) || 0;
                               setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(1, value) }));
                             }}
-                            className="w-32 text-base h-11"
+                            className="mt-1 block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="e.g., 50"
                           />
                         </div>
