@@ -862,19 +862,6 @@ export function SimplifiedAdTargetingForm({
           <div className="space-y-4">
             {/* Pricing Breakdown */}
             <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Base Price:</span>
-                <span className="text-right">
-                  {campaignTargets.likeEnabled && (
-                    <>{campaignTargets.likeTargets.filter(url => url.trim()).length || 1} posts × {campaignTargets.likeCountPerPost} likes @ $0.30</>
-                  )}
-                  {campaignTargets.likeEnabled && campaignTargets.followEnabled && ' + '}
-                  {campaignTargets.followEnabled && (
-                    <>{campaignTargets.followCount} follows @ $0.60</>
-                  )}
-                  {!campaignTargets.likeEnabled && !campaignTargets.followEnabled && 'No actions selected'}
-                </span>
-              </div>
               {requirements.minFollowers >= 1000 && (
                 <div className="flex justify-between text-muted-foreground">
                   <span>Quality Multiplier ({requirements.minFollowers.toLocaleString()}+ followers):</span>
