@@ -32,24 +32,38 @@ const platforms = [
   { id: 'farcaster', name: 'Farcaster', icon: '/social-logos/farcaster.png', available: false },
 ];
 
-// Country list with codes matching contract
+// Country list with codes matching contract (ALL COUNTRIES WITH 2025 CPM DATA)
 const COUNTRIES = [
   { code: 'all', name: 'All Countries' },
-  { code: 'US', name: 'United States' },
-  { code: 'UK', name: 'United Kingdom' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'AU', name: 'Australia' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'FR', name: 'France' },
-  { code: 'ES', name: 'Spain' },
-  { code: 'IT', name: 'Italy' },
-  { code: 'BR', name: 'Brazil' },
-  { code: 'MX', name: 'Mexico' },
-  { code: 'JP', name: 'Japan' },
-  { code: 'KR', name: 'South Korea' },
-  { code: 'IN', name: 'India' },
-  { code: 'PH', name: 'Philippines' },
-  { code: 'ID', name: 'Indonesia' }
+  // High CPM Markets (1.0x - 1.5x)
+  { code: 'US', name: 'United States' },      // 1.5x
+  { code: 'CA', name: 'Canada' },              // 1.1x
+  { code: 'UK', name: 'United Kingdom' },      // 1.0x
+  { code: 'AU', name: 'Australia' },           // 0.9x
+  // European Markets (0.6x - 0.8x)
+  { code: 'DE', name: 'Germany' },             // 0.8x
+  { code: 'FR', name: 'France' },              // 0.6x
+  { code: 'ES', name: 'Spain' },               // 0.7x
+  { code: 'IT', name: 'Italy' },               // 0.6x
+  // Asian Markets - Developed (0.5x - 0.7x)
+  { code: 'JP', name: 'Japan' },               // 0.5x
+  { code: 'KR', name: 'South Korea' },         // 0.6x
+  { code: 'TW', name: 'Taiwan' },              // 0.6x - NEW!
+  // Asian Markets - Emerging (0.2x - 0.7x)
+  { code: 'CN', name: 'China' },               // 0.4x - NEW!
+  { code: 'IN', name: 'India' },               // 0.2x
+  { code: 'ID', name: 'Indonesia' },           // 0.2x
+  { code: 'PH', name: 'Philippines' },         // 0.7x
+  { code: 'TH', name: 'Thailand' },            // 0.3x - NEW!
+  { code: 'VN', name: 'Vietnam' },             // 0.2x - NEW!
+  { code: 'MM', name: 'Myanmar' },             // 0.2x - NEW!
+  { code: 'LA', name: 'Laos' },                // 0.2x - NEW!
+  { code: 'MN', name: 'Mongolia' },            // 0.25x - NEW!
+  // Latin America (0.4x)
+  { code: 'BR', name: 'Brazil' },              // 0.4x
+  { code: 'MX', name: 'Mexico' },              // 0.4x
+  // Central Asia (0.35x)
+  { code: 'KZ', name: 'Kazakhstan' }           // 0.35x - NEW!
 ];
 
 type CampaignTargets = {
