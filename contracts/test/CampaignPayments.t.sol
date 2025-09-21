@@ -132,17 +132,17 @@ contract CampaignPaymentsTest is Test {
         uint256 usPrice = campaignPayments.calculatePrice(usReqs);
         assertEq(usPrice, expectedBase * 1500 / 1000);
         
-        // Test with all multipliers
+        // Test with all multipliers (100k followers, 1M views)
         CampaignPayments.AccountRequirements memory maxReqs = CampaignPayments.AccountRequirements({
             verifiedOnly: true,
-            minFollowers: 1000,
-            minUniqueViews28Days: 10000,
+            minFollowers: 100000,
+            minUniqueViews28Days: 1000000,
             accountLocation: "US",
             accountLanguage: "en"
         });
         uint256 maxPrice = campaignPayments.calculatePrice(maxReqs);
-        // US: 1.5x, EN: 1.2x, Verified: 1.5x, MinFollowers: 1.2x, MinViews: 1.3x
-        uint256 expectedMax = (basePrice * 1500 * 1200 * 1500 * 1200 * 1300) / (1000 ** 5);
+        // US: 1.5x, EN: 1.2x, Verified: 1.5x, 100k followers: 1.5x, 1M views: 1.6x
+        uint256 expectedMax = (basePrice * 1500 * 1200 * 1500 * 1500 * 1600) / (1000 ** 5);
         assertEq(maxPrice, expectedMax);
     }
     
@@ -188,19 +188,44 @@ contract CampaignPaymentsTest is Test {
         assertEq(newPrice, expectedPrice);
     }
     
-    function testUpdateAccountQualityMultipliers() public {
-        // Update account quality multipliers
-        campaignPayments.updateAccountQualityMultipliers(1600, 1100, 1400);
+    function testUpdateVerifiedMultiplier() public {
+        // Update verified multiplier
+        campaignPayments.updateVerifiedMultiplier(1600);
         assertEq(campaignPayments.verifiedMultiplier(), 1600);
-        assertEq(campaignPayments.minFollowersMultiplier(), 1100);
-        assertEq(campaignPayments.minViewsMultiplier(), 1400);
         
         // Test invalid multipliers revert
         vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
-        campaignPayments.updateAccountQualityMultipliers(400, 1100, 1400); // Too low
+        campaignPayments.updateVerifiedMultiplier(400); // Too low
         
         vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
-        campaignPayments.updateAccountQualityMultipliers(1600, 6000, 1400); // Too high
+        campaignPayments.updateVerifiedMultiplier(6000); // Too high
+    }
+    
+    function testUpdateFollowersMultipliers() public {
+        // Update followers multipliers
+        campaignPayments.updateFollowersMultipliers(1100, 1250, 1400, 1600, 1850, 2100);
+        assertEq(campaignPayments.followersMultiplier1k(), 1100);
+        assertEq(campaignPayments.followersMultiplier10k(), 1250);
+        assertEq(campaignPayments.followersMultiplier50k(), 1400);
+        assertEq(campaignPayments.followersMultiplier100k(), 1600);
+        assertEq(campaignPayments.followersMultiplier500k(), 1850);
+        assertEq(campaignPayments.followersMultiplier1M(), 2100);
+        
+        // Test invalid order reverts
+        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
+        campaignPayments.updateFollowersMultipliers(1100, 1050, 1400, 1600, 1850, 2100); // 10k < 1k
+    }
+    
+    function testUpdateViewsMultipliers() public {
+        // Update views multipliers
+        campaignPayments.updateViewsMultipliers(1100, 1200, 1350, 1500, 1650, 1900, 2200);
+        assertEq(campaignPayments.viewsMultiplier10k(), 1100);
+        assertEq(campaignPayments.viewsMultiplier50k(), 1200);
+        assertEq(campaignPayments.viewsMultiplier100k(), 1350);
+        assertEq(campaignPayments.viewsMultiplier500k(), 1500);
+        assertEq(campaignPayments.viewsMultiplier1M(), 1650);
+        assertEq(campaignPayments.viewsMultiplier5M(), 1900);
+        assertEq(campaignPayments.viewsMultiplier10M(), 2200);
     }
     
     function testUpdateLocationMultiplier() public {
@@ -257,7 +282,7 @@ contract CampaignPaymentsTest is Test {
         campaignPayments.updateBasePrices(250000, 450000);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
-        campaignPayments.updateAccountQualityMultipliers(1100, 1300, 1600);
+        campaignPayments.updateVerifiedMultiplier(1600);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
         campaignPayments.updateLocationMultiplier("XX", 1500);

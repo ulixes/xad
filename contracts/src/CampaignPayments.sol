@@ -34,8 +34,23 @@ contract CampaignPayments {
     
     // Account quality multipliers (1000 = 1.0x) - configurable by owner
     uint256 public verifiedMultiplier = 1500;   // 1.5x when targeting verified only
-    uint256 public minFollowersMultiplier = 1200;  // 1.2x for minimum followers requirement
-    uint256 public minViewsMultiplier = 1300;       // 1.3x for minimum views requirement
+    
+    // Tiered multipliers for followers (1000 = 1.0x)
+    uint256 public followersMultiplier1k = 1100;      // 1.1x for 1k+ followers
+    uint256 public followersMultiplier10k = 1200;     // 1.2x for 10k+ followers
+    uint256 public followersMultiplier50k = 1350;     // 1.35x for 50k+ followers
+    uint256 public followersMultiplier100k = 1500;    // 1.5x for 100k+ followers
+    uint256 public followersMultiplier500k = 1750;    // 1.75x for 500k+ followers
+    uint256 public followersMultiplier1M = 2000;      // 2.0x for 1M+ followers
+    
+    // Tiered multipliers for views (1000 = 1.0x)
+    uint256 public viewsMultiplier10k = 1100;         // 1.1x for 10k+ views
+    uint256 public viewsMultiplier50k = 1200;         // 1.2x for 50k+ views
+    uint256 public viewsMultiplier100k = 1300;        // 1.3x for 100k+ views
+    uint256 public viewsMultiplier500k = 1450;        // 1.45x for 500k+ views
+    uint256 public viewsMultiplier1M = 1600;          // 1.6x for 1M+ views
+    uint256 public viewsMultiplier5M = 1850;          // 1.85x for 5M+ views
+    uint256 public viewsMultiplier10M = 2100;         // 2.1x for 10M+ views
     
     // Location/Language multipliers (1000 = 1.0x)
     mapping(string => uint256) public locationMultipliers;  // Account location
@@ -74,10 +89,23 @@ contract CampaignPayments {
         uint256 followPrice
     );
     
-    event AccountQualityMultipliersUpdated(
-        uint256 verifiedMult,
-        uint256 minFollowersMult,
-        uint256 minViewsMult
+    event VerifiedMultiplierUpdated(uint256 multiplier);
+    event FollowersMultipliersUpdated(
+        uint256 mult1k,
+        uint256 mult10k,
+        uint256 mult50k,
+        uint256 mult100k,
+        uint256 mult500k,
+        uint256 mult1M
+    );
+    event ViewsMultipliersUpdated(
+        uint256 mult10k,
+        uint256 mult50k,
+        uint256 mult100k,
+        uint256 mult500k,
+        uint256 mult1M,
+        uint256 mult5M,
+        uint256 mult10M
     );
     
     event LocationMultiplierUpdated(
@@ -161,21 +189,65 @@ contract CampaignPayments {
         emit BasePricesUpdated(_likePrice, _followPrice);
     }
     
-    function updateAccountQualityMultipliers(
-        uint256 _verifiedMult,
-        uint256 _minFollowersMult,
-        uint256 _minViewsMult
+    function updateVerifiedMultiplier(uint256 _multiplier) external onlyOwner {
+        if (_multiplier < 500 || _multiplier > 5000) revert InvalidMultiplier();
+        verifiedMultiplier = _multiplier;
+        emit VerifiedMultiplierUpdated(_multiplier);
+    }
+    
+    function updateFollowersMultipliers(
+        uint256 _mult1k,
+        uint256 _mult10k,
+        uint256 _mult50k,
+        uint256 _mult100k,
+        uint256 _mult500k,
+        uint256 _mult1M
     ) external onlyOwner {
-        // Multipliers should be reasonable (e.g., between 0.5x and 5x)
-        if (_verifiedMult < 500 || _verifiedMult > 5000) revert InvalidMultiplier();
-        if (_minFollowersMult < 500 || _minFollowersMult > 5000) revert InvalidMultiplier();
-        if (_minViewsMult < 500 || _minViewsMult > 5000) revert InvalidMultiplier();
+        // Validate multipliers are reasonable and in ascending order
+        if (_mult1k < 1000 || _mult1k > 5000) revert InvalidMultiplier();
+        if (_mult10k < _mult1k || _mult10k > 5000) revert InvalidMultiplier();
+        if (_mult50k < _mult10k || _mult50k > 5000) revert InvalidMultiplier();
+        if (_mult100k < _mult50k || _mult100k > 5000) revert InvalidMultiplier();
+        if (_mult500k < _mult100k || _mult500k > 5000) revert InvalidMultiplier();
+        if (_mult1M < _mult500k || _mult1M > 5000) revert InvalidMultiplier();
         
-        verifiedMultiplier = _verifiedMult;
-        minFollowersMultiplier = _minFollowersMult;
-        minViewsMultiplier = _minViewsMult;
+        followersMultiplier1k = _mult1k;
+        followersMultiplier10k = _mult10k;
+        followersMultiplier50k = _mult50k;
+        followersMultiplier100k = _mult100k;
+        followersMultiplier500k = _mult500k;
+        followersMultiplier1M = _mult1M;
         
-        emit AccountQualityMultipliersUpdated(_verifiedMult, _minFollowersMult, _minViewsMult);
+        emit FollowersMultipliersUpdated(_mult1k, _mult10k, _mult50k, _mult100k, _mult500k, _mult1M);
+    }
+    
+    function updateViewsMultipliers(
+        uint256 _mult10k,
+        uint256 _mult50k,
+        uint256 _mult100k,
+        uint256 _mult500k,
+        uint256 _mult1M,
+        uint256 _mult5M,
+        uint256 _mult10M
+    ) external onlyOwner {
+        // Validate multipliers are reasonable and in ascending order
+        if (_mult10k < 1000 || _mult10k > 5000) revert InvalidMultiplier();
+        if (_mult50k < _mult10k || _mult50k > 5000) revert InvalidMultiplier();
+        if (_mult100k < _mult50k || _mult100k > 5000) revert InvalidMultiplier();
+        if (_mult500k < _mult100k || _mult500k > 5000) revert InvalidMultiplier();
+        if (_mult1M < _mult500k || _mult1M > 5000) revert InvalidMultiplier();
+        if (_mult5M < _mult1M || _mult5M > 5000) revert InvalidMultiplier();
+        if (_mult10M < _mult5M || _mult10M > 5000) revert InvalidMultiplier();
+        
+        viewsMultiplier10k = _mult10k;
+        viewsMultiplier50k = _mult50k;
+        viewsMultiplier100k = _mult100k;
+        viewsMultiplier500k = _mult500k;
+        viewsMultiplier1M = _mult1M;
+        viewsMultiplier5M = _mult5M;
+        viewsMultiplier10M = _mult10M;
+        
+        emit ViewsMultipliersUpdated(_mult10k, _mult50k, _mult100k, _mult500k, _mult1M, _mult5M, _mult10M);
     }
     
     function updateLocationMultiplier(string calldata location, uint256 multiplier) external onlyOwner {
@@ -244,8 +316,40 @@ contract CampaignPayments {
         
         // Apply account quality multipliers
         uint256 verifiedMult = requirements.verifiedOnly ? verifiedMultiplier : 1000;
-        uint256 followersMult = requirements.minFollowers > 0 ? minFollowersMultiplier : 1000;
-        uint256 viewsMult = requirements.minUniqueViews28Days > 0 ? minViewsMultiplier : 1000;
+        
+        // Calculate followers multiplier based on tier
+        uint256 followersMult = 1000; // Default 1.0x
+        if (requirements.minFollowers >= 1000000) {
+            followersMult = followersMultiplier1M;
+        } else if (requirements.minFollowers >= 500000) {
+            followersMult = followersMultiplier500k;
+        } else if (requirements.minFollowers >= 100000) {
+            followersMult = followersMultiplier100k;
+        } else if (requirements.minFollowers >= 50000) {
+            followersMult = followersMultiplier50k;
+        } else if (requirements.minFollowers >= 10000) {
+            followersMult = followersMultiplier10k;
+        } else if (requirements.minFollowers >= 1000) {
+            followersMult = followersMultiplier1k;
+        }
+        
+        // Calculate views multiplier based on tier
+        uint256 viewsMult = 1000; // Default 1.0x
+        if (requirements.minUniqueViews28Days >= 10000000) {
+            viewsMult = viewsMultiplier10M;
+        } else if (requirements.minUniqueViews28Days >= 5000000) {
+            viewsMult = viewsMultiplier5M;
+        } else if (requirements.minUniqueViews28Days >= 1000000) {
+            viewsMult = viewsMultiplier1M;
+        } else if (requirements.minUniqueViews28Days >= 500000) {
+            viewsMult = viewsMultiplier500k;
+        } else if (requirements.minUniqueViews28Days >= 100000) {
+            viewsMult = viewsMultiplier100k;
+        } else if (requirements.minUniqueViews28Days >= 50000) {
+            viewsMult = viewsMultiplier50k;
+        } else if (requirements.minUniqueViews28Days >= 10000) {
+            viewsMult = viewsMultiplier10k;
+        }
         
         // Calculate combined multiplier
         uint256 combinedMultiplier = locationMult * languageMult * verifiedMult * followersMult * viewsMult;
