@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createHmac } from 'crypto'
 import { campaigns, payments, campaignActions, actions, brands } from '../db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { eq, sql, inArray } from 'drizzle-orm'
 import { createPublicClient, http, parseAbiItem, decodeEventLog, decodeFunctionData } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import type { Env } from '../types'
@@ -366,17 +366,32 @@ export class WebhookListenerService {
         throw new Error('No campaign actions to activate')
       }
 
-      console.log(`[WEBHOOK] Creating ${campaignActionsData.length} actions for extension users...`)
+      // Check if actions already exist (they should have been created with campaign_actions)
+      const existingActions = await db.select()
+        .from(actions)
+        .where(inArray(actions.id, campaignActionsData.map(ca => ca.id)))
+      
+      console.log(`[WEBHOOK] Found ${existingActions.length} existing actions out of ${campaignActionsData.length} campaign_actions`)
+      
+      // Only create missing actions
+      const existingActionIds = new Set(existingActions.map(a => a.id))
+      const missingCampaignActions = campaignActionsData.filter(ca => !existingActionIds.has(ca.id))
+      
+      if (missingCampaignActions.length > 0) {
+        console.log(`[WEBHOOK] Creating ${missingCampaignActions.length} missing actions for extension users...`)
+      } else {
+        console.log(`[WEBHOOK] All actions already exist, skipping creation`)
+      }
 
-      // Create trackable actions for extension users
+      // Create trackable actions for extension users (only for missing ones)
       // IMPORTANT: We use the campaignAction.id as the action.id to maintain the 1:1 relationship
-      const actionsToInsert = campaignActionsData.map((campaignAction) => {
+      const actionsToInsert = missingCampaignActions.map((campaignAction) => {
         // The target is already set correctly in campaignActions
         return {
           id: campaignAction.id, // Use the same ID to maintain relationship!
-          platform: campaign.platform,
-          actionType: campaignAction.actionType,
-          target: campaignAction.target, // Use target from campaignAction
+          platform: campaign.platform as 'tiktok', // Ensure proper enum type
+          actionType: campaignAction.actionType as 'like' | 'follow', // Ensure proper enum type
+          target: campaignAction.target || '', // Ensure not null
           title: `${campaign.platform} ${campaignAction.actionType}`,
           description: `${campaignAction.actionType} on ${campaign.platform}`,
           price: campaignAction.pricePerAction,
@@ -391,13 +406,26 @@ export class WebhookListenerService {
         }
       })
 
-      // Bulk insert all actions at once
-      const insertedActions = await db.insert(actions).values(actionsToInsert).returning()
-
-      // Validate that we created the exact same number of actions as campaign_actions
-      if (insertedActions.length !== campaignActionsData.length) {
-        console.error(`[WEBHOOK] ERROR: Action count mismatch! Expected ${campaignActionsData.length}, got ${insertedActions.length}`)
-        throw new Error(`Failed to create all actions. Expected ${campaignActionsData.length}, created ${insertedActions.length}`)
+      // Only insert if there are missing actions
+      let insertedActions = []
+      if (actionsToInsert.length > 0) {
+        console.log('[WEBHOOK] Actions to insert:', JSON.stringify(actionsToInsert, null, 2))
+        
+        try {
+          insertedActions = await db.insert(actions).values(actionsToInsert).returning()
+          console.log(`[WEBHOOK] Successfully inserted ${insertedActions.length} actions`)
+        } catch (insertError) {
+          console.error('[WEBHOOK] Failed to insert actions:', insertError)
+          console.error('[WEBHOOK] Actions data:', actionsToInsert)
+          throw new Error(`Failed to insert actions: ${insertError.message}`)
+        }
+      }
+      
+      // Total actions should match campaign_actions
+      const totalActions = existingActions.length + insertedActions.length
+      if (totalActions !== campaignActionsData.length) {
+        console.error(`[WEBHOOK] ERROR: Action count mismatch! Expected ${campaignActionsData.length}, got ${totalActions}`)
+        throw new Error(`Failed to ensure all actions exist. Expected ${campaignActionsData.length}, have ${totalActions}`)
       }
 
       console.log(`[WEBHOOK] SUCCESS: Campaign ${campaignId} activated`)
@@ -407,6 +435,8 @@ export class WebhookListenerService {
       console.log(`[WEBHOOK] - Created ${insertedActions.length} trackable actions (verified count)`)
     } catch (error) {
       console.error(`[WEBHOOK] ERROR: Failed to process payment for campaign ${campaignId}:`, error)
+      // Re-throw to ensure webhook returns error status
+      throw error
     }
   }
 
@@ -532,8 +562,44 @@ export class WebhookListenerService {
       const defaultActions = campaignActionsList
       
       if (defaultActions.length > 0) {
-        await db.insert(campaignActions).values(defaultActions)
-        console.log('[WEBHOOK] Campaign actions created:', defaultActions.length)
+        // Insert campaign_actions and get the created records with IDs
+        const createdCampaignActions = await db.insert(campaignActions)
+          .values(defaultActions)
+          .returning()
+        
+        console.log('[WEBHOOK] Campaign actions created:', createdCampaignActions.length)
+        
+        // Immediately create corresponding actions records
+        const actionsToCreate = createdCampaignActions.map(ca => ({
+          id: ca.id, // Use same ID for 1:1 mapping
+          platform: 'tiktok' as const,
+          actionType: ca.actionType as 'like' | 'follow',
+          target: ca.target,
+          title: `TikTok ${ca.actionType}`,
+          description: `${ca.actionType === 'follow' ? 'Follow' : 'Like'} on TikTok`,
+          price: ca.pricePerAction,
+          maxVolume: ca.maxVolume,
+          currentVolume: 0,
+          isActive: false, // Will be activated when payment completes
+          eligibilityCriteria: {
+            campaignId: campaign.id,
+            campaignActionId: ca.id
+          }
+        }))
+        
+        console.log('[WEBHOOK] Creating actions records:', actionsToCreate.length)
+        
+        try {
+          const createdActions = await db.insert(actions)
+            .values(actionsToCreate)
+            .returning()
+          
+          console.log('[WEBHOOK] Actions created successfully:', createdActions.length)
+        } catch (actionError) {
+          console.error('[WEBHOOK] Failed to create actions:', actionError)
+          // Don't fail the whole process, actions can be created later
+          console.warn('[WEBHOOK] Will retry actions creation during activation')
+        }
       } else {
         console.warn('[WEBHOOK] No campaign actions to create')
       }
