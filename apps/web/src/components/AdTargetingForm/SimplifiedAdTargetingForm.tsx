@@ -183,7 +183,8 @@ export function SimplifiedAdTargetingForm({
 
       setIsCalculating(true);
       try {
-        const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
+        const networkConfig = getNetworkConfig();
+        const contractAddress = networkConfig.campaignPaymentsContract as `0x${string}`;
 
         const price = await publicClient.readContract({
           address: contractAddress,
