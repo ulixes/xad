@@ -733,7 +733,6 @@ export function SimplifiedAdTargetingForm({
                           className="text-base h-11"
                           placeholder="e.g., 100"
                         />
-                        <p className="text-xs text-muted-foreground mt-1">Number of follows to purchase</p>
                       </div>
                     </div>
                     )}
