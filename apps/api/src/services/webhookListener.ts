@@ -10,9 +10,9 @@ import { parseTargetsFromBlockchain } from '../utils/targetEncoder'
 
 const USDC_DECIMALS = 6
 
-// CampaignPaymentReceived event ABI - updated with new structure
+// CampaignPaymentReceived event ABI - updated with new structure including follow/like counts
 const CAMPAIGN_PAYMENT_EVENT_ABI = parseAbiItem(
-  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp)'
+  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp, uint256 totalFollows, uint256 totalLikes)'
 )
 
 // Contract ABI for depositForCampaignWithPermit function - NEW STRUCTURE
