@@ -23,9 +23,9 @@ contract CampaignPayments {
     address public immutable owner;
     address public immutable usdcToken;
     
-    // Base prices in USDC (6 decimals) - configurable by owner
-    uint256 public baseLikePrice = 300000;    // $0.30 (increased from $0.20)
-    uint256 public baseFollowPrice = 600000;  // $0.60 (increased from $0.40)
+    // Base prices in USDC (6 decimals) - 30% reduction for affordability
+    uint256 public baseLikePrice = 210000;    // $0.21 per like (reduced 30% from $0.30)
+    uint256 public baseFollowPrice = 420000;  // $0.42 per follow (reduced 30% from $0.60)
     uint256 public constant BASE_PRECISION = 1000;       // For multiplier calculations
     
     // Account quality multipliers (1000 = 1.0x) - configurable by owner
