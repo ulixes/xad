@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { actionRuns, actions, users, socialAccounts } from "../db/schema";
+import { actionRuns, campaignActions, users, socialAccounts } from "../db/schema";
 import type { Context } from "../types";
 import { userAuthMiddleware } from "../middleware/userAuth";
 
@@ -63,14 +63,14 @@ app.post("/start", async (c) => {
       return c.json(run);
     }
 
-    // Get action details for pricing
-    const [action] = await db
+    // Get campaign action details for pricing
+    const [campaignAction] = await db
       .select()
-      .from(actions)
-      .where(eq(actions.id, actionId));
+      .from(campaignActions)
+      .where(eq(campaignActions.id, actionId));
 
-    if (!action) {
-      return c.json({ error: "Action not found" }, 404);
+    if (!campaignAction) {
+      return c.json({ error: "Campaign action not found" }, 404);
     }
 
     // Create new action run
@@ -80,7 +80,7 @@ app.post("/start", async (c) => {
         actionId,
         userId,
         socialAccountId,
-        rewardAmount: action.price,
+        rewardAmount: campaignAction.pricePerAction,
         status: "pending_verification", // Start with pending_verification
         proof: {
           sessionId: crypto.randomUUID(),
@@ -90,14 +90,14 @@ app.post("/start", async (c) => {
       })
       .returning();
 
-    // Increment action's current volume
+    // Increment campaign action's current volume
     await db
-      .update(actions)
+      .update(campaignActions)
       .set({ 
-        currentVolume: sql`${actions.currentVolume} + 1`,
+        currentVolume: sql`${campaignActions.currentVolume} + 1`,
         updatedAt: new Date()
       })
-      .where(eq(actions.id, actionId));
+      .where(eq(campaignActions.id, actionId));
 
     console.log('Created new action run:', newActionRun.id);
     return c.json(newActionRun, 201);
@@ -171,17 +171,17 @@ app.get("/user/:userId", async (c) => {
         createdAt: actionRuns.createdAt,
         updatedAt: actionRuns.updatedAt,
         action: {
-          id: actions.id,
-          platform: actions.platform,
-          actionType: actions.actionType,
-          target: actions.target,
-          title: actions.title,
-          description: actions.description,
-          price: actions.price,
+          id: campaignActions.id,
+          platform: 'tiktok', // We'll need to join with campaigns for this
+          actionType: campaignActions.actionType,
+          target: campaignActions.target,
+          title: sql`'TikTok ' || ${campaignActions.actionType}`,
+          description: sql`${campaignActions.actionType} || ' on TikTok'`,
+          price: campaignActions.pricePerAction,
         }
       })
       .from(actionRuns)
-      .leftJoin(actions, eq(actionRuns.actionId, actions.id))
+      .leftJoin(campaignActions, eq(actionRuns.actionId, campaignActions.id))
       .where(eq(actionRuns.userId, userId))
       .orderBy(actionRuns.createdAt);
 

@@ -12,7 +12,8 @@ import {
   tiktokViewerMetrics,
   tiktokFollowerDemographics,
   tiktokFollowerGeography,
-  actions, 
+  campaigns,
+  campaignActions, 
   actionRuns 
 } from "../db/schema";
 import type { AppContext } from "../types";
@@ -868,13 +869,24 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
   const db = c.get("db");
 
   try {
-    // First, get the social account with Instagram data if available
+    // First, get the social account with Instagram and TikTok data if available
     const accountData = await db
       .select()
       .from(socialAccounts)
       .leftJoin(
         instagramAccounts,
         eq(socialAccounts.id, instagramAccounts.socialAccountId)
+      )
+      .leftJoin(
+        tiktokAccounts,
+        eq(socialAccounts.id, tiktokAccounts.socialAccountId)
+      )
+      .leftJoin(
+        tiktokViewerMetrics,
+        and(
+          eq(tiktokAccounts.id, tiktokViewerMetrics.tiktokAccountId),
+          eq(tiktokViewerMetrics.rangeDays, 28) // Get 28-day metrics
+        )
       )
       .where(eq(socialAccounts.id, accountId))
       .limit(1);
@@ -888,6 +900,8 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
     // Drizzle returns joined tables with table names as keys
     const socialAccount = account.social_accounts;
     const instagramData = account.instagram_accounts;
+    const tiktokData = account.tiktok_accounts;
+    const tiktokMetrics = account.tiktok_viewer_metrics;
     
     if (!socialAccount) {
       return c.json({ error: "Social account data not found" }, 404);
@@ -913,26 +927,36 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         locationCountry: instagramData.locationCountry,
         locationCity: instagramData.locationCity,
       }),
+      ...(tiktokData && {
+        followerCount: tiktokData.followers,
+        followingCount: tiktokData.following,
+        isVerified: tiktokData.isVerified,
+        region: tiktokData.region,
+        language: tiktokData.language,
+        analyticsOn: tiktokData.analyticsOn,
+      }),
     };
 
-    // Get all active actions for the platform with user's action runs
-    console.log('Fetching actions for platform:', platform, 'userId:', userId);
+    // Get all active campaign actions with campaigns for the platform with user's action runs
+    console.log('Fetching campaign actions for platform:', platform, 'userId:', userId);
     
-    // Fetch actions with LEFT JOIN to get user's action runs
+    // Fetch campaign actions with campaigns and user's action runs
     const actionsWithRuns = await db
       .select({
-        // Action fields
-        actionId: actions.id,
-        actionType: actions.actionType,
-        target: actions.target,
-        title: actions.title,
-        description: actions.description,
-        price: actions.price,
-        maxVolume: actions.maxVolume,
-        currentVolume: actions.currentVolume,
-        eligibilityCriteria: actions.eligibilityCriteria,
-        expiresAt: actions.expiresAt,
-        isActive: actions.isActive,
+        // Campaign action fields
+        actionId: campaignActions.id,
+        actionType: campaignActions.actionType,
+        target: campaignActions.target,
+        price: campaignActions.pricePerAction,
+        maxVolume: campaignActions.maxVolume,
+        currentVolume: campaignActions.currentVolume,
+        isActive: campaignActions.isActive,
+        // Campaign fields for eligibility
+        campaignId: campaigns.id,
+        campaignPlatform: campaigns.platform,
+        campaignStatus: campaigns.status,
+        campaignTargetingRules: campaigns.targetingRules,
+        campaignExpiresAt: campaigns.expiresAt,
         // Action run fields (null if not started)
         actionRunId: actionRuns.id,
         actionRunStatus: actionRuns.status,
@@ -940,11 +964,15 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         actionRunCompletedAt: actionRuns.completedAt,
         actionRunRewardAmount: actionRuns.rewardAmount,
       })
-      .from(actions)
+      .from(campaignActions)
+      .innerJoin(
+        campaigns,
+        eq(campaignActions.campaignId, campaigns.id)
+      )
       .leftJoin(
         actionRuns,
         and(
-          eq(actions.id, actionRuns.actionId),
+          eq(campaignActions.id, actionRuns.actionId),
           eq(actionRuns.userId, userId),
           eq(actionRuns.socialAccountId, accountId),
           // Only include recent runs (last 48 hours) or active ones
@@ -956,38 +984,56 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
       )
       .where(
         and(
-          eq(actions.platform, platform),
-          eq(actions.isActive, true),
-          sql`${actions.currentVolume} < ${actions.maxVolume}`,
-          sql`${actions.expiresAt} IS NULL OR ${actions.expiresAt} > NOW()`
+          eq(campaigns.platform, platform),
+          eq(campaigns.status, 'active'),
+          eq(campaigns.isActive, true),
+          eq(campaignActions.isActive, true),
+          sql`${campaignActions.currentVolume} < ${campaignActions.maxVolume}`,
+          sql`${campaigns.expiresAt} IS NULL OR ${campaigns.expiresAt} > NOW()`
         )
       );
-    console.log('Actions with runs found:', actionsWithRuns.length);
+    console.log('Campaign actions with runs found:', actionsWithRuns.length);
 
-    // Filter actions based on eligibility criteria and completion status
+    // Filter actions based on campaign targeting rules and completion status
     const eligibleActions = actionsWithRuns.filter(action => {
       // Skip if already completed or paid
       if (action.actionRunStatus === 'completed' || action.actionRunStatus === 'paid') {
         return false;
       }
       
-      const criteria = action.eligibilityCriteria as any;
+      // Use campaign targeting rules as eligibility criteria
+      const criteria = action.campaignTargetingRules as any;
       
       // If no criteria specified, action is available to all
       if (!criteria || Object.keys(criteria).length === 0) {
         return true;
       }
 
-      // Check minimum followers
-      if (criteria.minFollowers && instagramData) {
-        if (instagramData.followerCount < criteria.minFollowers) {
+      // Check minimum followers (works for both Instagram and TikTok)
+      if (criteria.minFollowers && criteria.minFollowers > 0) {
+        const followerCount = instagramData?.followerCount || tiktokData?.followers || 0;
+        if (followerCount < criteria.minFollowers) {
           return false;
         }
       }
 
-      // Check maximum followers
-      if (criteria.maxFollowers && instagramData) {
-        if (instagramData.followerCount > criteria.maxFollowers) {
+      // Check maximum followers (works for both Instagram and TikTok)
+      if (criteria.maxFollowers && criteria.maxFollowers > 0) {
+        const followerCount = instagramData?.followerCount || tiktokData?.followers || 0;
+        if (followerCount > criteria.maxFollowers) {
+          return false;
+        }
+      }
+      
+      // Check minimum views (TikTok specific)
+      if (criteria.minUniqueViews28Days && criteria.minUniqueViews28Days > 0) {
+        // Check if we have TikTok view metrics data
+        if (!tiktokMetrics || !tiktokMetrics.totalUniqueViewers) {
+          return false; // No metrics = can't verify views = not eligible
+        }
+        
+        // Check if unique viewers meet the requirement
+        if (tiktokMetrics.totalUniqueViewers < criteria.minUniqueViews28Days) {
           return false;
         }
       }
@@ -1014,23 +1060,26 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         }
       }
 
-      // Check location country
-      if (criteria.countries && Array.isArray(criteria.countries) && instagramData?.locationCountry) {
-        if (!criteria.countries.includes(instagramData.locationCountry)) {
+      // Check location (accountLocation from campaign)
+      if (criteria.accountLocation && criteria.accountLocation !== 'all') {
+        const location = instagramData?.locationCountry || tiktokData?.region;
+        if (location && location !== criteria.accountLocation) {
           return false;
         }
       }
-
-      // Check location city
-      if (criteria.cities && Array.isArray(criteria.cities) && instagramData?.locationCity) {
-        if (!criteria.cities.includes(instagramData.locationCity)) {
+      
+      // Check language (accountLanguage from campaign)
+      if (criteria.accountLanguage && criteria.accountLanguage !== 'all') {
+        const language = tiktokData?.language;
+        if (language && language !== criteria.accountLanguage) {
           return false;
         }
       }
 
       // Check if account is verified (if required)
-      if (criteria.requireVerified === true) {
-        if (!socialAccount.isVerified) {
+      if (criteria.verifiedOnly === true) {
+        const isVerified = instagramData?.isVerified || tiktokData?.isVerified || false;
+        if (!isVerified) {
           return false;
         }
       }
@@ -1052,14 +1101,14 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
       return true;
     });
 
-    // Transform actions with user run data
+    // Transform campaign actions with user run data
     const transformedActions = eligibleActions.map(action => ({
       id: action.actionId,
-      platform, // Include platform from the account
+      platform: action.campaignPlatform, // From campaign
       actionType: action.actionType,
       target: action.target,
-      title: action.title,
-      description: action.description,
+      title: `${action.campaignPlatform} ${action.actionType}`,
+      description: `${action.actionType} on ${action.campaignPlatform}`,
       price: action.price,
       availableVolume: action.maxVolume - action.currentVolume,
       percentageComplete: Math.round((action.currentVolume / action.maxVolume) * 100),
