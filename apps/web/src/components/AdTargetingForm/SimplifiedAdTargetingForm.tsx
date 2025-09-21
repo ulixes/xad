@@ -63,7 +63,10 @@ const COUNTRIES = [
   { code: 'BR', name: 'Brazil' },              // 0.4x
   { code: 'MX', name: 'Mexico' },              // 0.4x
   // Central Asia (0.35x)
-  { code: 'KZ', name: 'Kazakhstan' }           // 0.35x - NEW!
+  { code: 'KZ', name: 'Kazakhstan' },          // 0.35x - NEW!
+  // Southeast Asia - Additional (0.5x - 1.0x)
+  { code: 'SG', name: 'Singapore' },           // 1.0x - NEW!
+  { code: 'MY', name: 'Malaysia' }             // 0.5x - NEW!
 ];
 
 type CampaignTargets = {
@@ -644,6 +647,8 @@ export function SimplifiedAdTargetingForm({
                   <SelectItem value="id">Indonesian</SelectItem>
                   <SelectItem value="th">Thai</SelectItem>
                   <SelectItem value="vi">Vietnamese</SelectItem>
+                  <SelectItem value="ms">Malay</SelectItem>
+                  <SelectItem value="ta">Tamil</SelectItem>
                 </SelectContent>
               </Select>
             </div>

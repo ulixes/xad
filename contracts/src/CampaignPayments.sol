@@ -170,6 +170,8 @@ contract CampaignPayments {
         locationMultipliers["LA"] = 200;        // 0.2x - Laos very low CPM ~$1-2
         locationMultipliers["MN"] = 250;        // 0.25x - Mongolia CPM ~$2-4
         locationMultipliers["KZ"] = 350;        // 0.35x - Kazakhstan CPM ~$4-6
+        locationMultipliers["SG"] = 1000;       // 1.0x - Singapore CPM ~$10-15 (affluent market)
+        locationMultipliers["MY"] = 500;        // 0.5x - Malaysia CPM ~$4-6 (emerging market)
         
         // Initialize language multipliers - FIXED 25% premium for all specific languages
         languageMultipliers["all"] = 1000;      // 1.0x baseline (no language targeting)
@@ -188,6 +190,8 @@ contract CampaignPayments {
         languageMultipliers["id"] = 1250;       // 1.25x - Fixed 25% premium
         languageMultipliers["th"] = 1250;       // 1.25x - Fixed 25% premium
         languageMultipliers["vi"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ms"] = 1250;       // 1.25x - Fixed 25% premium
+        languageMultipliers["ta"] = 1250;       // 1.25x - Fixed 25% premium
     }
     
     // Owner functions to update configuration
