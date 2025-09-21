@@ -743,25 +743,24 @@ export function SimplifiedAdTargetingForm({
                       </div>
                     </div>
                     {campaignTargets.likeEnabled && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="like-count" className="text-sm font-medium">
-                          Likes per Post:
-                        </Label>
-                        <Input
-                          id="like-count"
-                          type="number"
-                          min="40"
-                          value={campaignTargets.likeCountPerPost}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 40;
-                            setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(40, value) }));
-                          }}
-                          className="w-24 text-base h-9"
-                          required
-                        />
-                      </div>
-                    </div>
+                      <>
+                        <div className="flex items-center gap-3">
+                          <Label htmlFor="like-count" className="text-sm font-medium">
+                            Likes per Post:
+                          </Label>
+                          <Input
+                            id="like-count"
+                            type="number"
+                            min="40"
+                            value={campaignTargets.likeCountPerPost}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 40;
+                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(40, value) }));
+                            }}
+                            className="w-24 text-base h-9"
+                            required
+                          />
+                        </div>
                     
                     <div className="space-y-3">
                       {campaignTargets.likeTargets.map((url, index) => (
@@ -838,7 +837,7 @@ export function SimplifiedAdTargetingForm({
                         + Add Another Post URL
                       </Button>
                     </div>
-                    </>
+                      </>
                     )}
                   </div>
                 </>
