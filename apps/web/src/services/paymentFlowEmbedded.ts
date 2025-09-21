@@ -35,17 +35,21 @@ export class PaymentFlowEmbeddedService {
     // Get USDC contract address
     const usdcAddress = networkConfig.usdcAddress
     
+    // Prepare account requirements for contract
+    const accountRequirements = {
+      verifiedOnly: targetingParams.verifiedOnly || false,
+      minFollowers: BigInt(targetingParams.minFollowers || 0),
+      minUniqueViews28Days: BigInt(targetingParams.minViews28Days || 0),
+      accountLocation: targetingParams.accountLocation || 'all',
+      accountLanguage: targetingParams.accountLanguage || 'all'
+    }
+    
     // Get calculated price from contract
     const calculatedAmount = await publicClient.readContract({
       address: contractAddress,
       abi: CAMPAIGN_PAYMENTS_ABI,
       functionName: 'calculatePrice',
-      args: [
-        targetingParams.country,
-        targetingParams.targetGender,
-        targetingParams.targetAge,
-        targetingParams.verifiedOnly
-      ]
+      args: [accountRequirements]
     })
 
     console.log('Campaign payment amount:', calculatedAmount.toString(), 'USDC (6 decimals)')
@@ -128,12 +132,13 @@ export class PaymentFlowEmbeddedService {
       
       console.log('[PaymentFlow] Using connected wallet:', walletAddress)
       
-      // Step 3: Prepare targeting parameters (using accountLocation for contract compatibility)
+      // Step 3: Prepare account requirements
       const targetingParams = {
-        country: formData.accountLocation || 'all',
-        targetGender: false, // Deprecated, keeping for contract compatibility
-        targetAge: false, // Deprecated, keeping for contract compatibility
-        verifiedOnly: formData.verifiedOnly || false
+        verifiedOnly: formData.verifiedOnly || false,
+        minFollowers: formData.minFollowers || 0,
+        minViews28Days: formData.minUniqueViews28Days || 0,
+        accountLocation: formData.accountLocation || 'all',
+        accountLanguage: formData.accountLanguage || 'all'
       }
       
       // Step 3.5: Prepare action targets (extract handle and videoId)
@@ -188,13 +193,21 @@ export class PaymentFlowEmbeddedService {
       const s = `0x${signature.slice(66, 130)}` as `0x${string}`
       const v = parseInt(signature.slice(130, 132), 16)
       
-      // Step 6: Encode the contract call (now with struct and encoded targets)
+      // Step 6: Encode the contract call with AccountRequirements struct
+      const accountRequirements = {
+        verifiedOnly: targetingParams.verifiedOnly,
+        minFollowers: BigInt(targetingParams.minFollowers),
+        minUniqueViews28Days: BigInt(targetingParams.minViews28Days),
+        accountLocation: targetingParams.accountLocation,
+        accountLanguage: targetingParams.accountLanguage
+      }
+      
       const txData = encodeFunctionData({
         abi: CAMPAIGN_PAYMENTS_ABI,
         functionName: 'depositForCampaignWithPermit',
         args: [
           campaignId,
-          targetingParams, // Now passed as a struct
+          accountRequirements, // AccountRequirements struct
           targets, // Simple string "likeUrl|followUrl"
           deadline,
           v,

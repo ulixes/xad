@@ -76,13 +76,14 @@ export const CAMPAIGN_PAYMENTS_ABI = [
     inputs: [
       { name: 'campaignId', type: 'string' },
       { 
-        name: 'params', 
+        name: 'requirements', 
         type: 'tuple',
         components: [
-          { name: 'country', type: 'string' },
-          { name: 'targetGender', type: 'bool' },
-          { name: 'targetAge', type: 'bool' },
-          { name: 'verifiedOnly', type: 'bool' }
+          { name: 'verifiedOnly', type: 'bool' },
+          { name: 'minFollowers', type: 'uint256' },
+          { name: 'minUniqueViews28Days', type: 'uint256' },
+          { name: 'accountLocation', type: 'string' },
+          { name: 'accountLanguage', type: 'string' }
         ]
       },
       { name: 'targets', type: 'string' },
@@ -98,10 +99,17 @@ export const CAMPAIGN_PAYMENTS_ABI = [
   },
   {
     inputs: [
-      { name: 'country', type: 'string' },
-      { name: 'targetGender', type: 'bool' },
-      { name: 'targetAge', type: 'bool' },
-      { name: 'verifiedOnly', type: 'bool' }
+      { 
+        name: 'requirements', 
+        type: 'tuple',
+        components: [
+          { name: 'verifiedOnly', type: 'bool' },
+          { name: 'minFollowers', type: 'uint256' },
+          { name: 'minUniqueViews28Days', type: 'uint256' },
+          { name: 'accountLocation', type: 'string' },
+          { name: 'accountLanguage', type: 'string' }
+        ]
+      }
     ],
     name: 'calculatePrice',
     outputs: [{ name: '', type: 'uint256' }],

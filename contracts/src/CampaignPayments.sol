@@ -32,13 +32,14 @@ contract CampaignPayments {
     uint256 public baseFollowPrice = 400000;  // $0.40
     uint256 public constant BASE_PRECISION = 1000;       // For multiplier calculations
     
-    // Targeting multipliers (1000 = 1.0x) - configurable by owner
-    uint256 public genderMultiplier = 1200;     // 1.2x when targeting specific gender
-    uint256 public ageMultiplier = 1400;        // 1.4x when targeting specific age
+    // Account quality multipliers (1000 = 1.0x) - configurable by owner
     uint256 public verifiedMultiplier = 1500;   // 1.5x when targeting verified only
+    uint256 public minFollowersMultiplier = 1200;  // 1.2x for minimum followers requirement
+    uint256 public minViewsMultiplier = 1300;       // 1.3x for minimum views requirement
     
-    // Country multipliers (1000 = 1.0x)
-    mapping(string => uint256) public countryMultipliers;
+    // Location/Language multipliers (1000 = 1.0x)
+    mapping(string => uint256) public locationMultipliers;  // Account location
+    mapping(string => uint256) public languageMultipliers;  // Account language
     
     // Store action targets for each campaign (minimal data)
     // Format: "h:v|h" where h=handle(without @), v=videoId
@@ -54,13 +55,13 @@ contract CampaignPayments {
         string targets
     );
     
-    event PriceCalculated(
+    event CampaignRequirementsSet(
         string indexed campaignId,
-        uint256 totalPrice,
-        string country,
-        bool targetGender,
-        bool targetAge,
-        bool verifiedOnly
+        bool verifiedOnly,
+        uint256 minFollowers,
+        uint256 minViews,
+        string location,
+        string language
     );
     
     event PackageUpdated(
@@ -73,14 +74,19 @@ contract CampaignPayments {
         uint256 followPrice
     );
     
-    event TargetingMultipliersUpdated(
-        uint256 genderMult,
-        uint256 ageMult,
-        uint256 verifiedMult
+    event AccountQualityMultipliersUpdated(
+        uint256 verifiedMult,
+        uint256 minFollowersMult,
+        uint256 minViewsMult
     );
     
-    event CountryMultiplierUpdated(
-        string country,
+    event LocationMultiplierUpdated(
+        string location,
+        uint256 multiplier
+    );
+    
+    event LanguageMultiplierUpdated(
+        string language,
         uint256 multiplier
     );
     
@@ -103,20 +109,41 @@ contract CampaignPayments {
         owner = msg.sender;
         usdcToken = _usdcToken;
         
-        // Initialize default country multipliers
-        countryMultipliers["all"] = 1000;      // 1.0x
-        countryMultipliers["US"] = 1500;       // 1.5x
-        countryMultipliers["UK"] = 1400;       // 1.4x
-        countryMultipliers["CA"] = 1400;       // 1.4x
-        countryMultipliers["AU"] = 1300;       // 1.3x
-        countryMultipliers["DE"] = 1300;       // 1.3x
-        countryMultipliers["FR"] = 1200;       // 1.2x
-        countryMultipliers["JP"] = 1200;       // 1.2x
-        countryMultipliers["BR"] = 1100;       // 1.1x
-        countryMultipliers["MX"] = 1000;       // 1.0x
-        countryMultipliers["IN"] = 900;        // 0.9x
-        countryMultipliers["PH"] = 800;        // 0.8x
-        countryMultipliers["ID"] = 700;        // 0.7x
+        // Initialize default location multipliers
+        locationMultipliers["all"] = 1000;      // 1.0x
+        locationMultipliers["US"] = 1500;       // 1.5x
+        locationMultipliers["UK"] = 1400;       // 1.4x
+        locationMultipliers["CA"] = 1400;       // 1.4x
+        locationMultipliers["AU"] = 1300;       // 1.3x
+        locationMultipliers["DE"] = 1300;       // 1.3x
+        locationMultipliers["FR"] = 1200;       // 1.2x
+        locationMultipliers["ES"] = 1150;       // 1.15x
+        locationMultipliers["IT"] = 1150;       // 1.15x
+        locationMultipliers["JP"] = 1200;       // 1.2x
+        locationMultipliers["KR"] = 1100;       // 1.1x
+        locationMultipliers["BR"] = 1100;       // 1.1x
+        locationMultipliers["MX"] = 1000;       // 1.0x
+        locationMultipliers["IN"] = 900;        // 0.9x
+        locationMultipliers["PH"] = 800;        // 0.8x
+        locationMultipliers["ID"] = 700;        // 0.7x
+        
+        // Initialize default language multipliers
+        languageMultipliers["all"] = 1000;      // 1.0x
+        languageMultipliers["en"] = 1200;       // 1.2x
+        languageMultipliers["es"] = 1100;       // 1.1x
+        languageMultipliers["fr"] = 1100;       // 1.1x
+        languageMultipliers["de"] = 1100;       // 1.1x
+        languageMultipliers["it"] = 1050;       // 1.05x
+        languageMultipliers["pt"] = 1050;       // 1.05x
+        languageMultipliers["ru"] = 1000;       // 1.0x
+        languageMultipliers["ja"] = 1000;       // 1.0x
+        languageMultipliers["ko"] = 1000;       // 1.0x
+        languageMultipliers["zh"] = 900;        // 0.9x
+        languageMultipliers["ar"] = 950;        // 0.95x
+        languageMultipliers["hi"] = 900;        // 0.9x
+        languageMultipliers["id"] = 850;        // 0.85x
+        languageMultipliers["th"] = 850;        // 0.85x
+        languageMultipliers["vi"] = 850;        // 0.85x
     }
     
     // Owner functions to update configuration
@@ -134,82 +161,106 @@ contract CampaignPayments {
         emit BasePricesUpdated(_likePrice, _followPrice);
     }
     
-    function updateTargetingMultipliers(
-        uint256 _genderMult,
-        uint256 _ageMult,
-        uint256 _verifiedMult
+    function updateAccountQualityMultipliers(
+        uint256 _verifiedMult,
+        uint256 _minFollowersMult,
+        uint256 _minViewsMult
     ) external onlyOwner {
         // Multipliers should be reasonable (e.g., between 0.5x and 5x)
-        if (_genderMult < 500 || _genderMult > 5000) revert InvalidMultiplier();
-        if (_ageMult < 500 || _ageMult > 5000) revert InvalidMultiplier();
         if (_verifiedMult < 500 || _verifiedMult > 5000) revert InvalidMultiplier();
+        if (_minFollowersMult < 500 || _minFollowersMult > 5000) revert InvalidMultiplier();
+        if (_minViewsMult < 500 || _minViewsMult > 5000) revert InvalidMultiplier();
         
-        genderMultiplier = _genderMult;
-        ageMultiplier = _ageMult;
         verifiedMultiplier = _verifiedMult;
+        minFollowersMultiplier = _minFollowersMult;
+        minViewsMultiplier = _minViewsMult;
         
-        emit TargetingMultipliersUpdated(_genderMult, _ageMult, _verifiedMult);
+        emit AccountQualityMultipliersUpdated(_verifiedMult, _minFollowersMult, _minViewsMult);
     }
     
-    function updateCountryMultiplier(string calldata country, uint256 multiplier) external onlyOwner {
+    function updateLocationMultiplier(string calldata location, uint256 multiplier) external onlyOwner {
         // Multiplier should be reasonable (e.g., between 0.1x and 10x)
         if (multiplier < 100 || multiplier > 10000) revert InvalidMultiplier();
-        countryMultipliers[country] = multiplier;
-        emit CountryMultiplierUpdated(country, multiplier);
+        locationMultipliers[location] = multiplier;
+        emit LocationMultiplierUpdated(location, multiplier);
     }
     
-    function updateCountryMultipliersBatch(
-        string[] calldata countries,
+    function updateLanguageMultiplier(string calldata language, uint256 multiplier) external onlyOwner {
+        // Multiplier should be reasonable (e.g., between 0.1x and 10x)
+        if (multiplier < 100 || multiplier > 10000) revert InvalidMultiplier();
+        languageMultipliers[language] = multiplier;
+        emit LanguageMultiplierUpdated(language, multiplier);
+    }
+    
+    function updateLocationMultipliersBatch(
+        string[] calldata locations,
         uint256[] calldata multipliers
     ) external onlyOwner {
-        require(countries.length == multipliers.length, "Array length mismatch");
+        require(locations.length == multipliers.length, "Array length mismatch");
         
-        for (uint256 i = 0; i < countries.length; i++) {
+        for (uint256 i = 0; i < locations.length; i++) {
             if (multipliers[i] < 100 || multipliers[i] > 10000) revert InvalidMultiplier();
-            countryMultipliers[countries[i]] = multipliers[i];
-            emit CountryMultiplierUpdated(countries[i], multipliers[i]);
+            locationMultipliers[locations[i]] = multipliers[i];
+            emit LocationMultiplierUpdated(locations[i], multipliers[i]);
         }
+    }
+    
+    function updateLanguageMultipliersBatch(
+        string[] calldata languages,
+        uint256[] calldata multipliers
+    ) external onlyOwner {
+        require(languages.length == multipliers.length, "Array length mismatch");
+        
+        for (uint256 i = 0; i < languages.length; i++) {
+            if (multipliers[i] < 100 || multipliers[i] > 10000) revert InvalidMultiplier();
+            languageMultipliers[languages[i]] = multipliers[i];
+            emit LanguageMultiplierUpdated(languages[i], multipliers[i]);
+        }
+    }
+    
+    // Struct for account requirements
+    struct AccountRequirements {
+        bool verifiedOnly;
+        uint256 minFollowers;
+        uint256 minUniqueViews28Days;
+        string accountLocation;
+        string accountLanguage;
     }
     
     function calculatePrice(
-        string memory country,
-        bool targetGender,
-        bool targetAge,
-        bool verifiedOnly
+        AccountRequirements memory requirements
     ) public view returns (uint256) {
-        // Get country multiplier (default to "all" if not found)
-        uint256 countryMult = countryMultipliers[country];
-        if (countryMult == 0) {
-            countryMult = countryMultipliers["all"];
+        // Get location multiplier (default to "all" if not found)
+        uint256 locationMult = locationMultipliers[requirements.accountLocation];
+        if (locationMult == 0) {
+            locationMult = locationMultipliers["all"];
         }
         
-        // Apply targeting multipliers
-        uint256 genderMult = targetGender ? genderMultiplier : 1000;    
-        uint256 ageMult = targetAge ? ageMultiplier : 1000;          
-        uint256 verifiedMult = verifiedOnly ? verifiedMultiplier : 1000;  
+        // Get language multiplier (default to "all" if not found)
+        uint256 languageMult = languageMultipliers[requirements.accountLanguage];
+        if (languageMult == 0) {
+            languageMult = languageMultipliers["all"];
+        }
+        
+        // Apply account quality multipliers
+        uint256 verifiedMult = requirements.verifiedOnly ? verifiedMultiplier : 1000;
+        uint256 followersMult = requirements.minFollowers > 0 ? minFollowersMultiplier : 1000;
+        uint256 viewsMult = requirements.minUniqueViews28Days > 0 ? minViewsMultiplier : 1000;
         
         // Calculate combined multiplier
-        uint256 combinedMultiplier = countryMult * genderMult * ageMult * verifiedMult;
+        uint256 combinedMultiplier = locationMult * languageMult * verifiedMult * followersMult * viewsMult;
         
-        // Calculate prices with multipliers applied
-        uint256 likePrice = (baseLikePrice * combinedMultiplier) / (BASE_PRECISION ** 4);
-        uint256 followPrice = (baseFollowPrice * combinedMultiplier) / (BASE_PRECISION ** 4);
+        // Calculate prices with multipliers applied (5 multipliers now)
+        uint256 likePrice = (baseLikePrice * combinedMultiplier) / (BASE_PRECISION ** 5);
+        uint256 followPrice = (baseFollowPrice * combinedMultiplier) / (BASE_PRECISION ** 5);
         
         // Calculate total for the campaign package
         return (campaignLikes * likePrice) + (campaignFollows * followPrice);
     }
     
-    // Struct to avoid stack too deep error
-    struct CampaignParams {
-        string country;
-        bool targetGender;
-        bool targetAge;
-        bool verifiedOnly;
-    }
-    
     function depositForCampaignWithPermit(
         string calldata campaignId,
-        CampaignParams calldata params,
+        AccountRequirements calldata requirements,
         string calldata targets, // Simple string: "likeUrl|followUrl"
         uint256 deadline,
         uint8 v,
@@ -223,7 +274,7 @@ contract CampaignPayments {
         campaignTargets[campaignId] = targets;
         
         // Calculate required payment
-        uint256 requiredAmount = calculatePrice(params.country, params.targetGender, params.targetAge, params.verifiedOnly);
+        uint256 requiredAmount = calculatePrice(requirements);
         
         // Call permit on USDC to set allowance via signature
         try IERC20Permit(usdcToken).permit(
@@ -248,13 +299,14 @@ contract CampaignPayments {
         );
         if (!success) revert TransferFailed();
         
-        emit PriceCalculated(
+        // Emit events for tracking
+        emit CampaignRequirementsSet(
             campaignId,
-            requiredAmount,
-            params.country,
-            params.targetGender,
-            params.targetAge,
-            params.verifiedOnly
+            requirements.verifiedOnly,
+            requirements.minFollowers,
+            requirements.minUniqueViews28Days,
+            requirements.accountLocation,
+            requirements.accountLanguage
         );
         
         emit CampaignPaymentReceived(

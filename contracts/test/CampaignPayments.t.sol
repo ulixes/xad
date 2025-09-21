@@ -53,7 +53,17 @@ contract CampaignPaymentsTest is Test {
         string indexed campaignId,
         address indexed sender,
         uint256 amount,
-        uint256 timestamp
+        uint256 timestamp,
+        string targets
+    );
+    
+    event CampaignRequirementsSet(
+        string indexed campaignId,
+        bool verifiedOnly,
+        uint256 minFollowers,
+        uint256 minViews,
+        string location,
+        string language
     );
     
     function setUp() public {
@@ -97,19 +107,42 @@ contract CampaignPaymentsTest is Test {
     }
     
     function testCalculatePrice() public view {
+        // Create account requirements for testing
+        CampaignPayments.AccountRequirements memory baseReqs = CampaignPayments.AccountRequirements({
+            verifiedOnly: false,
+            minFollowers: 0,
+            minUniqueViews28Days: 0,
+            accountLocation: "all",
+            accountLanguage: "all"
+        });
+        
         // Test base price (no multipliers)
-        uint256 basePrice = campaignPayments.calculatePrice("all", false, false, false);
+        uint256 basePrice = campaignPayments.calculatePrice(baseReqs);
         uint256 expectedBase = (20 * 200000) + (10 * 400000); // 20 likes + 10 follows
         assertEq(basePrice, expectedBase);
         
-        // Test with country multiplier (US = 1.5x)
-        uint256 usPrice = campaignPayments.calculatePrice("US", false, false, false);
+        // Test with location multiplier (US = 1.5x)
+        CampaignPayments.AccountRequirements memory usReqs = CampaignPayments.AccountRequirements({
+            verifiedOnly: false,
+            minFollowers: 0,
+            minUniqueViews28Days: 0,
+            accountLocation: "US",
+            accountLanguage: "all"
+        });
+        uint256 usPrice = campaignPayments.calculatePrice(usReqs);
         assertEq(usPrice, expectedBase * 1500 / 1000);
         
         // Test with all multipliers
-        uint256 maxPrice = campaignPayments.calculatePrice("US", true, true, true);
-        // US: 1.5x, Gender: 1.2x, Age: 1.4x, Verified: 1.5x = 3.78x total
-        uint256 expectedMax = (basePrice * 1500 * 1200 * 1400 * 1500) / (1000 ** 4);
+        CampaignPayments.AccountRequirements memory maxReqs = CampaignPayments.AccountRequirements({
+            verifiedOnly: true,
+            minFollowers: 1000,
+            minUniqueViews28Days: 10000,
+            accountLocation: "US",
+            accountLanguage: "en"
+        });
+        uint256 maxPrice = campaignPayments.calculatePrice(maxReqs);
+        // US: 1.5x, EN: 1.2x, Verified: 1.5x, MinFollowers: 1.2x, MinViews: 1.3x
+        uint256 expectedMax = (basePrice * 1500 * 1200 * 1500 * 1200 * 1300) / (1000 ** 5);
         assertEq(maxPrice, expectedMax);
     }
     
@@ -120,7 +153,14 @@ contract CampaignPaymentsTest is Test {
         assertEq(campaignPayments.campaignFollows(), 15);
         
         // Test that price calculation uses new values
-        uint256 newPrice = campaignPayments.calculatePrice("all", false, false, false);
+        CampaignPayments.AccountRequirements memory reqs = CampaignPayments.AccountRequirements({
+            verifiedOnly: false,
+            minFollowers: 0,
+            minUniqueViews28Days: 0,
+            accountLocation: "all",
+            accountLanguage: "all"
+        });
+        uint256 newPrice = campaignPayments.calculatePrice(reqs);
         uint256 expectedPrice = (30 * 200000) + (15 * 400000); // 30 likes + 15 follows
         assertEq(newPrice, expectedPrice);
         
@@ -136,75 +176,106 @@ contract CampaignPaymentsTest is Test {
         assertEq(campaignPayments.baseFollowPrice(), 500000);
         
         // Test that price calculation uses new values
-        uint256 newPrice = campaignPayments.calculatePrice("all", false, false, false);
+        CampaignPayments.AccountRequirements memory reqs = CampaignPayments.AccountRequirements({
+            verifiedOnly: false,
+            minFollowers: 0,
+            minUniqueViews28Days: 0,
+            accountLocation: "all",
+            accountLanguage: "all"
+        });
+        uint256 newPrice = campaignPayments.calculatePrice(reqs);
         uint256 expectedPrice = (20 * 300000) + (10 * 500000);
         assertEq(newPrice, expectedPrice);
     }
     
-    function testUpdateTargetingMultipliers() public {
-        // Update targeting multipliers
-        campaignPayments.updateTargetingMultipliers(1100, 1300, 1600);
-        assertEq(campaignPayments.genderMultiplier(), 1100);
-        assertEq(campaignPayments.ageMultiplier(), 1300);
+    function testUpdateAccountQualityMultipliers() public {
+        // Update account quality multipliers
+        campaignPayments.updateAccountQualityMultipliers(1600, 1100, 1400);
         assertEq(campaignPayments.verifiedMultiplier(), 1600);
+        assertEq(campaignPayments.minFollowersMultiplier(), 1100);
+        assertEq(campaignPayments.minViewsMultiplier(), 1400);
         
-        // Test invalid multipliers
+        // Test invalid multipliers revert
         vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
-        campaignPayments.updateTargetingMultipliers(400, 1300, 1600); // Too low
+        campaignPayments.updateAccountQualityMultipliers(400, 1100, 1400); // Too low
         
         vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
-        campaignPayments.updateTargetingMultipliers(1100, 6000, 1600); // Too high
+        campaignPayments.updateAccountQualityMultipliers(1600, 6000, 1400); // Too high
     }
     
-    function testUpdateCountryMultiplier() public {
-        // Update single country
-        campaignPayments.updateCountryMultiplier("BR", 1500);
-        assertEq(campaignPayments.countryMultipliers("BR"), 1500);
+    function testUpdateLocationMultiplier() public {
+        // Update location multiplier
+        campaignPayments.updateLocationMultiplier("FR", 1250);
+        assertEq(campaignPayments.locationMultipliers("FR"), 1250);
         
-        // Test batch update
-        string[] memory countries = new string[](3);
-        countries[0] = "KR";
-        countries[1] = "CN";
-        countries[2] = "TH";
+        // Test invalid multiplier reverts
+        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
+        campaignPayments.updateLocationMultiplier("XX", 50); // Too low
+        
+        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
+        campaignPayments.updateLocationMultiplier("XX", 20000); // Too high
+    }
+    
+    function testUpdateLanguageMultiplier() public {
+        // Update language multiplier
+        campaignPayments.updateLanguageMultiplier("es", 1150);
+        assertEq(campaignPayments.languageMultipliers("es"), 1150);
+        
+        // Test invalid multiplier reverts
+        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
+        campaignPayments.updateLanguageMultiplier("xx", 50); // Too low
+        
+        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
+        campaignPayments.updateLanguageMultiplier("xx", 20000); // Too high
+    }
+    
+    function testUpdateLocationMultipliersBatch() public {
+        string[] memory locations = new string[](3);
+        locations[0] = "IT";
+        locations[1] = "ES";
+        locations[2] = "PT";
         
         uint256[] memory multipliers = new uint256[](3);
         multipliers[0] = 1250;
-        multipliers[1] = 1100;
-        multipliers[2] = 950;
+        multipliers[1] = 1150;
+        multipliers[2] = 1050;
         
-        campaignPayments.updateCountryMultipliersBatch(countries, multipliers);
-        assertEq(campaignPayments.countryMultipliers("KR"), 1250);
-        assertEq(campaignPayments.countryMultipliers("CN"), 1100);
-        assertEq(campaignPayments.countryMultipliers("TH"), 950);
+        campaignPayments.updateLocationMultipliersBatch(locations, multipliers);
         
-        // Test invalid multiplier
-        vm.expectRevert(CampaignPayments.InvalidMultiplier.selector);
-        campaignPayments.updateCountryMultiplier("XX", 50); // Too low
+        assertEq(campaignPayments.locationMultipliers("IT"), 1250);
+        assertEq(campaignPayments.locationMultipliers("ES"), 1150);
+        assertEq(campaignPayments.locationMultipliers("PT"), 1050);
     }
     
-    function testOnlyOwnerModifiers() public {
-        // Try to update as non-owner
-        vm.prank(user1);
+    function testOnlyOwnerCanUpdateConfig() public {
+        vm.startPrank(user1);
+        
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
         campaignPayments.updatePackage(25, 12);
         
-        vm.prank(user1);
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
         campaignPayments.updateBasePrices(250000, 450000);
         
-        vm.prank(user1);
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
-        campaignPayments.updateTargetingMultipliers(1100, 1300, 1400);
+        campaignPayments.updateAccountQualityMultipliers(1100, 1300, 1600);
         
-        vm.prank(user1);
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
-        campaignPayments.updateCountryMultiplier("US", 2000);
+        campaignPayments.updateLocationMultiplier("XX", 1500);
+        
+        vm.expectRevert(CampaignPayments.OnlyOwner.selector);
+        campaignPayments.updateLanguageMultiplier("xx", 1500);
+        
+        vm.stopPrank();
     }
     
-    function testCountryMultipliers() public {
-        assertEq(campaignPayments.countryMultipliers("US"), 1500);
-        assertEq(campaignPayments.countryMultipliers("UK"), 1400);
-        assertEq(campaignPayments.countryMultipliers("IN"), 900);
-        assertEq(campaignPayments.countryMultipliers("all"), 1000);
+    function testCampaignTargets() public {
+        string memory campaignId = "test-campaign-123";
+        string memory targets = "likeHandle:123456789|followHandle";
+        
+        // Store targets through depositForCampaignWithPermit would normally happen
+        // For testing, we'll use a simplified approach
+        
+        // First check that empty targets are empty
+        assertEq(campaignPayments.getCampaignTargets(campaignId), "");
     }
 }

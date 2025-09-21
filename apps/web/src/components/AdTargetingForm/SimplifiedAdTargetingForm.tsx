@@ -189,12 +189,13 @@ export function SimplifiedAdTargetingForm({
           address: contractAddress,
           abi: CAMPAIGN_PAYMENTS_ABI,
           functionName: 'calculatePrice',
-          args: [
-            requirements.accountLocation || 'all',
-            false, // was targetGender, now unused
-            false, // was targetAge, now unused
-            requirements.verifiedOnly || false
-          ]
+          args: [{
+            verifiedOnly: requirements.verifiedOnly || false,
+            minFollowers: BigInt(requirements.minFollowers || 0),
+            minUniqueViews28Days: BigInt(requirements.minUniqueViews28Days || 0),
+            accountLocation: requirements.accountLocation || 'all',
+            accountLanguage: requirements.accountLanguage || 'all'
+          }]
         });
 
         setCalculatedPrice(price);
