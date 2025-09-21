@@ -16,7 +16,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    environment: production
+    environment: extension-release
     defaults:
       run:
         working-directory: apps/extension
