@@ -727,11 +727,18 @@ export function SimplifiedAdTargetingForm({
                           min="40"
                           value={campaignTargets.followCount}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value) || 40;
-                            setCampaignTargets(prev => ({ ...prev, followCount: Math.max(40, value) }));
+                            const value = parseInt(e.target.value) || 0;
+                            setCampaignTargets(prev => ({ ...prev, followCount: value }));
+                          }}
+                          onBlur={(e) => {
+                            // Only enforce minimum on blur to allow typing
+                            const value = parseInt(e.target.value) || 0;
+                            if (value > 0 && value < 40) {
+                              setCampaignTargets(prev => ({ ...prev, followCount: 40 }));
+                            }
                           }}
                           className="text-base h-11"
-                          required
+                          placeholder="40"
                         />
                         <p className="text-xs text-muted-foreground mt-1">Minimum 40 follows required</p>
                       </div>
@@ -768,11 +775,18 @@ export function SimplifiedAdTargetingForm({
                             min="40"
                             value={campaignTargets.likeCountPerPost}
                             onChange={(e) => {
-                              const value = parseInt(e.target.value) || 40;
-                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(40, value) }));
+                              const value = parseInt(e.target.value) || 0;
+                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: value }));
+                            }}
+                            onBlur={(e) => {
+                              // Only enforce minimum on blur to allow typing
+                              const value = parseInt(e.target.value) || 0;
+                              if (value > 0 && value < 40) {
+                                setCampaignTargets(prev => ({ ...prev, likeCountPerPost: 40 }));
+                              }
                             }}
                             className="w-24 text-base h-9"
-                            required
+                            placeholder="40"
                           />
                         </div>
                     
