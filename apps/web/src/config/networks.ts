@@ -126,7 +126,7 @@ export const CAMPAIGN_PAYMENTS_ABI = [
           { name: 'followTarget', type: 'string' },
           { name: 'followCount', type: 'uint256' },
           { name: 'likeTargets', type: 'string[]' },
-          { name: 'likeCounts', type: 'uint256[]' }
+          { name: 'likeCountPerPost', type: 'uint256' }
         ]
       }
     ],

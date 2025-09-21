@@ -2,7 +2,6 @@
 
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
 import { encodeFunctionData } from 'viem'
-import { encodeTargetsSimple } from '@/utils/targetEncoder'
 
 const networkConfig = getNetworkConfig()
 
@@ -24,10 +23,17 @@ export class PaymentFlowEmbeddedService {
     campaignId: string,
     contractAddress: string,
     targetingParams: {
-      country: string,
-      targetGender: boolean,
-      targetAge: boolean,
-      verifiedOnly: boolean
+      verifiedOnly: boolean,
+      minFollowers: number,
+      minViews28Days: number,
+      accountLocation: string,
+      accountLanguage: string
+    },
+    campaignActions: {
+      followTarget: string,
+      followCount: bigint,
+      likeTargets: string[],
+      likeCountPerPost: bigint
     },
     walletAddress: string,
     publicClient: any
@@ -49,7 +55,7 @@ export class PaymentFlowEmbeddedService {
       address: contractAddress,
       abi: CAMPAIGN_PAYMENTS_ABI,
       functionName: 'calculatePrice',
-      args: [accountRequirements]
+      args: [accountRequirements, campaignActions]
     })
 
     console.log('Campaign payment amount:', calculatedAmount.toString(), 'USDC (6 decimals)')
@@ -141,24 +147,19 @@ export class PaymentFlowEmbeddedService {
         accountLanguage: formData.accountLanguage || 'all'
       }
       
-      // Step 3.5: Prepare action targets (extract handle and videoId)
-      // Get the SINGLE like URL and SINGLE follow URL from form
-      const likeUrl = formData.likeUrl || 'https://www.tiktok.com/@defaultuser/video/1234567890'
+      // Step 3.5: Prepare campaign actions
+      const likeUrls = formData.likeUrls || ['https://www.tiktok.com/@defaultuser/video/1234567890']
+      const likeCountPerPost = formData.likeCountPerPost || 20
       const followUrl = formData.followUrl || 'https://www.tiktok.com/@defaultuser'
+      const followCount = formData.followCount || 10
       
-      // Extract handle and videoId from URLs
-      const extractFromTikTokUrl = (url: string) => {
-        const match = url.match(/@([^\/]+)(?:\/video\/(\d+))?/)
-        if (!match) throw new Error('Invalid TikTok URL')
-        return { handle: match[1], videoId: match[2] }
+      // Prepare CampaignActions struct
+      const campaignActions = {
+        followTarget: followUrl,
+        followCount: BigInt(followCount),
+        likeTargets: likeUrls,
+        likeCountPerPost: BigInt(likeCountPerPost)
       }
-      
-      const likeData = extractFromTikTokUrl(likeUrl)
-      const followData = extractFromTikTokUrl(followUrl)
-      
-      // Encode targets for privacy (obfuscated before storing on-chain)
-      const targets = encodeTargetsSimple(likeData.handle, likeData.videoId, followData.handle)
-      console.log('Encoded targets for blockchain (obfuscated):', targets)
       
       // Step 4: Get payment data and check balance
       const {
@@ -171,6 +172,7 @@ export class PaymentFlowEmbeddedService {
         campaignId,
         contractAddress,
         targetingParams,
+        campaignActions,
         walletAddress,
         publicClient
       )
@@ -208,7 +210,7 @@ export class PaymentFlowEmbeddedService {
         args: [
           campaignId,
           accountRequirements, // AccountRequirements struct
-          targets, // Simple string "likeUrl|followUrl"
+          campaignActions, // CampaignActions struct
           deadline,
           v,
           r,

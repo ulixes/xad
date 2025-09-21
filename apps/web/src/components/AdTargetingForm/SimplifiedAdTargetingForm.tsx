@@ -52,8 +52,10 @@ const COUNTRIES = [
 ];
 
 type CampaignTargets = {
-  likeTarget: string;
-  followTarget: string;
+  likeTargets: string[];  // Array of post URLs for likes
+  likeCountPerPost: number;  // Number of likes per post
+  followTarget: string;  // Single account URL for follows
+  followCount: number;  // Number of follows
 };
 
 type AccountRequirements = {
@@ -78,8 +80,10 @@ export function SimplifiedAdTargetingForm({
   const navigate = useNavigate();
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
-    likeTarget: '',
-    followTarget: ''
+    likeTargets: [''],  // Start with one empty URL field
+    likeCountPerPost: 20,  // Default 20 likes per post
+    followTarget: '',
+    followCount: 10  // Default 10 follows
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -110,8 +114,6 @@ export function SimplifiedAdTargetingForm({
   
   // Contract data
   const [contractData, setContractData] = useState({
-    likes: 40,
-    follows: 20,
     baseLikePrice: 200000, // in USDC (6 decimals)
     baseFollowPrice: 400000,
     loading: true
@@ -140,8 +142,6 @@ export function SimplifiedAdTargetingForm({
       if (!publicClient) {
         // Use defaults for Storybook
         setContractData({
-          likes: 20,
-          follows: 10,
           baseLikePrice: 200000,
           baseFollowPrice: 400000,
           loading: false
@@ -153,10 +153,8 @@ export function SimplifiedAdTargetingForm({
         // TODO: Update this to fetch actual contract data once contract functions are available
         // const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
         
-        // Use default package values - these define the campaign package
+        // Use default base prices
         setContractData({
-          likes: 40,
-          follows: 20,
           baseLikePrice: 200000, // 0.2 USDC per like (6 decimals)
           baseFollowPrice: 400000, // 0.4 USDC per follow (6 decimals)
           loading: false
@@ -173,10 +171,16 @@ export function SimplifiedAdTargetingForm({
   // Calculate price when requirements change
   useEffect(() => {
     const calculatePrice = async () => {
+      // Get valid like targets for calculation
+      const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
+      const likeTargetsCount = validLikeTargets.length || 1; // At least 1 for price estimate
+      
       if (!publicClient) {
         // Mock calculation for Storybook
-        const baseTotal = (contractData.likes * contractData.baseLikePrice +
-                          contractData.follows * contractData.baseFollowPrice);
+        const totalLikes = likeTargetsCount * campaignTargets.likeCountPerPost;
+        const totalFollows = campaignTargets.followCount;
+        const baseTotal = (totalLikes * contractData.baseLikePrice +
+                          totalFollows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
         return;
       }
@@ -186,32 +190,45 @@ export function SimplifiedAdTargetingForm({
         const networkConfig = getNetworkConfig();
         const contractAddress = networkConfig.campaignPaymentsContract as `0x${string}`;
 
+        // Create dummy targets array for price calculation
+        const dummyTargets = Array(likeTargetsCount).fill('post');
+        
         const price = await publicClient.readContract({
           address: contractAddress,
           abi: CAMPAIGN_PAYMENTS_ABI,
           functionName: 'calculatePrice',
-          args: [{
-            verifiedOnly: requirements.verifiedOnly || false,
-            minFollowers: BigInt(requirements.minFollowers || 0),
-            minUniqueViews28Days: BigInt(requirements.minUniqueViews28Days || 0),
-            accountLocation: requirements.accountLocation || 'all',
-            accountLanguage: requirements.accountLanguage || 'all'
-          }]
+          args: [
+            {
+              verifiedOnly: requirements.verifiedOnly || false,
+              minFollowers: BigInt(requirements.minFollowers || 0),
+              minUniqueViews28Days: BigInt(requirements.minUniqueViews28Days || 0),
+              accountLocation: requirements.accountLocation || 'all',
+              accountLanguage: requirements.accountLanguage || 'all'
+            },
+            {
+              followTarget: 'account',
+              followCount: BigInt(campaignTargets.followCount),
+              likeTargets: dummyTargets,
+              likeCountPerPost: BigInt(campaignTargets.likeCountPerPost)
+            }
+          ]
         });
 
         setCalculatedPrice(price);
       } catch (error) {
         console.error('Error calculating price:', error);
         // Fallback to base price
-        const baseTotal = (contractData.likes * contractData.baseLikePrice +
-                          contractData.follows * contractData.baseFollowPrice);
+        const totalLikes = likeTargetsCount * campaignTargets.likeCountPerPost;
+        const totalFollows = campaignTargets.followCount;
+        const baseTotal = (totalLikes * contractData.baseLikePrice +
+                          totalFollows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
       }
       setIsCalculating(false);
     };
 
     calculatePrice();
-  }, [requirements, contractData, publicClient]);
+  }, [requirements, contractData, publicClient, campaignTargets]);
 
   // Load USDC balance when wallet connects
   useEffect(() => {
@@ -279,8 +296,8 @@ export function SimplifiedAdTargetingForm({
   };
   
   const estimatedCost = Number(formatPrice(calculatedPrice));
-  const basePackagePrice = (contractData.likes * contractData.baseLikePrice + 
-                           contractData.follows * contractData.baseFollowPrice) / 1000000;
+  const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
+  const totalActions = (validLikeTargets.length || 1) * campaignTargets.likeCountPerPost + campaignTargets.followCount;
 
   const handleSave = async () => {
     // Reset previous states
@@ -319,13 +336,24 @@ export function SimplifiedAdTargetingForm({
     }
 
     // Validate targets are filled
-    if (!campaignTargets.likeTarget.trim()) {
-      setPaymentError('Please provide a TikTok post URL for likes');
+    const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
+    if (validLikeTargets.length === 0) {
+      setPaymentError('Please provide at least one TikTok post URL for likes');
       return;
     }
     
     if (!campaignTargets.followTarget.trim()) {
       setPaymentError('Please provide a TikTok profile URL for follows');
+      return;
+    }
+    
+    if (campaignTargets.likeCountPerPost < 1) {
+      setPaymentError('Like count per post must be at least 1');
+      return;
+    }
+    
+    if (campaignTargets.followCount < 1) {
+      setPaymentError('Follow count must be at least 1');
       return;
     }
 
@@ -345,12 +373,15 @@ export function SimplifiedAdTargetingForm({
         
         const formData = {
           platform: selectedPlatform,
-          country: requirements.country,
-          gender: requirements.gender,
-          ageRange: requirements.ageRange,
           verifiedOnly: requirements.verifiedOnly,
-          likeUrl: campaignTargets.likeTarget,    // Changed from likeTarget to likeUrl
-          followUrl: campaignTargets.followTarget  // Changed from followTarget to followUrl
+          minFollowers: requirements.minFollowers,
+          minUniqueViews28Days: requirements.minUniqueViews28Days,
+          accountLocation: requirements.accountLocation,
+          accountLanguage: requirements.accountLanguage,
+          likeUrls: validLikeTargets,  // Array of post URLs
+          likeCountPerPost: campaignTargets.likeCountPerPost,
+          followUrl: campaignTargets.followTarget,
+          followCount: campaignTargets.followCount
         };
         
         const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
@@ -554,49 +585,120 @@ export function SimplifiedAdTargetingForm({
 
 
 
-        {/* Fixed Campaign Package - Fetched from Contract */}
+        {/* Campaign Actions - Configurable */}
         {selectedPlatform === 'tiktok' && (
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">Package ({contractData.follows} follows, {contractData.likes} likes)</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">Campaign Actions</h2>
 
-            {/* Package Details Card */}
-            <div className="p-4 border border-border rounded-lg bg-card space-y-4">
+            {/* Actions Details Card */}
+            <div className="p-4 border border-border rounded-lg bg-card space-y-6">
               {contractData.loading ? (
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="ml-2">Loading package details...</span>
+                  <span className="ml-2">Loading configuration...</span>
                 </div>
               ) : (
                 <>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="like-target" className="text-base font-medium">
-                        URL for likes
-                      </Label>
-                      <Input
-                        id="like-target"
-                        type="url"
-                        placeholder="https://tiktok.com/@username/video/123456789"
-                        value={campaignTargets.likeTarget}
-                        onChange={(e) => setCampaignTargets(prev => ({ ...prev, likeTarget: e.target.value }))}
-                        className="font-mono text-base h-11"
-                        required
-                      />
+                  {/* Follow Action */}
+                  <div className="space-y-4 pb-4 border-b border-border">
+                    <h3 className="text-base font-semibold">Follow Action</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="follow-target" className="text-sm font-medium">
+                          Account URL
+                        </Label>
+                        <Input
+                          id="follow-target"
+                          type="url"
+                          placeholder="https://tiktok.com/@username"
+                          value={campaignTargets.followTarget}
+                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, followTarget: e.target.value }))}
+                          className="font-mono text-base h-11"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="follow-count" className="text-sm font-medium">
+                          Number of Follows
+                        </Label>
+                        <Input
+                          id="follow-count"
+                          type="number"
+                          min="1"
+                          value={campaignTargets.followCount}
+                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, followCount: parseInt(e.target.value) || 1 }))}
+                          className="text-base h-11"
+                          required
+                        />
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="follow-target" className="text-base font-medium">
-                        URL for follows
-                      </Label>
-                      <Input
-                        id="follow-target"
-                        type="url"
-                        placeholder="https://tiktok.com/@username"
-                        value={campaignTargets.followTarget}
-                        onChange={(e) => setCampaignTargets(prev => ({ ...prev, followTarget: e.target.value }))}
-                        className="font-mono text-base h-11"
-                        required
-                      />
+                  {/* Like Actions */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold">Like Actions</h3>
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="like-count" className="text-sm font-medium">
+                          Likes per Post:
+                        </Label>
+                        <Input
+                          id="like-count"
+                          type="number"
+                          min="1"
+                          value={campaignTargets.likeCountPerPost}
+                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, likeCountPerPost: parseInt(e.target.value) || 1 }))}
+                          className="w-24 text-base h-9"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {campaignTargets.likeTargets.map((url, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            type="url"
+                            placeholder="https://tiktok.com/@username/video/123456789"
+                            value={url}
+                            onChange={(e) => {
+                              const newTargets = [...campaignTargets.likeTargets];
+                              newTargets[index] = e.target.value;
+                              setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+                            }}
+                            className="font-mono text-base h-11 flex-1"
+                            required={index === 0}
+                          />
+                          {campaignTargets.likeTargets.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                const newTargets = campaignTargets.likeTargets.filter((_, i) => i !== index);
+                                setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+                              }}
+                              className="h-11 w-11"
+                            >
+                              <span className="text-lg">×</span>
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setCampaignTargets(prev => ({ 
+                            ...prev, 
+                            likeTargets: [...prev.likeTargets, ''] 
+                          }));
+                        }}
+                        className="w-full"
+                      >
+                        + Add Another Post URL
+                      </Button>
                     </div>
                   </div>
                 </>
