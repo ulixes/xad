@@ -116,9 +116,21 @@ contract CampaignPaymentsTest is Test {
             accountLanguage: "all"
         });
         
+        // Create actions for testing - 2 posts with 20 likes each, 10 follows
+        string[] memory likeTargets = new string[](2);
+        likeTargets[0] = "post1";
+        likeTargets[1] = "post2";
+        
+        CampaignPayments.CampaignActions memory baseActions = CampaignPayments.CampaignActions({
+            followTarget: "@account",
+            followCount: 10,
+            likeTargets: likeTargets,
+            likeCountPerPost: 20
+        });
+        
         // Test base price (no multipliers)
-        uint256 basePrice = campaignPayments.calculatePrice(baseReqs);
-        uint256 expectedBase = (40 * 200000) + (20 * 400000); // 40 likes + 20 follows
+        uint256 basePrice = campaignPayments.calculatePrice(baseReqs, baseActions);
+        uint256 expectedBase = (2 * 20 * 200000) + (10 * 400000); // 2 posts * 20 likes each + 10 follows
         assertEq(basePrice, expectedBase);
         
         // Test with location multiplier (US = 1.5x)
@@ -129,7 +141,7 @@ contract CampaignPaymentsTest is Test {
             accountLocation: "US",
             accountLanguage: "all"
         });
-        uint256 usPrice = campaignPayments.calculatePrice(usReqs);
+        uint256 usPrice = campaignPayments.calculatePrice(usReqs, baseActions);
         assertEq(usPrice, expectedBase * 1500 / 1000);
         
         // Test with all multipliers (100k followers, 1M views)
@@ -140,34 +152,13 @@ contract CampaignPaymentsTest is Test {
             accountLocation: "US",
             accountLanguage: "en"
         });
-        uint256 maxPrice = campaignPayments.calculatePrice(maxReqs);
+        uint256 maxPrice = campaignPayments.calculatePrice(maxReqs, baseActions);
         // US: 1.5x, EN: 1.2x, Verified: 1.5x, 100k followers: 1.5x, 1M views: 1.6x
         uint256 expectedMax = (basePrice * 1500 * 1200 * 1500 * 1500 * 1600) / (1000 ** 5);
         assertEq(maxPrice, expectedMax);
     }
     
-    function testUpdatePackage() public {
-        // Update package
-        campaignPayments.updatePackage(30, 15);
-        assertEq(campaignPayments.campaignLikes(), 30);
-        assertEq(campaignPayments.campaignFollows(), 15);
-        
-        // Test that price calculation uses new values
-        CampaignPayments.AccountRequirements memory reqs = CampaignPayments.AccountRequirements({
-            verifiedOnly: false,
-            minFollowers: 0,
-            minUniqueViews28Days: 0,
-            accountLocation: "all",
-            accountLanguage: "all"
-        });
-        uint256 newPrice = campaignPayments.calculatePrice(reqs);
-        uint256 expectedPrice = (30 * 200000) + (15 * 400000); // 30 likes + 15 follows (after update)
-        assertEq(newPrice, expectedPrice);
-        
-        // Test zero values revert
-        vm.expectRevert(CampaignPayments.InvalidAmount.selector);
-        campaignPayments.updatePackage(0, 10);
-    }
+    // Package control was removed - actions are now flexible per campaign
     
     function testUpdateBasePrices() public {
         // Update base prices
@@ -183,8 +174,20 @@ contract CampaignPaymentsTest is Test {
             accountLocation: "all",
             accountLanguage: "all"
         });
-        uint256 newPrice = campaignPayments.calculatePrice(reqs);
-        uint256 expectedPrice = (40 * 300000) + (20 * 500000); // 40 likes + 20 follows with new prices
+        
+        string[] memory likeTargets = new string[](2);
+        likeTargets[0] = "post1";
+        likeTargets[1] = "post2";
+        
+        CampaignPayments.CampaignActions memory actions = CampaignPayments.CampaignActions({
+            followTarget: "@account",
+            followCount: 10,
+            likeTargets: likeTargets,
+            likeCountPerPost: 20
+        });
+        
+        uint256 newPrice = campaignPayments.calculatePrice(reqs, actions);
+        uint256 expectedPrice = (2 * 20 * 300000) + (10 * 500000); // 2 posts * 20 likes + 10 follows with new prices
         assertEq(newPrice, expectedPrice);
     }
     
@@ -276,9 +279,6 @@ contract CampaignPaymentsTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
-        campaignPayments.updatePackage(25, 12);
-        
-        vm.expectRevert(CampaignPayments.OnlyOwner.selector);
         campaignPayments.updateBasePrices(250000, 450000);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
@@ -293,14 +293,5 @@ contract CampaignPaymentsTest is Test {
         vm.stopPrank();
     }
     
-    function testCampaignTargets() public {
-        string memory campaignId = "test-campaign-123";
-        string memory targets = "likeHandle:123456789|followHandle";
-        
-        // Store targets through depositForCampaignWithPermit would normally happen
-        // For testing, we'll use a simplified approach
-        
-        // First check that empty targets are empty
-        assertEq(campaignPayments.getCampaignTargets(campaignId), "");
-    }
+    // Campaign targets are now passed as CampaignActions struct, not stored
 }
