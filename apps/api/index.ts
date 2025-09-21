@@ -37,6 +37,8 @@ app.use("*", async (c, next) => {
       if (allowedOriginPattern.test(requestOrigin)) return requestOrigin;
       // Add production domains
       const allowedDomains = [
+        "https://www.zkad.org",
+        "https://zkad.org",
         "https://xad.com",
         "https://xad.vercel.app",
         "https://xad-web.vercel.app",
