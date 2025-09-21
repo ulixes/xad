@@ -9,33 +9,37 @@ export default function FAQ() {
   const faqs = {
     en: [
       {
-        question: "What is zkad?",
-        answer: "zkad is a platform that pays users for genuine social media engagement while letting brands advertise through micro-influencers at scale, all secured by zero-knowledge proofs."
-      },
-      {
         question: "How do users get paid?",
-        answer: "Install the Chrome extension, connect your social accounts, and earn crypto for likes and comments on matched promotions. Payouts are instant and private."
+        answer: "Install the Chrome extension, connect your social media accounts, and earn crypto."
       },
       {
-        question: "Is it safe?",
-        answer: "Yes – we use zk proofs to verify without exposing data. No bots, no scams, full privacy."
+        question: "How you ensure these accounts aren't bots?",
+        answer: "We use self.xyz's \"Proof of Humanity\" to check that the social media account owner is a single unique human. You never pay for botted engagement."
       },
       {
-        question: "How do brands target audiences?",
-        answer: "Use our form to set rules based on verified schemas (e.g., age, location, interests). Then fund with crypto for immediate activation."
+        question: "Will you support more social media platforms?",
+        answer: "Yes. Instagram, Reddit, and X are all on our roadmap."
+      },
+      {
+        question: "Will you support commenting, sharing, and posting?",
+        answer: "Yes."
       },
       {
         question: "What social platforms are supported?",
         answer: "X (Twitter), Reddit, Instagram, YouTube, Facebook, Farcaster, Douyin/TikTok, XiaoHongShu, and more coming soon."
       },
       {
+        question: "How much can I earn?",
+        answer: "It depends which brands want you to engage with their content, but your time will always be well spent."
+      },
+      {
         question: "Any costs for users?",
         answer: "Free to join and use – just your time engaging genuinely."
       },
       {
-        question: "How to get started as a brand?",
-        answer: "Fill the targeting form, send crypto, and watch engagements roll in."
-      }
+        question: "Where can I download the extension?",
+        answer: "Coming soon."
+      },
     ],
     zh: [
       {
@@ -45,14 +49,6 @@ export default function FAQ() {
       {
         question: "用户如何获得报酬？",
         answer: "安装 Chrome 扩展，连接您的社交账户，通过对匹配的推广内容点赞和评论赚取加密货币。支付即时且私密。"
-      },
-      {
-        question: "安全吗？",
-        answer: "是的 - 我们使用零知识证明进行验证而不暴露数据。没有机器人，没有欺诈，完全隐私。"
-      },
-      {
-        question: "品牌如何定向受众？",
-        answer: "使用我们的表单根据经过验证的模式（例如，年龄、位置、兴趣）设置规则。然后用加密货币付款即可立即激活。"
       },
       {
         question: "支持哪些社交平台？",
@@ -89,7 +85,7 @@ export default function FAQ() {
           {/* Section Header */}
           <div className="mb-8">
             <h4 className="text-3xl md:text-5xl tracking-tighter font-regular text-left">
-              Frequently Asked Questions
+              FAQ
             </h4>
           </div>
 

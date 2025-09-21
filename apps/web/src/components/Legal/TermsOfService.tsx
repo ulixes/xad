@@ -18,8 +18,8 @@ export function TermsOfService() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            XAD is a platform that connects advertisers with social media users for legitimate 
-            engagement activities. Our single purpose is to facilitate paid social media interactions 
+            zkad is a platform that connects advertisers with social media users for legitimate
+            engagement activities. Our single purpose is to facilitate paid social media interactions
             (likes, follows) in a transparent and compliant manner.
           </p>
           <div className="space-y-3">
@@ -224,9 +224,7 @@ export function TermsOfService() {
             For questions about these terms or to report violations:
           </p>
           <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
-            <li><strong className="text-foreground">Email:</strong> legal@xad.com</li>
-            <li><strong className="text-foreground">Support:</strong> support@xad.com</li>
-            <li><strong className="text-foreground">Address:</strong> [Company Address]</li>
+            <li><strong className="text-foreground">Contact:</strong> Visit our website for support</li>
           </ul>
           <p className="text-xs text-muted-foreground">
             Response time: We aim to respond to all inquiries within 48 hours.
@@ -236,7 +234,7 @@ export function TermsOfService() {
 
       <div className="text-center text-xs text-muted-foreground border-t border-border pt-6">
         <p>
-          By using XAD services, you acknowledge that you have read, understood, 
+          By using zkad services, you acknowledge that you have read, understood, 
           and agree to be bound by these Terms of Service.
         </p>
       </div>

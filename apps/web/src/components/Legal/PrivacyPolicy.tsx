@@ -296,10 +296,7 @@ export function PrivacyPolicy() {
             For questions about this Privacy Policy or to exercise your privacy rights:
           </p>
           <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
-            <li><strong className="text-foreground">Privacy Officer:</strong> privacy@xad.com</li>
-            <li><strong className="text-foreground">General Support:</strong> support@xad.com</li>
-            <li><strong className="text-foreground">Data Protection Officer:</strong> dpo@xad.com</li>
-            <li><strong className="text-foreground">Address:</strong> [Company Address]</li>
+            <li><strong className="text-foreground">Contact:</strong> Visit our website for privacy inquiries</li>
           </ul>
           
           <div className="p-3 bg-muted rounded-lg border">
@@ -314,7 +311,7 @@ export function PrivacyPolicy() {
       <div className="text-center text-xs text-muted-foreground border-t border-border pt-6">
         <p>
           This Privacy Policy is effective immediately and governs our collection, use, 
-          and protection of your information while using XAD services.
+          and protection of your information while using zkad services.
         </p>
       </div>
     </div>

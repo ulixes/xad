@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export default function Footer() {
   return (
     <footer className="w-full py-12 bg-card border-t border-border">
@@ -10,18 +12,18 @@ export default function Footer() {
 
           {/* Links */}
           <div className="flex gap-6">
-            <a
-              href="/terms"
+            <Link
+              to="/terms"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Terms of Service
-            </a>
-            <a
-              href="/privacy"
+            </Link>
+            <Link
+              to="/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Privacy Policy
-            </a>
+            </Link>
           </div>
 
         </div>
