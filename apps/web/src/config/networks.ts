@@ -14,9 +14,9 @@ export const getNetworkConfig = () => {
     networkName: isProduction ? 'Base' : 'Base Sepolia',
     chainId: isProduction ? 8453 : 84532,
     
-    // Smart Contract (CampaignPayments)
+    // Smart Contract (CampaignPayments) - v2 with updated pricing
     campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
-      '0x1500e44974088eCe2A5e25d9a8Df7033D650A08B', // Base Sepolia deployment with account requirements
+      '0x1500e44974088eCe2A5e25d9a8Df7033D650A08B', // Base Sepolia deployment with $0.30/$0.60 pricing
     
     // USDC Token Address (payment currency)
     usdcAddress: isProduction

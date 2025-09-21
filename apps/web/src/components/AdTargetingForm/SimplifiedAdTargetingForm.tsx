@@ -82,9 +82,9 @@ export function SimplifiedAdTargetingForm({
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
     likeTargets: [''],  // Start with one empty URL field
-    likeCountPerPost: 20,  // Default 20 likes per post
+    likeCountPerPost: 40,  // Min 40 likes per post (contract requirement)
     followTarget: '',
-    followCount: 10  // Default 10 follows
+    followCount: 40  // Min 40 follows (contract requirement)
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -119,18 +119,18 @@ export function SimplifiedAdTargetingForm({
     checkAuthStatus 
   } = usePrivyAuth();
   
-  // Contract data
+  // Contract data (updated pricing)
   const [contractData, setContractData] = useState({
-    baseLikePrice: 200000, // in USDC (6 decimals)
-    baseFollowPrice: 400000,
+    baseLikePrice: 300000, // $0.30 in USDC (6 decimals) - increased from $0.20
+    baseFollowPrice: 600000, // $0.60 in USDC (6 decimals) - increased from $0.40
     loading: true
   });
   
-  // Account requirements
+  // Account requirements (with minimums to meet $40 threshold)
   const [requirements, setRequirements] = useState<AccountRequirements>({
     verifiedOnly: false,
-    minFollowers: 1000,
-    minUniqueViews28Days: 10000,
+    minFollowers: 1000,  // Min 1k for 1.1x multiplier (contract requirement)
+    minUniqueViews28Days: 10000,  // Min 10k for 1.1x multiplier (contract requirement)
     accountLocation: 'all',
     accountLanguage: 'all'
   });
@@ -147,10 +147,10 @@ export function SimplifiedAdTargetingForm({
   useEffect(() => {
     const loadContractData = async () => {
       if (!publicClient) {
-        // Use defaults for Storybook
+        // Use defaults for Storybook (updated pricing)
         setContractData({
-          baseLikePrice: 200000,
-          baseFollowPrice: 400000,
+          baseLikePrice: 300000,  // $0.30
+          baseFollowPrice: 600000, // $0.60
           loading: false
         });
         return;
@@ -160,10 +160,10 @@ export function SimplifiedAdTargetingForm({
         // TODO: Update this to fetch actual contract data once contract functions are available
         // const contractAddress = '0xf206c64836CA5Bba3198523911Aa4c06b49fc1E6' as const;
         
-        // Use default base prices
+        // Use updated base prices from contract
         setContractData({
-          baseLikePrice: 200000, // 0.2 USDC per like (6 decimals)
-          baseFollowPrice: 400000, // 0.4 USDC per follow (6 decimals)
+          baseLikePrice: 300000, // 0.3 USDC per like (6 decimals)
+          baseFollowPrice: 600000, // 0.6 USDC per follow (6 decimals)
           loading: false
         });
       } catch (error) {
@@ -507,12 +507,16 @@ export function SimplifiedAdTargetingForm({
               <Input
                 id="min-followers"
                 type="number"
-                min="0"
+                min="1000"
                 placeholder="Enter minimum followers (e.g., 1000)"
                 value={requirements.minFollowers || ''}
-                onChange={(e) => setRequirements({...requirements, minFollowers: parseInt(e.target.value) || 0})}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1000;
+                  setRequirements({...requirements, minFollowers: Math.max(1000, value)});
+                }}
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground mt-1">Minimum 1,000 followers required for campaign quality</p>
             </div>
 
             {/* Minimum Unique Views (28 days) */}
@@ -523,12 +527,16 @@ export function SimplifiedAdTargetingForm({
               <Input
                 id="min-views"
                 type="number"
-                min="0"
+                min="10000"
                 placeholder="Enter minimum views (e.g., 10000)"
                 value={requirements.minUniqueViews28Days || ''}
-                onChange={(e) => setRequirements({...requirements, minUniqueViews28Days: parseInt(e.target.value) || 0})}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 10000;
+                  setRequirements({...requirements, minUniqueViews28Days: Math.max(10000, value)});
+                }}
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground mt-1">Minimum 10,000 views required for campaign quality</p>
             </div>
 
             {/* Account Location */}
@@ -647,12 +655,16 @@ export function SimplifiedAdTargetingForm({
                         <Input
                           id="follow-count"
                           type="number"
-                          min="1"
+                          min="40"
                           value={campaignTargets.followCount}
-                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, followCount: parseInt(e.target.value) || 1 }))}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 40;
+                            setCampaignTargets(prev => ({ ...prev, followCount: Math.max(40, value) }));
+                          }}
                           className="text-base h-11"
                           required
                         />
+                        <p className="text-xs text-muted-foreground mt-1">Minimum 40 follows required</p>
                       </div>
                     </div>
                   </div>
@@ -668,9 +680,12 @@ export function SimplifiedAdTargetingForm({
                         <Input
                           id="like-count"
                           type="number"
-                          min="1"
+                          min="40"
                           value={campaignTargets.likeCountPerPost}
-                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, likeCountPerPost: parseInt(e.target.value) || 1 }))}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 40;
+                            setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(40, value) }));
+                          }}
                           className="w-24 text-base h-9"
                           required
                         />
@@ -759,21 +774,60 @@ export function SimplifiedAdTargetingForm({
           </div>
         )}
 
-        {/* Total Campaign Cost - Simplified Display */}
+        {/* Total Campaign Cost with Minimum Requirement */}
         <div className="border-t border-border pt-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-3xl font-bold">Total</h3>
-            <div className="text-right">
-              {isCalculating ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-lg">Calculating...</span>
-                </div>
-              ) : (
-                <div className="text-3xl font-bold text-primary">
-                  ${estimatedCost.toFixed(2)}
+          <div className="space-y-4">
+            {/* Pricing Breakdown */}
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Base Price:</span>
+                <span>
+                  {campaignTargets.likeTargets.filter(url => url.trim()).length} posts × {campaignTargets.likeCountPerPost} likes @ $0.30 + 
+                  {campaignTargets.followCount} follows @ $0.60
+                </span>
+              </div>
+              {requirements.minFollowers >= 1000 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Quality Multiplier ({requirements.minFollowers.toLocaleString()}+ followers):</span>
+                  <span>×{requirements.minFollowers >= 1000000 ? '2.0' : requirements.minFollowers >= 500000 ? '1.75' : requirements.minFollowers >= 100000 ? '1.5' : requirements.minFollowers >= 50000 ? '1.35' : requirements.minFollowers >= 10000 ? '1.2' : '1.1'}</span>
                 </div>
               )}
+              {requirements.minUniqueViews28Days >= 10000 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Views Multiplier ({requirements.minUniqueViews28Days.toLocaleString()}+ views):</span>
+                  <span>×{requirements.minUniqueViews28Days >= 10000000 ? '2.1' : requirements.minUniqueViews28Days >= 5000000 ? '1.85' : requirements.minUniqueViews28Days >= 1000000 ? '1.6' : requirements.minUniqueViews28Days >= 500000 ? '1.45' : requirements.minUniqueViews28Days >= 100000 ? '1.3' : requirements.minUniqueViews28Days >= 50000 ? '1.2' : '1.1'}</span>
+                </div>
+              )}
+              {requirements.verifiedOnly && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Verified Accounts Only:</span>
+                  <span>×1.5</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Total */}
+            <div className="flex justify-between items-center">
+              <h3 className="text-3xl font-bold">Total</h3>
+              <div className="text-right">
+                {isCalculating ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-lg">Calculating...</span>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-3xl font-bold text-primary">
+                      ${estimatedCost.toFixed(2)}
+                    </div>
+                    {estimatedCost < 40 && (
+                      <p className="text-sm text-orange-500 mt-1">
+                        Minimum campaign value is $40.00
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -824,7 +878,8 @@ export function SimplifiedAdTargetingForm({
               contractData.loading ||
               isCalculating ||
               !!urlErrors.follow ||
-              !!(urlErrors.likes && Object.keys(urlErrors.likes).length > 0)
+              !!(urlErrors.likes && Object.keys(urlErrors.likes).length > 0) ||
+              estimatedCost < 40  // Minimum $40 requirement
             }
             size="lg"
             className="w-full"
