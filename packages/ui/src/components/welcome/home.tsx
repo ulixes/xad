@@ -30,6 +30,7 @@ interface HomeProps {
   onJackpotClick?: () => void
   onCashOut?: () => void
   connectedAccounts?: ConnectedAccount[]
+  disabledPlatforms?: string[]
   className?: string
 }
 
@@ -56,6 +57,7 @@ export function Home({
   onJackpotClick,
   onCashOut,
   connectedAccounts = [],
+  disabledPlatforms = [],
   className
 }: HomeProps) {
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null)
@@ -166,17 +168,27 @@ export function Home({
           <div className="space-y-4">
             {platforms.map((platform) => {
               const accounts = getAccountsForPlatform(platform.id)
+              const isDisabled = disabledPlatforms.includes(platform.id)
+              
               return (
-                <div key={platform.id} className="space-y-2">
+                <div key={platform.id} className={cn("space-y-2", isDisabled && "opacity-60")}>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{platform.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{platform.name}</span>
+                      {isDisabled && (
+                        <span className="text-xs text-muted-foreground">(Not Available)</span>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        setAddingPlatform(platform.id)
-                        setHandleInput('')
+                        if (!isDisabled) {
+                          setAddingPlatform(platform.id)
+                          setHandleInput('')
+                        }
                       }}
+                      disabled={isDisabled}
                       className="h-8 w-8"
                     >
                       <Plus className="h-4 w-4" />

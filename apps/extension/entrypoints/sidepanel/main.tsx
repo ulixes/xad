@@ -209,50 +209,6 @@ const AppContent = () => {
             [actionId]: 'loading'
           }));
         }
-      } else if (message.type === 'igDataCollected') {
-        const metadata = message.payload;
-        const accountId = message.accountId;
-        console.log('Instagram data collected:', metadata, 'for account:', accountId);
-        
-        // Find the account by ID
-        const account = socialAccounts.find(acc => acc.id === accountId);
-        console.log('Found account:', account, 'User:', user);
-        
-        if (account && user) {
-          try {
-            console.log('Updating Instagram data for account:', account.id, 'handle:', account.handle);
-            // Save Instagram data to API with handle validation
-            const result = await apiClient.updateInstagramData(account.id, metadata, account.handle);
-            console.log('Instagram data update result:', result);
-            
-            // Remove from verifying state
-            setVerifyingAccounts(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(accountId);
-              return newSet;
-            });
-            
-            // Reload social accounts from API
-            const updatedAccounts = await apiClient.getUserSocialAccounts(user.id);
-            console.log('Updated accounts from API after verification:', updatedAccounts);
-            console.log('First account structure:', updatedAccounts[0]);
-            setSocialAccounts(updatedAccounts);
-            
-            // Fetch eligible actions for the updated accounts
-            await fetchActionsForAccounts(updatedAccounts);
-          } catch (error) {
-            console.error('Failed to save Instagram data:', error);
-            // Remove from verifying state and remove account
-            setVerifyingAccounts(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(accountId);
-              return newSet;
-            });
-            setSocialAccounts(prev => prev.filter(acc => acc.id !== account.id));
-          }
-        } else {
-          console.log('Cannot save: account or user missing', { account, user });
-        }
       } else if (message.type === 'tiktokAccountComplete') {
         const { accountId, handle, profileData, demographics, hasDemographics } = message;
         console.log('TikTok account creation complete:', { 
@@ -755,6 +711,9 @@ const AppContent = () => {
         console.log('Mapped to UI format:', mapped);
         return mapped;
       })}
+      
+      // Disable all platforms except TikTok
+      disabledPlatforms={['instagram', 'x', 'reddit']}
 
       // Handlers
       onAddAccount={async (platform: string, handle: string) => {
@@ -775,10 +734,22 @@ const AppContent = () => {
           setSocialAccounts(prev => [...prev, newAccount]);
           setVerifyingAccounts(prev => new Set(prev).add(newAccount.id));
 
-          // Send message to background script to collect data based on platform
-          const messageType = platform.toLowerCase() === 'tiktok' ? 'addTikTokAccount' : 'addIgAccount';
+          // Send message to background script to collect data (TikTok only now)
+          if (platform.toLowerCase() !== 'tiktok') {
+            console.error('Only TikTok platform is supported');
+            // Remove account from API and UI on error
+            await apiClient.deleteSocialAccount(newAccount.id);
+            setSocialAccounts(prev => prev.filter(acc => acc.id !== newAccount.id));
+            setVerifyingAccounts(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(newAccount.id);
+              return newSet;
+            });
+            return;
+          }
+          
           browser.runtime.sendMessage({
-            type: messageType,
+            type: 'addTikTokAccount',
             handle: handle,
             accountId: newAccount.id,
           }).catch(async (error) => {

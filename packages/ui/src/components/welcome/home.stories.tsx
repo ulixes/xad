@@ -280,3 +280,92 @@ export const TabletView: Story = {
     ],
   },
 }
+
+export const WithDisabledPlatforms: Story = {
+  args: {
+    pendingEarnings: 45.50,
+    availableEarnings: 125.00,
+    dailyActionsCompleted: 3,
+    dailyActionsRequired: 5,
+    jackpotAmount: 75000,
+    hoursUntilDrawing: 2,
+    minutesUntilDrawing: 30,
+    secondsUntilDrawing: 15,
+    disabledPlatforms: ['reddit', 'x'],
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+    connectedAccounts: [
+      { platform: 'tiktok', handle: 'activeuser', availableActions: 5 },
+      { platform: 'instagram', handle: 'creative', availableActions: 8 },
+    ],
+  },
+}
+
+export const OnlyTikTokEnabled: Story = {
+  args: {
+    pendingEarnings: 0,
+    availableEarnings: 0,
+    dailyActionsCompleted: 0,
+    dailyActionsRequired: 5,
+    jackpotAmount: 50000,
+    hoursUntilDrawing: 3,
+    minutesUntilDrawing: 45,
+    secondsUntilDrawing: 0,
+    disabledPlatforms: ['instagram', 'x', 'reddit'],
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+  },
+}
+
+export const AllPlatformsDisabled: Story = {
+  args: {
+    pendingEarnings: 100.00,
+    availableEarnings: 500.00,
+    dailyActionsCompleted: 5,
+    dailyActionsRequired: 5,
+    jackpotAmount: 100000,
+    hoursUntilDrawing: 1,
+    minutesUntilDrawing: 30,
+    secondsUntilDrawing: 0,
+    disabledPlatforms: ['tiktok', 'instagram', 'x', 'reddit'],
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+    connectedAccounts: [
+      { platform: 'tiktok', handle: 'existinguser', availableActions: 0 },
+    ],
+  },
+}
+
+export const MixedEnabledDisabled: Story = {
+  args: {
+    pendingEarnings: 75.25,
+    availableEarnings: 200.00,
+    dailyActionsCompleted: 4,
+    dailyActionsRequired: 5,
+    jackpotAmount: 80000,
+    hoursUntilDrawing: 2,
+    minutesUntilDrawing: 15,
+    secondsUntilDrawing: 30,
+    disabledPlatforms: ['reddit'],
+    onAddAccount: (platform, handle) => console.log('Add account for:', platform, 'with handle:', handle),
+    onAccountClick: (account) => console.log('Account clicked:', account),
+    onJackpotClick: () => console.log('Jackpot clicked'),
+    onWalletClick: () => console.log('Wallet clicked'),
+    onCashOut: () => console.log('Cash out clicked'),
+    connectedAccounts: [
+      { platform: 'tiktok', handle: 'tiktoker', availableActions: 10 },
+      { platform: 'instagram', handle: 'instagrammer', availableActions: 7 },
+      { platform: 'x', handle: 'tweeter', availableActions: 5 },
+      { platform: 'reddit', handle: 'redditor', availableActions: 3 },
+    ],
+  },
+}
