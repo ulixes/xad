@@ -336,8 +336,8 @@ export class WebhookListenerService {
           network: 'base-sepolia',
           timestamp: timestamp.toISOString()
         },
-        createdAt: timestamp,
-        updatedAt: timestamp
+        createdAt: timestamp.toISOString(),
+        updatedAt: timestamp.toISOString()
       })
 
       // Activate campaign
@@ -346,7 +346,7 @@ export class WebhookListenerService {
         .set({ 
           status: 'active',
           isActive: true,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         })
         .where(eq(campaigns.id, campaignId))
 
@@ -520,8 +520,8 @@ export class WebhookListenerService {
         },
         status: 'pending_payment',
         isActive: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }).returning()
       
       console.log('[WEBHOOK] Campaign created:', campaign.id)
@@ -569,37 +569,9 @@ export class WebhookListenerService {
         
         console.log('[WEBHOOK] Campaign actions created:', createdCampaignActions.length)
         
-        // Immediately create corresponding actions records
-        const actionsToCreate = createdCampaignActions.map(ca => ({
-          id: ca.id, // Use same ID for 1:1 mapping
-          platform: 'tiktok' as const,
-          actionType: ca.actionType as 'like' | 'follow',
-          target: ca.target,
-          title: `TikTok ${ca.actionType}`,
-          description: `${ca.actionType === 'follow' ? 'Follow' : 'Like'} on TikTok`,
-          price: ca.pricePerAction,
-          maxVolume: ca.maxVolume,
-          currentVolume: 0,
-          isActive: false, // Will be activated when payment completes
-          eligibilityCriteria: {
-            campaignId: campaign.id,
-            campaignActionId: ca.id
-          }
-        }))
-        
-        console.log('[WEBHOOK] Creating actions records:', actionsToCreate.length)
-        
-        try {
-          const createdActions = await db.insert(actions)
-            .values(actionsToCreate)
-            .returning()
-          
-          console.log('[WEBHOOK] Actions created successfully:', createdActions.length)
-        } catch (actionError) {
-          console.error('[WEBHOOK] Failed to create actions:', actionError)
-          // Don't fail the whole process, actions can be created later
-          console.warn('[WEBHOOK] Will retry actions creation during activation')
-        }
+        // Actions will be created later during payment processing
+        // We don't create them here since the campaign is not yet active
+        console.log('[WEBHOOK] Campaign actions created. Actions will be created during payment processing.')
       } else {
         console.warn('[WEBHOOK] No campaign actions to create')
       }
