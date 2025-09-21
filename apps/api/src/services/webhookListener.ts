@@ -10,17 +10,12 @@ import { parseTargetsFromBlockchain } from '../utils/targetEncoder'
 
 const USDC_DECIMALS = 6
 
-// CampaignPaymentReceived event ABI
+// CampaignPaymentReceived event ABI - updated with new structure
 const CAMPAIGN_PAYMENT_EVENT_ABI = parseAbiItem(
-  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp, string targets)'
+  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp)'
 )
 
-// PriceCalculated event ABI
-const PRICE_CALCULATED_EVENT_ABI = parseAbiItem(
-  'event PriceCalculated(string indexed campaignId, uint256 totalPrice, string country, bool targetGender, bool targetAge, bool verifiedOnly)'
-)
-
-// Contract ABI for depositForCampaignWithPermit function (with struct and encodedTargets)
+// Contract ABI for depositForCampaignWithPermit function - NEW STRUCTURE
 const DEPOSIT_FOR_CAMPAIGN_ABI = [
   {
     name: 'depositForCampaignWithPermit',
@@ -28,16 +23,26 @@ const DEPOSIT_FOR_CAMPAIGN_ABI = [
     inputs: [
       { name: 'campaignId', type: 'string' },
       { 
-        name: 'params', 
+        name: 'requirements', 
         type: 'tuple',
         components: [
-          { name: 'country', type: 'string' },
-          { name: 'targetGender', type: 'bool' },
-          { name: 'targetAge', type: 'bool' },
-          { name: 'verifiedOnly', type: 'bool' }
+          { name: 'verifiedOnly', type: 'bool' },
+          { name: 'minFollowers', type: 'uint256' },
+          { name: 'minUniqueViews28Days', type: 'uint256' },
+          { name: 'accountLocation', type: 'string' },
+          { name: 'accountLanguage', type: 'string' }
         ]
       },
-      { name: 'targets', type: 'string' },
+      {
+        name: 'actions',
+        type: 'tuple',
+        components: [
+          { name: 'followTarget', type: 'string' },  // Encoded URL
+          { name: 'followCount', type: 'uint256' },
+          { name: 'likeTargets', type: 'string[]' },  // Array of encoded URLs
+          { name: 'likeCountPerPost', type: 'uint256' }
+        ]
+      },
       { name: 'deadline', type: 'uint256' },
       { name: 'v', type: 'uint8' },
       { name: 'r', type: 'bytes32' },
@@ -152,21 +157,34 @@ export class WebhookListenerService {
         
         if (decoded.functionName === 'depositForCampaignWithPermit') {
           const campaignId = decoded.args[0] as string
-          const params = decoded.args[1] as {
-            country: string
-            targetGender: boolean
-            targetAge: boolean
+          const requirements = decoded.args[1] as {
             verifiedOnly: boolean
+            minFollowers: bigint
+            minUniqueViews28Days: bigint
+            accountLocation: string
+            accountLanguage: string
           }
-          const targets = decoded.args[2] as string // "handle:videoId|handle"
+          const actions = decoded.args[2] as {
+            followTarget: string  // Encoded URL
+            followCount: bigint
+            likeTargets: string[]  // Array of encoded URLs
+            likeCountPerPost: bigint
+          }
           
           console.log('[WEBHOOK] Decoded campaign payment:', {
             campaignId,
-            country: params.country,
-            targetGender: params.targetGender,
-            targetAge: params.targetAge,
-            verifiedOnly: params.verifiedOnly,
-            targets, // "handle:videoId|handle"
+            requirements: {
+              verifiedOnly: requirements.verifiedOnly,
+              minFollowers: requirements.minFollowers.toString(),
+              minViews: requirements.minUniqueViews28Days.toString(),
+              location: requirements.accountLocation,
+              language: requirements.accountLanguage
+            },
+            actions: {
+              followCount: actions.followCount.toString(),
+              likeCount: actions.likeCountPerPost.toString(),
+              likeTargetsCount: actions.likeTargets.length
+            },
             from: tx.from,
             hash: tx.hash
           })
@@ -212,8 +230,8 @@ export class WebhookListenerService {
             transactionHash: tx.hash,
             blockNumber: tx.block_number,
             timestamp,
-            targetingParams: params,
-            targets
+            requirements,
+            actions
           }, db)
           
           console.log('[WEBHOOK] Campaign payment processed successfully')
@@ -233,30 +251,53 @@ export class WebhookListenerService {
     transactionHash: string,
     blockNumber: number,
     timestamp: Date,
-    targetingParams: {
-      country: string,
-      targetGender: boolean,
-      targetAge: boolean,
-      verifiedOnly: boolean
+    requirements: {
+      verifiedOnly: boolean,
+      minFollowers: bigint,
+      minUniqueViews28Days: bigint,
+      accountLocation: string,
+      accountLanguage: string
     },
-    targets: string // "handle:videoId|handle"
+    actions: {
+      followTarget: string,  // Encoded URL
+      followCount: bigint,
+      likeTargets: string[],  // Array of encoded URLs
+      likeCountPerPost: bigint
+    }
   }, db: any) {
-    const { campaignId, amount, senderAddress, transactionHash, blockNumber, timestamp, targetingParams, targets } = data
+    const { campaignId, amount, senderAddress, transactionHash, blockNumber, timestamp, requirements, actions } = data
     
     console.log('[WEBHOOK] Processing campaign payment for:', campaignId)
     
     try {
-      // Decode obfuscated targets from contract
-      const decodedTargets = parseTargetsFromBlockchain(targets)
+      // Decode the encoded URLs from contract (they use our xad_ encoding)
+      const decodeUrl = (encoded: string): string => {
+        if (!encoded || encoded === '') return ''
+        try {
+          // Remove xad_ prefix and _v1 suffix
+          if (!encoded.startsWith('xad_') || !encoded.endsWith('_v1')) {
+            return encoded // Return as-is if not encoded
+          }
+          const withoutMarkers = encoded.slice(4, -3)
+          const reversed = withoutMarkers.split('').reverse().join('')
+          const decoded = Buffer.from(reversed, 'base64').toString('utf-8')
+          // Remove salt (xad2024campaign)
+          return decoded.slice(15) // Length of 'xad2024campaign'
+        } catch (e) {
+          console.error('[WEBHOOK] Failed to decode URL:', e)
+          return encoded
+        }
+      }
       
-      // Build TikTok URLs from decoded data
-      const likeUrl = `https://www.tiktok.com/@${decodedTargets.likeHandle}/video/${decodedTargets.videoId}`
-      const followUrl = `https://www.tiktok.com/@${decodedTargets.followHandle}`
+      // Decode URLs
+      const followUrl = decodeUrl(actions.followTarget)
+      const likeUrls = actions.likeTargets.map(url => decodeUrl(url))
       
-      console.log('[WEBHOOK] Decoded and built URLs from contract data:', {
-        likeUrl,
-        followUrl,
-        decoded: decodedTargets
+      console.log('[WEBHOOK] Decoded URLs from contract:', {
+        followUrl: followUrl ? 'Found' : 'None',
+        likeUrlsCount: likeUrls.filter(u => u).length,
+        followCount: actions.followCount.toString(),
+        likeCountPerPost: actions.likeCountPerPost.toString()
       })
       
       // Create new campaign from payment data
@@ -265,9 +306,10 @@ export class WebhookListenerService {
         campaignId,
         amount,
         senderAddress,
-        targetingParams,
-        likeUrl,
-        followUrl
+        requirements,
+        actions,
+        followUrl,
+        likeUrls
       }, db)
       
       if (!campaign) {
@@ -373,22 +415,34 @@ export class WebhookListenerService {
     campaignId: string,
     amount: bigint,
     senderAddress: string,
-    targetingParams: {
-      country: string,
-      targetGender: boolean,
-      targetAge: boolean,
-      verifiedOnly: boolean
+    requirements: {
+      verifiedOnly: boolean,
+      minFollowers: bigint,
+      minUniqueViews28Days: bigint,
+      accountLocation: string,
+      accountLanguage: string
     },
-    likeUrl: string,
-    followUrl: string
+    actions: {
+      followTarget: string,
+      followCount: bigint,
+      likeTargets: string[],
+      likeCountPerPost: bigint
+    },
+    followUrl: string,
+    likeUrls: string[]
   }, db: any) {
-    const { campaignId, amount, senderAddress, targetingParams, likeUrl, followUrl } = data
+    const { campaignId, amount, senderAddress, requirements, actions, followUrl, likeUrls } = data
     
     console.log('[WEBHOOK] Creating new campaign from payment:', {
       campaignId,
       amount: amount.toString(),
       sender: senderAddress,
-      targetingParams
+      requirements: {
+        verifiedOnly: requirements.verifiedOnly,
+        minFollowers: requirements.minFollowers.toString(),
+        location: requirements.accountLocation,
+        language: requirements.accountLanguage
+      }
     })
     
     try {
@@ -429,10 +483,11 @@ export class WebhookListenerService {
         totalBudget: amountInCents,
         remainingBudget: amountInCents,
         targetingRules: {
-          country: targetingParams.country,
-          gender: targetingParams.targetGender ? 'specific' : 'all',
-          ageRange: targetingParams.targetAge ? 'specific' : 'all',
-          verifiedOnly: targetingParams.verifiedOnly
+          verifiedOnly: requirements.verifiedOnly,
+          minFollowers: Number(requirements.minFollowers),
+          minUniqueViews28Days: Number(requirements.minUniqueViews28Days),
+          accountLocation: requirements.accountLocation,
+          accountLanguage: requirements.accountLanguage
         },
         status: 'pending_payment',
         isActive: false,
@@ -442,31 +497,47 @@ export class WebhookListenerService {
       
       console.log('[WEBHOOK] Campaign created:', campaign.id)
       
-      // Create campaign actions with the provided targets
-      const defaultActions = [
-        {
-          campaignId: campaign.id,
-          actionType: 'like',
-          target: likeUrl,
-          pricePerAction: 20, // $0.20 in cents
-          maxVolume: 20, // 20 likes total
-          currentVolume: 0,
-          isActive: false
-        },
-        {
+      // Create campaign actions based on what was actually requested
+      const campaignActionsList = []
+      
+      // Add follow action if requested
+      if (followUrl && Number(actions.followCount) > 0) {
+        campaignActionsList.push({
           campaignId: campaign.id,
           actionType: 'follow',
           target: followUrl,
-          pricePerAction: 40, // $0.40 in cents  
-          maxVolume: 10, // 10 follows total
+          pricePerAction: 60, // $0.60 in cents (updated price)
+          maxVolume: Number(actions.followCount),
           currentVolume: 0,
           isActive: false
+        })
+      }
+      
+      // Add like actions if requested (one action per URL)
+      if (likeUrls.length > 0 && Number(actions.likeCountPerPost) > 0) {
+        for (const likeUrl of likeUrls) {
+          if (likeUrl) {
+            campaignActionsList.push({
+              campaignId: campaign.id,
+              actionType: 'like',
+              target: likeUrl,
+              pricePerAction: 30, // $0.30 in cents (updated price)
+              maxVolume: Number(actions.likeCountPerPost),
+              currentVolume: 0,
+              isActive: false
+            })
+          }
         }
-      ]
+      }
       
-      await db.insert(campaignActions).values(defaultActions)
+      const defaultActions = campaignActionsList
       
-      console.log('[WEBHOOK] Campaign actions created')
+      if (defaultActions.length > 0) {
+        await db.insert(campaignActions).values(defaultActions)
+        console.log('[WEBHOOK] Campaign actions created:', defaultActions.length)
+      } else {
+        console.warn('[WEBHOOK] No campaign actions to create')
+      }
       
       return campaign
     } catch (error) {
