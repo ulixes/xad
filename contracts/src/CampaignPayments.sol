@@ -143,35 +143,39 @@ contract CampaignPayments {
         owner = msg.sender;
         usdcToken = _usdcToken;
         
-        // Initialize location multipliers based on 2025 CPM data
+        // FAIR PRICING: 3-Tier system with narrow range (max 50% difference)
         locationMultipliers["all"] = 1000;      // 1.0x baseline
-        locationMultipliers["US"] = 1500;       // 1.5x - Highest CPM (~$20)
-        locationMultipliers["UK"] = 1000;       // 1.0x - ~0.53x US CPM (~$11)
-        locationMultipliers["CA"] = 1100;       // 1.1x - ~0.68x US CPM (~$14)
-        locationMultipliers["AU"] = 900;        // 0.9x - ~0.54x US CPM (~$11)
-        locationMultipliers["DE"] = 800;        // 0.8x - ~0.49x US CPM (~$10)
-        locationMultipliers["FR"] = 600;        // 0.6x - ~0.39x US CPM (~$8)
-        locationMultipliers["ES"] = 700;        // 0.7x - ~0.46x US CPM (~$9)
-        locationMultipliers["IT"] = 600;        // 0.6x - ~0.39x US CPM (~$8)
-        locationMultipliers["JP"] = 500;        // 0.5x - ~0.35x US CPM (~$7)
-        locationMultipliers["KR"] = 600;        // 0.6x - ~0.40x US CPM (~$8)
-        locationMultipliers["BR"] = 400;        // 0.4x - ~0.25x US CPM (~$5)
-        locationMultipliers["MX"] = 400;        // 0.4x - ~0.27x US CPM (~$5.5)
-        locationMultipliers["IN"] = 200;        // 0.2x - ~0.13x US CPM (~$2.7)
-        locationMultipliers["PH"] = 700;        // 0.7x - ~0.52x US CPM (~$10.7)
-        locationMultipliers["ID"] = 200;        // 0.2x - ~0.10-0.15x US CPM (~$2-3)
         
-        // Additional emerging markets
-        locationMultipliers["VN"] = 200;        // 0.2x - Vietnam low CPM ~$1-3
-        locationMultipliers["CN"] = 400;        // 0.4x - China CPM ~$4-7
-        locationMultipliers["TH"] = 300;        // 0.3x - Thailand CPM ~$3-5
-        locationMultipliers["TW"] = 600;        // 0.6x - Taiwan CPM ~$7-9
-        locationMultipliers["MM"] = 200;        // 0.2x - Myanmar low CPM ~$2-3
-        locationMultipliers["LA"] = 200;        // 0.2x - Laos very low CPM ~$1-2
-        locationMultipliers["MN"] = 250;        // 0.25x - Mongolia CPM ~$2-4
-        locationMultipliers["KZ"] = 350;        // 0.35x - Kazakhstan CPM ~$4-6
-        locationMultipliers["SG"] = 1000;       // 1.0x - Singapore CPM ~$10-15 (affluent market)
-        locationMultipliers["MY"] = 500;        // 0.5x - Malaysia CPM ~$4-6 (emerging market)
+        // TIER 1 (Premium): 1.2x - Top premium markets
+        locationMultipliers["US"] = 1200;       // 1.2x - United States
+        locationMultipliers["UK"] = 1200;       // 1.2x - United Kingdom
+        locationMultipliers["CA"] = 1200;       // 1.2x - Canada
+        locationMultipliers["AU"] = 1200;       // 1.2x - Australia
+        
+        // TIER 2 (Standard): 1.0x - Most developed countries
+        locationMultipliers["DE"] = 1000;       // 1.0x - Germany
+        locationMultipliers["FR"] = 1000;       // 1.0x - France
+        locationMultipliers["ES"] = 1000;       // 1.0x - Spain
+        locationMultipliers["IT"] = 1000;       // 1.0x - Italy
+        locationMultipliers["JP"] = 1000;       // 1.0x - Japan
+        locationMultipliers["KR"] = 1000;       // 1.0x - South Korea
+        locationMultipliers["TW"] = 1000;       // 1.0x - Taiwan
+        locationMultipliers["SG"] = 1000;       // 1.0x - Singapore
+        
+        // TIER 3 (Emerging): 0.8x - Emerging markets (fair treatment)
+        locationMultipliers["BR"] = 800;        // 0.8x - Brazil
+        locationMultipliers["MX"] = 800;        // 0.8x - Mexico
+        locationMultipliers["IN"] = 800;        // 0.8x - India
+        locationMultipliers["PH"] = 800;        // 0.8x - Philippines
+        locationMultipliers["ID"] = 800;        // 0.8x - Indonesia
+        locationMultipliers["VN"] = 800;        // 0.8x - Vietnam
+        locationMultipliers["CN"] = 800;        // 0.8x - China
+        locationMultipliers["TH"] = 800;        // 0.8x - Thailand
+        locationMultipliers["MY"] = 800;        // 0.8x - Malaysia
+        locationMultipliers["MM"] = 800;        // 0.8x - Myanmar
+        locationMultipliers["LA"] = 800;        // 0.8x - Laos
+        locationMultipliers["MN"] = 800;        // 0.8x - Mongolia
+        locationMultipliers["KZ"] = 800;        // 0.8x - Kazakhstan
         
         // Initialize language multipliers - FIXED 25% premium for all specific languages
         languageMultipliers["all"] = 1000;      // 1.0x baseline (no language targeting)
