@@ -103,12 +103,12 @@ export function SimplifiedAdTargetingForm({
     // Follow action
     followEnabled: true,  // Default enabled
     followTarget: '',
-    followCount: 40,  // Min 40 follows if enabled
+    followCount: 100,  // Default 100 follows
     
     // Like action
     likeEnabled: true,  // Default enabled
     likeTargets: [''],  // Start with one empty URL field
-    likeCountPerPost: 40  // Min 40 likes per post if enabled
+    likeCountPerPost: 50  // Default 50 likes per post
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -388,8 +388,8 @@ export function SimplifiedAdTargetingForm({
         setPaymentError('Please provide a TikTok profile URL for follows');
         return;
       }
-      if (campaignTargets.followCount < 40) {
-        setPaymentError('Follow count must be at least 40');
+      if (campaignTargets.followCount < 1) {
+        setPaymentError('Follow count must be at least 1');
         return;
       }
     }
@@ -404,8 +404,8 @@ export function SimplifiedAdTargetingForm({
         setPaymentError('Please provide at least one TikTok post URL for likes');
         return;
       }
-      if (campaignTargets.likeCountPerPost < 40) {
-        setPaymentError('Like count per post must be at least 40');
+      if (campaignTargets.likeCountPerPost < 1) {
+        setPaymentError('Like count per post must be at least 1');
         return;
       }
     }
@@ -724,23 +724,16 @@ export function SimplifiedAdTargetingForm({
                         <Input
                           id="follow-count"
                           type="number"
-                          min="40"
+                          min="1"
                           value={campaignTargets.followCount}
                           onChange={(e) => {
                             const value = parseInt(e.target.value) || 0;
-                            setCampaignTargets(prev => ({ ...prev, followCount: value }));
-                          }}
-                          onBlur={(e) => {
-                            // Only enforce minimum on blur to allow typing
-                            const value = parseInt(e.target.value) || 0;
-                            if (value > 0 && value < 40) {
-                              setCampaignTargets(prev => ({ ...prev, followCount: 40 }));
-                            }
+                            setCampaignTargets(prev => ({ ...prev, followCount: Math.max(1, value) }));
                           }}
                           className="text-base h-11"
-                          placeholder="40"
+                          placeholder="e.g., 100"
                         />
-                        <p className="text-xs text-muted-foreground mt-1">Minimum 40 follows required</p>
+                        <p className="text-xs text-muted-foreground mt-1">Number of follows to purchase</p>
                       </div>
                     </div>
                     )}
@@ -772,21 +765,14 @@ export function SimplifiedAdTargetingForm({
                           <Input
                             id="like-count"
                             type="number"
-                            min="40"
+                            min="1"
                             value={campaignTargets.likeCountPerPost}
                             onChange={(e) => {
                               const value = parseInt(e.target.value) || 0;
-                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: value }));
+                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(1, value) }));
                             }}
-                            onBlur={(e) => {
-                              // Only enforce minimum on blur to allow typing
-                              const value = parseInt(e.target.value) || 0;
-                              if (value > 0 && value < 40) {
-                                setCampaignTargets(prev => ({ ...prev, likeCountPerPost: 40 }));
-                              }
-                            }}
-                            className="w-24 text-base h-9"
-                            placeholder="40"
+                            className="w-32 text-base h-11"
+                            placeholder="e.g., 50"
                           />
                         </div>
                     
