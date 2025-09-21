@@ -7,6 +7,12 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     action: {},
+    icons: {
+      '16': '/icon.svg',
+      '32': '/icon.svg',
+      '48': '/icon.svg',
+      '128': '/icon.svg'
+    },
     permissions: ['sidePanel', 'tabs', 'activeTab', 'scripting', 'identity'],
     host_permissions: [
       '*://*.tiktok.com/*',

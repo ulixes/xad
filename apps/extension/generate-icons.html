@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZKAD Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const sizes = [16, 32, 48, 96, 128];
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        sizes.forEach(size => {
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, size, size);
+            
+            // White text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `${Math.floor(size * 0.25)}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ZKAD', size / 2, size / 2);
+            
+            // Download link
+            const link = document.createElement('a');
+            link.download = `${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
+</body>
+</html>
