@@ -36,11 +36,11 @@ export function WalletDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
+        <Button
           variant="outline"
-          className="flex items-center gap-2 border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-100"
+          className="bg-background border-border hover:bg-accent/10 flex items-center gap-2"
         >
-          <Wallet className="w-4 h-4 text-indigo-400" />
+          <Wallet className="w-4 h-4" />
           <span className="text-sm font-medium">{formatAddress(address)}</span>
         </Button>
       </DropdownMenuTrigger>
