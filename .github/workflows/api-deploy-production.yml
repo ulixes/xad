@@ -18,7 +18,7 @@ permissions:
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
-    environment: production
+    environment: prod-api
     defaults:
       run:
         working-directory: apps/api
