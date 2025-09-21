@@ -47,83 +47,23 @@ export default function Header() {
   }
   
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-8">
-            <Link to="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
-              zkad
-            </Link>
-            
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-6">
-              <Link 
-                to="/" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === '/' ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Home
-              </Link>
-              <Link 
-                to="/blog" 
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname.startsWith('/blog') ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                Blog
-              </Link>
-              {isPrivyAuthenticated && hasAuthToken && (
-                <Link 
-                  to="/dashboard" 
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    location.pathname === '/dashboard' ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-              )}
-            </nav>
-          </div>
-          
-          {/* Right side buttons */}
-          <div className="flex items-center gap-4">
-            {/* Language Switcher - Commented out for now */}
-            {/* <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              title="Switch language"
-              className="text-foreground hover:text-primary"
-            >
-              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="2" y1="12" x2="22" y2="12"/>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              </svg>
-              {currentLang === 'en' ? 'EN' : '中文'}
-            </Button> */}
-
-            {/* Wallet Connection/Dropdown */}
-            {isPrivyAuthenticated && walletAddress ? (
-              <WalletDropdown 
-                address={walletAddress}
-                onSignOut={signOut}
-              />
-            ) : (
-              <Button
-                onClick={triggerSignIn}
-                variant="outline"
-                className="bg-background border-border hover:bg-accent/10"
-              >
-                Connect Wallet
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </header>
+    <div className="fixed top-4 right-4 z-50">
+      {/* Wallet Connection/Dropdown */}
+      {isPrivyAuthenticated && walletAddress ? (
+        <WalletDropdown
+          address={walletAddress}
+          onSignOut={signOut}
+        />
+      ) : (
+        <Button
+          onClick={triggerSignIn}
+          variant="outline"
+          className="bg-background border-border hover:bg-accent/10"
+        >
+          Connect Wallet
+        </Button>
+      )}
+    </div>
   )
 }
 

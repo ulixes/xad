@@ -101,7 +101,6 @@ export function SimplifiedAdTargetingForm({
   mockWalletConnected = false
 }: SimplifiedAdTargetingFormProps) {
   const navigate = useNavigate();
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
     // Follow action
     followEnabled: true,  // Default enabled
@@ -434,7 +433,7 @@ export function SimplifiedAdTargetingForm({
         console.log('Connected wallet:', connectedWallet.address);
         
         const formData = {
-          platform: selectedPlatform,
+          platform: 'tiktok' as Platform,
           verifiedOnly: requirements.verifiedOnly,
           minFollowers: requirements.minFollowers,
           minUniqueViews28Days: requirements.minUniqueViews28Days,
@@ -472,7 +471,7 @@ export function SimplifiedAdTargetingForm({
           setPaymentSuccess('Campaign created successfully! (Mock payment)');
           if (onSave) {
             onSave({
-              platform: selectedPlatform,
+              platform: 'tiktok' as Platform,
               requirements,
               targets: campaignTargets,
               totalAmount: estimatedCost,
@@ -493,43 +492,8 @@ export function SimplifiedAdTargetingForm({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">Create Campaign</h1>
-        </div>
-
-        {/* Platform Selection */}
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Platform</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {platforms.map((platform) => (
-              <button
-                key={platform.id}
-                onClick={() => platform.available && setSelectedPlatform(platform.id as Platform)}
-                disabled={!platform.available}
-                className={`
-                  relative p-3 rounded-lg border-2 transition-all
-                  ${selectedPlatform === platform.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-muted-foreground/50'
-                  }
-                  ${!platform.available
-                    ? 'cursor-not-allowed opacity-50'
-                    : 'cursor-pointer'
-                  }
-                `}
-              >
-                <img
-                  src={platform.icon}
-                  alt={platform.name}
-                  className="w-8 h-8 mx-auto mb-2 object-contain rounded-lg"
-                />
-                <p className="text-xs font-medium">{platform.name}</p>
-                {!platform.available && (
-                  <p className="text-[10px] text-muted-foreground">Coming Soon</p>
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-left">Create Tiktok Campaign</h1>
         </div>
 
         {/* Account Qualifications */}
@@ -658,7 +622,7 @@ export function SimplifiedAdTargetingForm({
 
 
         {/* Campaign Actions - Configurable */}
-        {selectedPlatform === 'tiktok' && (
+        {(
           <div>
             <h2 className="text-lg sm:text-xl font-semibold mb-4">Campaign Actions</h2>
 

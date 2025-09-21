@@ -85,24 +85,16 @@ export default function FAQ() {
   return (
     <section id="faq" className="py-16 lg:py-24">
       <div className="container mx-auto">
-        <div className="flex flex-col gap-10">
+        <div className="max-w-4xl mx-auto">
           {/* Section Header */}
-          <div className="flex text-center justify-center items-center gap-4 flex-col">
-            <div className="inline-flex items-center rounded-lg border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-              FAQ
-            </div>
-            <div className="flex gap-2 flex-col">
-              <h4 className="text-3xl md:text-5xl tracking-tighter max-w-xl text-center font-regular">
-                {t[language].subtitle}
-              </h4>
-              <p className="text-lg leading-relaxed tracking-tight text-muted-foreground max-w-xl text-center">
-                Everything you need to know about zkad's authentic advertising platform.
-              </p>
-            </div>
+          <div className="mb-8">
+            <h4 className="text-3xl md:text-5xl tracking-tighter font-regular text-left">
+              Frequently Asked Questions
+            </h4>
           </div>
 
           {/* FAQ Items - Simple Accordion */}
-          <div className="max-w-3xl w-full mx-auto space-y-4">
+          <div className="space-y-4">
             {faqs[language].map((faq, index) => (
               <div
                 key={index}
