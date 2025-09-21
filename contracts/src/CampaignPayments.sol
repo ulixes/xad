@@ -24,8 +24,8 @@ contract CampaignPayments {
     address public immutable usdcToken;
     
     // Base prices in USDC (6 decimals) - configurable by owner
-    uint256 public baseLikePrice = 200000;    // $0.20
-    uint256 public baseFollowPrice = 400000;  // $0.40
+    uint256 public baseLikePrice = 300000;    // $0.30 (increased from $0.20)
+    uint256 public baseFollowPrice = 600000;  // $0.60 (increased from $0.40)
     uint256 public constant BASE_PRECISION = 1000;       // For multiplier calculations
     
     // Account quality multipliers (1000 = 1.0x) - configurable by owner
@@ -49,8 +49,15 @@ contract CampaignPayments {
     uint256 public viewsMultiplier10M = 2100;         // 2.1x for 10M+ views
     
     // Location/Language multipliers (1000 = 1.0x)
-    mapping(string => uint256) public locationMultipliers;  // Account location
-    mapping(string => uint256) public languageMultipliers;  // Account language
+    mapping(string => uint256) public locationMultipliers;  // Account location (based on 2025 CPM data)
+    mapping(string => uint256) public languageMultipliers;  // Account language (based on global ad demand)
+    
+    // Minimum requirements to ensure campaigns meet $40+ threshold
+    uint256 public constant MIN_FOLLOW_COUNT = 40;      // Min 40 follows if follow target set
+    uint256 public constant MIN_LIKES_PER_POST = 40;    // Min 40 likes per post
+    uint256 public constant MIN_TOTAL_PAYMENT = 40000000; // Min $40 total (40 USDC)
+    uint256 public constant MIN_FOLLOWER_REQUIREMENT = 1000; // Min 1k followers for 1.1x multiplier
+    uint256 public constant MIN_VIEWS_REQUIREMENT = 10000;   // Min 10k views for 1.1x multiplier
     
     // Campaign data structure
     struct CampaignData {
@@ -138,41 +145,51 @@ contract CampaignPayments {
         owner = msg.sender;
         usdcToken = _usdcToken;
         
-        // Initialize default location multipliers
-        locationMultipliers["all"] = 1000;      // 1.0x
-        locationMultipliers["US"] = 1500;       // 1.5x
-        locationMultipliers["UK"] = 1400;       // 1.4x
-        locationMultipliers["CA"] = 1400;       // 1.4x
-        locationMultipliers["AU"] = 1300;       // 1.3x
-        locationMultipliers["DE"] = 1300;       // 1.3x
-        locationMultipliers["FR"] = 1200;       // 1.2x
-        locationMultipliers["ES"] = 1150;       // 1.15x
-        locationMultipliers["IT"] = 1150;       // 1.15x
-        locationMultipliers["JP"] = 1200;       // 1.2x
-        locationMultipliers["KR"] = 1100;       // 1.1x
-        locationMultipliers["BR"] = 1100;       // 1.1x
-        locationMultipliers["MX"] = 1000;       // 1.0x
-        locationMultipliers["IN"] = 900;        // 0.9x
-        locationMultipliers["PH"] = 800;        // 0.8x
-        locationMultipliers["ID"] = 700;        // 0.7x
+        // Initialize location multipliers based on 2025 CPM data
+        locationMultipliers["all"] = 1000;      // 1.0x baseline
+        locationMultipliers["US"] = 1500;       // 1.5x - Highest CPM (~$20)
+        locationMultipliers["UK"] = 1000;       // 1.0x - ~0.53x US CPM (~$11)
+        locationMultipliers["CA"] = 1100;       // 1.1x - ~0.68x US CPM (~$14)
+        locationMultipliers["AU"] = 900;        // 0.9x - ~0.54x US CPM (~$11)
+        locationMultipliers["DE"] = 800;        // 0.8x - ~0.49x US CPM (~$10)
+        locationMultipliers["FR"] = 600;        // 0.6x - ~0.39x US CPM (~$8)
+        locationMultipliers["ES"] = 700;        // 0.7x - ~0.46x US CPM (~$9)
+        locationMultipliers["IT"] = 600;        // 0.6x - ~0.39x US CPM (~$8)
+        locationMultipliers["JP"] = 500;        // 0.5x - ~0.35x US CPM (~$7)
+        locationMultipliers["KR"] = 600;        // 0.6x - ~0.40x US CPM (~$8)
+        locationMultipliers["BR"] = 400;        // 0.4x - ~0.25x US CPM (~$5)
+        locationMultipliers["MX"] = 400;        // 0.4x - ~0.27x US CPM (~$5.5)
+        locationMultipliers["IN"] = 200;        // 0.2x - ~0.13x US CPM (~$2.7)
+        locationMultipliers["PH"] = 700;        // 0.7x - ~0.52x US CPM (~$10.7)
+        locationMultipliers["ID"] = 200;        // 0.2x - ~0.10-0.15x US CPM (~$2-3)
         
-        // Initialize default language multipliers
-        languageMultipliers["all"] = 1000;      // 1.0x
-        languageMultipliers["en"] = 1200;       // 1.2x
-        languageMultipliers["es"] = 1100;       // 1.1x
-        languageMultipliers["fr"] = 1100;       // 1.1x
-        languageMultipliers["de"] = 1100;       // 1.1x
-        languageMultipliers["it"] = 1050;       // 1.05x
-        languageMultipliers["pt"] = 1050;       // 1.05x
-        languageMultipliers["ru"] = 1000;       // 1.0x
-        languageMultipliers["ja"] = 1000;       // 1.0x
-        languageMultipliers["ko"] = 1000;       // 1.0x
-        languageMultipliers["zh"] = 900;        // 0.9x
-        languageMultipliers["ar"] = 950;        // 0.95x
-        languageMultipliers["hi"] = 900;        // 0.9x
-        languageMultipliers["id"] = 850;        // 0.85x
-        languageMultipliers["th"] = 850;        // 0.85x
-        languageMultipliers["vi"] = 850;        // 0.85x
+        // Additional emerging markets
+        locationMultipliers["VN"] = 200;        // 0.2x - Vietnam low CPM ~$1-3
+        locationMultipliers["CN"] = 400;        // 0.4x - China CPM ~$4-7
+        locationMultipliers["TH"] = 300;        // 0.3x - Thailand CPM ~$3-5
+        locationMultipliers["TW"] = 600;        // 0.6x - Taiwan CPM ~$7-9
+        locationMultipliers["MM"] = 200;        // 0.2x - Myanmar low CPM ~$2-3
+        locationMultipliers["LA"] = 200;        // 0.2x - Laos very low CPM ~$1-2
+        locationMultipliers["MN"] = 250;        // 0.25x - Mongolia CPM ~$2-4
+        locationMultipliers["KZ"] = 350;        // 0.35x - Kazakhstan CPM ~$4-6
+        
+        // Initialize language multipliers based on global ad demand
+        languageMultipliers["all"] = 1000;      // 1.0x baseline
+        languageMultipliers["en"] = 1300;       // 1.3x - Highest ad demand
+        languageMultipliers["es"] = 900;        // 0.9x - Spanish markets mid-low CPM
+        languageMultipliers["fr"] = 800;        // 0.8x - Align with FR country
+        languageMultipliers["de"] = 800;        // 0.8x - Align with DE country
+        languageMultipliers["it"] = 700;        // 0.7x - Align with IT country
+        languageMultipliers["pt"] = 700;        // 0.7x - For BR/Portugal
+        languageMultipliers["ru"] = 800;        // 0.8x - Russia CPM ~$4-6
+        languageMultipliers["ja"] = 600;        // 0.6x - Align with JP
+        languageMultipliers["ko"] = 600;        // 0.6x - Align with KR
+        languageMultipliers["zh"] = 500;        // 0.5x - China CPM low
+        languageMultipliers["ar"] = 800;        // 0.8x - Arabic markets vary
+        languageMultipliers["hi"] = 300;        // 0.3x - Very cheap per IN data
+        languageMultipliers["id"] = 300;        // 0.3x - Align with ID
+        languageMultipliers["th"] = 400;        // 0.4x - Thailand CPM ~$3-5
+        languageMultipliers["vi"] = 400;        // 0.4x - Vietnam similar
     }
     
     // Owner functions to update configuration
@@ -380,8 +397,29 @@ contract CampaignPayments {
         if (bytes(campaignId).length == 0) revert InvalidCampaignId();
         if (actions.likeTargets.length == 0 && actions.followCount == 0) revert InvalidTargets();
         
+        // Enforce minimum requirements for campaign quality
+        if (actions.followCount > 0 && actions.followCount < MIN_FOLLOW_COUNT) {
+            revert InvalidAmount(); // Min 40 follows
+        }
+        if (actions.likeTargets.length > 0 && actions.likeCountPerPost < MIN_LIKES_PER_POST) {
+            revert InvalidAmount(); // Min 40 likes per post
+        }
+        
+        // Enforce minimum account requirements to reach $40 threshold
+        if (requirements.minFollowers < MIN_FOLLOWER_REQUIREMENT) {
+            revert InvalidAmount(); // Min 1k followers for quality
+        }
+        if (requirements.minUniqueViews28Days < MIN_VIEWS_REQUIREMENT) {
+            revert InvalidAmount(); // Min 10k views for quality
+        }
+        
         // Calculate required payment
         uint256 requiredAmount = calculatePrice(requirements, actions);
+        
+        // Enforce minimum total payment of $40
+        if (requiredAmount < MIN_TOTAL_PAYMENT) {
+            revert InvalidAmount(); // Campaign must be at least $40
+        }
         
         // Store campaign data
         CampaignData storage campaign = campaigns[campaignId];
