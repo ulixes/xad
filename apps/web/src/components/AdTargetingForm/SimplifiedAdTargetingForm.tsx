@@ -53,10 +53,15 @@ const COUNTRIES = [
 ];
 
 type CampaignTargets = {
-  likeTargets: string[];  // Array of post URLs for likes
-  likeCountPerPost: number;  // Number of likes per post
+  // Follow action (optional)
+  followEnabled: boolean;
   followTarget: string;  // Single account URL for follows
   followCount: number;  // Number of follows
+  
+  // Like action (optional)
+  likeEnabled: boolean;
+  likeTargets: string[];  // Array of post URLs for likes
+  likeCountPerPost: number;  // Number of likes per post
 };
 
 type AccountRequirements = {
@@ -81,10 +86,15 @@ export function SimplifiedAdTargetingForm({
   const navigate = useNavigate();
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
-    likeTargets: [''],  // Start with one empty URL field
-    likeCountPerPost: 40,  // Min 40 likes per post (contract requirement)
+    // Follow action
+    followEnabled: true,  // Default enabled
     followTarget: '',
-    followCount: 40  // Min 40 follows (contract requirement)
+    followCount: 40,  // Min 40 follows if enabled
+    
+    // Like action
+    likeEnabled: true,  // Default enabled
+    likeTargets: [''],  // Start with one empty URL field
+    likeCountPerPost: 40  // Min 40 likes per post if enabled
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -126,11 +136,11 @@ export function SimplifiedAdTargetingForm({
     loading: true
   });
   
-  // Account requirements (with minimums to meet $40 threshold)
+  // Account requirements (optional - users can set to 0)
   const [requirements, setRequirements] = useState<AccountRequirements>({
     verifiedOnly: false,
-    minFollowers: 1000,  // Min 1k for 1.1x multiplier (contract requirement)
-    minUniqueViews28Days: 10000,  // Min 10k for 1.1x multiplier (contract requirement)
+    minFollowers: 0,  // Optional - no minimum required
+    minUniqueViews28Days: 0,  // Optional - no minimum required
     accountLocation: 'all',
     accountLanguage: 'all'
   });
@@ -179,13 +189,19 @@ export function SimplifiedAdTargetingForm({
   useEffect(() => {
     const calculatePrice = async () => {
       // Get valid like targets for calculation
-      const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
-      const likeTargetsCount = validLikeTargets.length || 1; // At least 1 for price estimate
+      const validLikeTargets = campaignTargets.likeEnabled 
+        ? campaignTargets.likeTargets.filter(url => url.trim())
+        : [];
+      const likeTargetsCount = validLikeTargets.length; // 0 if disabled
       
       if (!publicClient) {
         // Mock calculation for Storybook
-        const totalLikes = likeTargetsCount * campaignTargets.likeCountPerPost;
-        const totalFollows = campaignTargets.followCount;
+        const totalLikes = campaignTargets.likeEnabled 
+          ? (likeTargetsCount || 1) * campaignTargets.likeCountPerPost 
+          : 0;
+        const totalFollows = campaignTargets.followEnabled 
+          ? campaignTargets.followCount 
+          : 0;
         const baseTotal = (totalLikes * contractData.baseLikePrice +
                           totalFollows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
@@ -198,7 +214,9 @@ export function SimplifiedAdTargetingForm({
         const contractAddress = networkConfig.campaignPaymentsContract as `0x${string}`;
 
         // Create dummy targets array for price calculation
-        const dummyTargets = Array(likeTargetsCount).fill('post');
+        const dummyTargets = campaignTargets.likeEnabled 
+          ? Array(Math.max(1, likeTargetsCount)).fill('post') 
+          : [];
         
         const price = await publicClient.readContract({
           address: contractAddress,
@@ -213,10 +231,10 @@ export function SimplifiedAdTargetingForm({
               accountLanguage: requirements.accountLanguage || 'all'
             },
             {
-              followTarget: 'account',
-              followCount: BigInt(campaignTargets.followCount),
+              followTarget: campaignTargets.followEnabled ? 'account' : '',
+              followCount: BigInt(campaignTargets.followEnabled ? campaignTargets.followCount : 0),
               likeTargets: dummyTargets,
-              likeCountPerPost: BigInt(campaignTargets.likeCountPerPost)
+              likeCountPerPost: BigInt(campaignTargets.likeEnabled ? campaignTargets.likeCountPerPost : 0)
             }
           ]
         });
@@ -225,8 +243,12 @@ export function SimplifiedAdTargetingForm({
       } catch (error) {
         console.error('Error calculating price:', error);
         // Fallback to base price
-        const totalLikes = likeTargetsCount * campaignTargets.likeCountPerPost;
-        const totalFollows = campaignTargets.followCount;
+        const totalLikes = campaignTargets.likeEnabled 
+          ? (likeTargetsCount || 1) * campaignTargets.likeCountPerPost 
+          : 0;
+        const totalFollows = campaignTargets.followEnabled 
+          ? campaignTargets.followCount 
+          : 0;
         const baseTotal = (totalLikes * contractData.baseLikePrice +
                           totalFollows * contractData.baseFollowPrice);
         setCalculatedPrice(BigInt(baseTotal));
@@ -340,25 +362,43 @@ export function SimplifiedAdTargetingForm({
       return;
     }
 
-    // Validate targets are filled
-    const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
-    if (validLikeTargets.length === 0) {
-      setPaymentError('Please provide at least one TikTok post URL for likes');
+    // Check that at least one action is enabled
+    if (!campaignTargets.followEnabled && !campaignTargets.likeEnabled) {
+      setPaymentError('Please enable at least one action (follows or likes)');
       return;
     }
     
-    if (!campaignTargets.followTarget.trim()) {
-      setPaymentError('Please provide a TikTok profile URL for follows');
-      return;
+    // Validate follow action if enabled
+    if (campaignTargets.followEnabled) {
+      if (!campaignTargets.followTarget.trim()) {
+        setPaymentError('Please provide a TikTok profile URL for follows');
+        return;
+      }
+      if (campaignTargets.followCount < 40) {
+        setPaymentError('Follow count must be at least 40');
+        return;
+      }
     }
     
-    if (campaignTargets.likeCountPerPost < 1) {
-      setPaymentError('Like count per post must be at least 1');
-      return;
+    // Validate like action if enabled
+    const validLikeTargets = campaignTargets.likeEnabled 
+      ? campaignTargets.likeTargets.filter(url => url.trim())
+      : [];
+    
+    if (campaignTargets.likeEnabled) {
+      if (validLikeTargets.length === 0) {
+        setPaymentError('Please provide at least one TikTok post URL for likes');
+        return;
+      }
+      if (campaignTargets.likeCountPerPost < 40) {
+        setPaymentError('Like count per post must be at least 40');
+        return;
+      }
     }
     
-    if (campaignTargets.followCount < 1) {
-      setPaymentError('Follow count must be at least 1');
+    // Check minimum payment requirement
+    if (estimatedCost < 40) {
+      setPaymentError('Campaign must be at least $40. Please increase your actions or requirements.');
       return;
     }
 
@@ -383,10 +423,10 @@ export function SimplifiedAdTargetingForm({
           minUniqueViews28Days: requirements.minUniqueViews28Days,
           accountLocation: requirements.accountLocation,
           accountLanguage: requirements.accountLanguage,
-          likeUrls: validLikeTargets,  // Array of post URLs
-          likeCountPerPost: campaignTargets.likeCountPerPost,
-          followUrl: campaignTargets.followTarget,
-          followCount: campaignTargets.followCount
+          likeUrls: campaignTargets.likeEnabled ? validLikeTargets : [],
+          likeCountPerPost: campaignTargets.likeEnabled ? campaignTargets.likeCountPerPost : 0,
+          followUrl: campaignTargets.followEnabled ? campaignTargets.followTarget : '',
+          followCount: campaignTargets.followEnabled ? campaignTargets.followCount : 0
         };
         
         const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
@@ -507,16 +547,16 @@ export function SimplifiedAdTargetingForm({
               <Input
                 id="min-followers"
                 type="number"
-                min="1000"
+                min="0"
                 placeholder="Enter minimum followers (e.g., 1000)"
                 value={requirements.minFollowers || ''}
                 onChange={(e) => {
-                  const value = parseInt(e.target.value) || 1000;
-                  setRequirements({...requirements, minFollowers: Math.max(1000, value)});
+                  const value = parseInt(e.target.value) || 0;
+                  setRequirements({...requirements, minFollowers: Math.max(0, value)});
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">Minimum 1,000 followers required for campaign quality</p>
+              <p className="text-xs text-muted-foreground mt-1">Higher follower counts increase pricing (optional)</p>
             </div>
 
             {/* Minimum Unique Views (28 days) */}
@@ -527,16 +567,16 @@ export function SimplifiedAdTargetingForm({
               <Input
                 id="min-views"
                 type="number"
-                min="10000"
+                min="0"
                 placeholder="Enter minimum views (e.g., 10000)"
                 value={requirements.minUniqueViews28Days || ''}
                 onChange={(e) => {
-                  const value = parseInt(e.target.value) || 10000;
-                  setRequirements({...requirements, minUniqueViews28Days: Math.max(10000, value)});
+                  const value = parseInt(e.target.value) || 0;
+                  setRequirements({...requirements, minUniqueViews28Days: Math.max(0, value)});
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">Minimum 10,000 views required for campaign quality</p>
+              <p className="text-xs text-muted-foreground mt-1">Higher view counts increase pricing (optional)</p>
             </div>
 
             {/* Account Location */}
@@ -614,7 +654,22 @@ export function SimplifiedAdTargetingForm({
                 <>
                   {/* Follow Action */}
                   <div className="space-y-4 pb-4 border-b border-border">
-                    <h3 className="text-base font-semibold">Follow Action</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold">Follow Action</h3>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="follow-toggle" className="text-sm">
+                          Enable Follows
+                        </Label>
+                        <Checkbox
+                          id="follow-toggle"
+                          checked={campaignTargets.followEnabled}
+                          onCheckedChange={(checked) => 
+                            setCampaignTargets(prev => ({ ...prev, followEnabled: checked as boolean }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    {campaignTargets.followEnabled && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2 space-y-2">
                         <Label htmlFor="follow-target" className="text-sm font-medium">
@@ -667,12 +722,28 @@ export function SimplifiedAdTargetingForm({
                         <p className="text-xs text-muted-foreground mt-1">Minimum 40 follows required</p>
                       </div>
                     </div>
+                    )}
                   </div>
 
                   {/* Like Actions */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-base font-semibold">Like Actions</h3>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="like-toggle" className="text-sm">
+                          Enable Likes
+                        </Label>
+                        <Checkbox
+                          id="like-toggle"
+                          checked={campaignTargets.likeEnabled}
+                          onCheckedChange={(checked) => 
+                            setCampaignTargets(prev => ({ ...prev, likeEnabled: checked as boolean }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    {campaignTargets.likeEnabled && (
+                    <>
                       <div className="flex items-center gap-3">
                         <Label htmlFor="like-count" className="text-sm font-medium">
                           Likes per Post:
@@ -767,6 +838,8 @@ export function SimplifiedAdTargetingForm({
                         + Add Another Post URL
                       </Button>
                     </div>
+                    </>
+                    )}
                   </div>
                 </>
               )}
@@ -781,9 +854,15 @@ export function SimplifiedAdTargetingForm({
             <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Base Price:</span>
-                <span>
-                  {campaignTargets.likeTargets.filter(url => url.trim()).length} posts × {campaignTargets.likeCountPerPost} likes @ $0.30 + 
-                  {campaignTargets.followCount} follows @ $0.60
+                <span className="text-right">
+                  {campaignTargets.likeEnabled && (
+                    <>{campaignTargets.likeTargets.filter(url => url.trim()).length || 1} posts × {campaignTargets.likeCountPerPost} likes @ $0.30</>
+                  )}
+                  {campaignTargets.likeEnabled && campaignTargets.followEnabled && ' + '}
+                  {campaignTargets.followEnabled && (
+                    <>{campaignTargets.followCount} follows @ $0.60</>
+                  )}
+                  {!campaignTargets.likeEnabled && !campaignTargets.followEnabled && 'No actions selected'}
                 </span>
               </div>
               {requirements.minFollowers >= 1000 && (
@@ -873,12 +952,13 @@ export function SimplifiedAdTargetingForm({
             onClick={handleSave}
             disabled={
               isProcessingPayment ||
-              campaignTargets.likeTargets.filter(url => url.trim()).length === 0 ||
-              !campaignTargets.followTarget.trim() ||
+              (!campaignTargets.followEnabled && !campaignTargets.likeEnabled) ||  // At least one action
+              (campaignTargets.likeEnabled && campaignTargets.likeTargets.filter(url => url.trim()).length === 0) ||
+              (campaignTargets.followEnabled && !campaignTargets.followTarget.trim()) ||
               contractData.loading ||
               isCalculating ||
-              !!urlErrors.follow ||
-              !!(urlErrors.likes && Object.keys(urlErrors.likes).length > 0) ||
+              (campaignTargets.followEnabled && !!urlErrors.follow) ||
+              (campaignTargets.likeEnabled && !!(urlErrors.likes && Object.keys(urlErrors.likes).length > 0)) ||
               estimatedCost < 40  // Minimum $40 requirement
             }
             size="lg"

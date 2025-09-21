@@ -2,7 +2,7 @@
 
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
 import { encodeFunctionData } from 'viem'
-import { encodeCampaignActions } from '@/utils/urlEncoder'
+import { validateTikTokUrl, encodeUrl } from '@/utils/urlEncoder'
 
 const networkConfig = getNetworkConfig()
 
@@ -148,17 +148,32 @@ export class PaymentFlowEmbeddedService {
         accountLanguage: formData.accountLanguage || 'all'
       }
       
-      // Step 3.5: Prepare campaign actions
-      const likeUrls = formData.likeUrls || ['https://www.tiktok.com/@defaultuser/video/1234567890']
-      const likeCountPerPost = formData.likeCountPerPost || 20
-      const followUrl = formData.followUrl || 'https://www.tiktok.com/@defaultuser'
-      const followCount = formData.followCount || 10
+      // Step 3.5: Prepare campaign actions (handle optional actions)
+      const likeUrls = formData.likeUrls && formData.likeUrls.length > 0 
+        ? formData.likeUrls 
+        : []
+      const likeCountPerPost = formData.likeCountPerPost || 0
+      const followUrl = formData.followUrl || ''
+      const followCount = formData.followCount || 0
       
-      // Encode URLs for privacy before storing on-chain
-      const { encodedFollowTarget, encodedLikeTargets } = encodeCampaignActions(
-        followUrl,
-        likeUrls
-      )
+      // Encode URLs for privacy before storing on-chain (handle optional actions)
+      let encodedFollowTarget = ''
+      let encodedLikeTargets: string[] = []
+      
+      // Only encode if actions are enabled
+      if (followUrl && followCount > 0) {
+        const followValidation = validateTikTokUrl(followUrl, 'follow')
+        if (followValidation.isValid) {
+          encodedFollowTarget = encodeUrl(followUrl)
+        }
+      }
+      
+      if (likeUrls.length > 0 && likeCountPerPost > 0) {
+        encodedLikeTargets = likeUrls.map(url => {
+          const likeValidation = validateTikTokUrl(url, 'like')
+          return likeValidation.isValid ? encodeUrl(url) : ''
+        }).filter(encoded => encoded !== '')
+      }
       
       console.log('[PaymentFlow] Encoded targets for privacy:', {
         followTargetEncoded: encodedFollowTarget.substring(0, 20) + '...',

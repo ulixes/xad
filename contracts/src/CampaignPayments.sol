@@ -56,8 +56,6 @@ contract CampaignPayments {
     uint256 public constant MIN_FOLLOW_COUNT = 40;      // Min 40 follows if follow target set
     uint256 public constant MIN_LIKES_PER_POST = 40;    // Min 40 likes per post
     uint256 public constant MIN_TOTAL_PAYMENT = 40000000; // Min $40 total (40 USDC)
-    uint256 public constant MIN_FOLLOWER_REQUIREMENT = 1000; // Min 1k followers for 1.1x multiplier
-    uint256 public constant MIN_VIEWS_REQUIREMENT = 10000;   // Min 10k views for 1.1x multiplier
     
     // Campaign data structure
     struct CampaignData {
@@ -395,30 +393,26 @@ contract CampaignPayments {
         bytes32 s
     ) external {
         if (bytes(campaignId).length == 0) revert InvalidCampaignId();
+        
+        // Must have at least one action (follows OR likes)
         if (actions.likeTargets.length == 0 && actions.followCount == 0) revert InvalidTargets();
         
-        // Enforce minimum requirements for campaign quality
+        // If follows are specified, enforce minimum
         if (actions.followCount > 0 && actions.followCount < MIN_FOLLOW_COUNT) {
-            revert InvalidAmount(); // Min 40 follows
-        }
-        if (actions.likeTargets.length > 0 && actions.likeCountPerPost < MIN_LIKES_PER_POST) {
-            revert InvalidAmount(); // Min 40 likes per post
+            revert InvalidAmount(); // Min 40 follows if follow action is used
         }
         
-        // Enforce minimum account requirements to reach $40 threshold
-        if (requirements.minFollowers < MIN_FOLLOWER_REQUIREMENT) {
-            revert InvalidAmount(); // Min 1k followers for quality
-        }
-        if (requirements.minUniqueViews28Days < MIN_VIEWS_REQUIREMENT) {
-            revert InvalidAmount(); // Min 10k views for quality
+        // If likes are specified, enforce minimum
+        if (actions.likeTargets.length > 0 && actions.likeCountPerPost < MIN_LIKES_PER_POST) {
+            revert InvalidAmount(); // Min 40 likes per post if like action is used
         }
         
         // Calculate required payment
         uint256 requiredAmount = calculatePrice(requirements, actions);
         
-        // Enforce minimum total payment of $40
+        // Only enforce minimum total payment - let users choose their actions
         if (requiredAmount < MIN_TOTAL_PAYMENT) {
-            revert InvalidAmount(); // Campaign must be at least $40
+            revert InvalidAmount(); // Campaign must be at least $40 total
         }
         
         // Store campaign data
