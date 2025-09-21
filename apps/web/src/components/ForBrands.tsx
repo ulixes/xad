@@ -158,7 +158,7 @@ export default function ForBrands() {
             <Button 
               size="lg" 
               className="font-semibold text-lg px-12 py-6"
-              onClick={() => navigate('/advertise')}
+              onClick={() => navigate('/')}
             >
               Start Campaign
             </Button>

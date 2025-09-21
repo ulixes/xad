@@ -66,7 +66,7 @@ export default function Hero() {
               size="lg" 
               variant="outline"
               className="font-semibold text-lg px-8 py-6"
-              onClick={() => navigate('/advertise')}
+              onClick={() => navigate('/')}
             >
               {t[language].brandCta}
             </Button>

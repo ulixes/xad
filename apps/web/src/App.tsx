@@ -6,7 +6,6 @@ import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
-import Advertise from './pages/Advertise'
 import { Dashboard } from './pages/Dashboard'
 import { TestAuth } from './pages/TestAuth'
 import TermsPage from './pages/TermsPage'
@@ -24,7 +23,6 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
-              <Route path="/advertise" element={<Advertise />} />
               <Route path="/test-auth" element={<TestAuth />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { AlertCircle, CheckCircle, Loader2, BadgeCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, BadgeCheck, ArrowRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { PaymentFlowEmbeddedService } from '../../services/paymentFlowEmbedded';
@@ -18,6 +18,7 @@ import { usePublicClient, useWalletClient } from 'wagmi';
 import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig } from '../../config/networks';
+import { useNavigate } from 'react-router-dom';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -73,6 +74,7 @@ export function SimplifiedAdTargetingForm({
   onSave,
   mockWalletConnected = false
 }: SimplifiedAdTargetingFormProps) {
+  const navigate = useNavigate();
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [campaignTargets, setCampaignTargets] = useState<CampaignTargets>({
     likeTarget: '',
@@ -630,11 +632,29 @@ export function SimplifiedAdTargetingForm({
         )}
 
         {paymentSuccess && (
-          <Alert className="border-green-500/50 bg-green-500/10">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-700">Success!</AlertTitle>
-            <AlertDescription className="text-green-600">{paymentSuccess}</AlertDescription>
-          </Alert>
+          <div className="space-y-4">
+            <Alert className="border-green-500/50 bg-green-500/10">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-700">Success!</AlertTitle>
+              <AlertDescription className="text-green-600">{paymentSuccess}</AlertDescription>
+            </Alert>
+            
+            {/* Dashboard Prompt */}
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-2">Your campaign has been created!</h3>
+              <p className="text-muted-foreground mb-4">
+                Track your campaign performance, view analytics, and manage your advertising campaigns in the dashboard.
+              </p>
+              <Button 
+                onClick={() => navigate('/dashboard')}
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                Go to Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Launch Campaign Button */}

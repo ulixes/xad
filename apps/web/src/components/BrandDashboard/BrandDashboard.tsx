@@ -314,48 +314,43 @@ function CampaignCard({
                       rel="noopener noreferrer"
                       className="flex items-start justify-between p-3 rounded-md bg-secondary/50 hover:bg-secondary transition-colors group"
                     >
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-1">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-1">
                             <Badge variant="outline" className="text-xs">
                               {action.actionType}
                             </Badge>
-                            <span className="text-sm text-primary group-hover:underline">
+                            <span className="text-sm text-primary group-hover:underline truncate">
                               {truncateUrl(action.target)}
                             </span>
+                            <svg 
+                              className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
+                              />
+                            </svg>
                           </div>
-                          <svg 
-                            className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round" 
-                              strokeWidth={2} 
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
-                            />
-                          </svg>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              ${(action.pricePerAction / 100).toFixed(2)} per action
-                            </span>
-                            <span className="font-medium">
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className="text-xs font-medium whitespace-nowrap">
                               {action.currentVolume} / {action.maxVolume}
                             </span>
                           </div>
-                          <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-                            <div 
-                              className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
-                                actionProgress === 100 ? 'bg-green-500' : 'bg-primary'
-                              }`}
-                              style={{ width: `${actionProgress}%` }}
-                            />
-                          </div>
+                        </div>
+                        
+                        <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
+                              actionProgress === 100 ? 'bg-green-500' : 'bg-primary'
+                            }`}
+                            style={{ width: `${actionProgress}%` }}
+                          />
                         </div>
                       </div>
                     </a>

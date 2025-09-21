@@ -1,14 +1,12 @@
-import Hero from '../components/Hero'
-import ForUsers from '../components/ForUsers'
-import ForBrands from '../components/ForBrands'
+import { SimplifiedAdTargetingForm } from '../components/AdTargetingForm/SimplifiedAdTargetingForm'
 import FAQ from '../components/FAQ'
 
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <ForUsers />
-      <ForBrands />
+      <div className="container mx-auto px-4 py-8">
+        <SimplifiedAdTargetingForm />
+      </div>
       <FAQ />
     </>
   )

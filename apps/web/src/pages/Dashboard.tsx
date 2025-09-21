@@ -78,7 +78,7 @@ export function Dashboard() {
   }
 
   const handleCreateCampaign = () => {
-    navigate('/advertise')
+    navigate('/')
   }
 
   const handleRefresh = () => {
