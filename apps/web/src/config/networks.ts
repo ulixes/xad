@@ -86,7 +86,16 @@ export const CAMPAIGN_PAYMENTS_ABI = [
           { name: 'accountLanguage', type: 'string' }
         ]
       },
-      { name: 'targets', type: 'string' },
+      {
+        name: 'actions',
+        type: 'tuple',
+        components: [
+          { name: 'followTarget', type: 'string' },
+          { name: 'followCount', type: 'uint256' },
+          { name: 'likeTargets', type: 'string[]' },
+          { name: 'likeCountPerPost', type: 'uint256' }
+        ]
+      },
       { name: 'deadline', type: 'uint256' },
       { name: 'v', type: 'uint8' },
       { name: 'r', type: 'bytes32' },
@@ -108,6 +117,16 @@ export const CAMPAIGN_PAYMENTS_ABI = [
           { name: 'minUniqueViews28Days', type: 'uint256' },
           { name: 'accountLocation', type: 'string' },
           { name: 'accountLanguage', type: 'string' }
+        ]
+      },
+      {
+        name: 'actions',
+        type: 'tuple',
+        components: [
+          { name: 'followTarget', type: 'string' },
+          { name: 'followCount', type: 'uint256' },
+          { name: 'likeTargets', type: 'string[]' },
+          { name: 'likeCounts', type: 'uint256[]' }
         ]
       }
     ],

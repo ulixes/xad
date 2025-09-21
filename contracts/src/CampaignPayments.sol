@@ -23,10 +23,6 @@ contract CampaignPayments {
     address public immutable owner;
     address public immutable usdcToken;
     
-    // Campaign package (configurable by owner)
-    uint256 public campaignLikes = 40;
-    uint256 public campaignFollows = 20;
-    
     // Base prices in USDC (6 decimals) - configurable by owner
     uint256 public baseLikePrice = 200000;    // $0.20
     uint256 public baseFollowPrice = 400000;  // $0.40
@@ -56,10 +52,18 @@ contract CampaignPayments {
     mapping(string => uint256) public locationMultipliers;  // Account location
     mapping(string => uint256) public languageMultipliers;  // Account language
     
-    // Store action targets for each campaign (minimal data)
-    // Format: "h:v|h" where h=handle(without @), v=videoId
-    // Example: "jacoboestreicher:7551115162124635447|jacoboestreicher"
-    mapping(string => string) public campaignTargets;
+    // Campaign data structure
+    struct CampaignData {
+        string followTarget;      // Single account URL for follows
+        uint256 followCount;      // Number of follows requested
+        string[] likeTargets;     // Array of post URLs for likes
+        uint256 likeCountPerPost;  // Same number of likes for each post
+        uint256 totalAmount;      // Total USDC paid
+        address depositor;        // Who paid for the campaign
+    }
+    
+    // Store campaign data
+    mapping(string => CampaignData) public campaigns;
     
     // Events
     event CampaignPaymentReceived(
@@ -67,7 +71,8 @@ contract CampaignPayments {
         address indexed sender,
         uint256 amount,
         uint256 timestamp,
-        string targets
+        uint256 totalFollows,
+        uint256 totalLikes
     );
     
     event CampaignRequirementsSet(
@@ -77,11 +82,6 @@ contract CampaignPayments {
         uint256 minViews,
         string location,
         string language
-    );
-    
-    event PackageUpdated(
-        uint256 likes,
-        uint256 follows
     );
     
     event BasePricesUpdated(
@@ -127,6 +127,7 @@ contract CampaignPayments {
     error InsufficientPayment();
     error InvalidMultiplier();
     error InvalidTargets();
+    error ArrayLengthMismatch();
     
     modifier onlyOwner() {
         if (msg.sender != owner) revert OnlyOwner();
@@ -175,13 +176,6 @@ contract CampaignPayments {
     }
     
     // Owner functions to update configuration
-    function updatePackage(uint256 _likes, uint256 _follows) external onlyOwner {
-        if (_likes == 0 || _follows == 0) revert InvalidAmount();
-        campaignLikes = _likes;
-        campaignFollows = _follows;
-        emit PackageUpdated(_likes, _follows);
-    }
-    
     function updateBasePrices(uint256 _likePrice, uint256 _followPrice) external onlyOwner {
         if (_likePrice == 0 || _followPrice == 0) revert InvalidAmount();
         baseLikePrice = _likePrice;
@@ -299,8 +293,17 @@ contract CampaignPayments {
         string accountLanguage;
     }
     
+    // Struct for campaign actions
+    struct CampaignActions {
+        string followTarget;       // Single account URL for follows
+        uint256 followCount;       // Number of follows requested
+        string[] likeTargets;      // Array of post URLs for likes
+        uint256 likeCountPerPost;  // Same number of likes for each post
+    }
+    
     function calculatePrice(
-        AccountRequirements memory requirements
+        AccountRequirements memory requirements,
+        CampaignActions memory actions
     ) public view returns (uint256) {
         // Get location multiplier (default to "all" if not found)
         uint256 locationMult = locationMultipliers[requirements.accountLocation];
@@ -355,30 +358,39 @@ contract CampaignPayments {
         uint256 combinedMultiplier = locationMult * languageMult * verifiedMult * followersMult * viewsMult;
         
         // Calculate prices with multipliers applied (5 multipliers now)
-        uint256 likePrice = (baseLikePrice * combinedMultiplier) / (BASE_PRECISION ** 5);
-        uint256 followPrice = (baseFollowPrice * combinedMultiplier) / (BASE_PRECISION ** 5);
+        uint256 adjustedLikePrice = (baseLikePrice * combinedMultiplier) / (BASE_PRECISION ** 5);
+        uint256 adjustedFollowPrice = (baseFollowPrice * combinedMultiplier) / (BASE_PRECISION ** 5);
         
-        // Calculate total for the campaign package
-        return (campaignLikes * likePrice) + (campaignFollows * followPrice);
+        // Calculate total likes requested
+        uint256 totalLikes = actions.likeTargets.length * actions.likeCountPerPost;
+        
+        // Calculate total price
+        return (totalLikes * adjustedLikePrice) + (actions.followCount * adjustedFollowPrice);
     }
     
     function depositForCampaignWithPermit(
         string calldata campaignId,
         AccountRequirements calldata requirements,
-        string calldata targets, // Simple string: "likeUrl|followUrl"
+        CampaignActions calldata actions,
         uint256 deadline,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external {
         if (bytes(campaignId).length == 0) revert InvalidCampaignId();
-        if (bytes(targets).length == 0) revert InvalidTargets();
-        
-        // Store the targets (simple string)
-        campaignTargets[campaignId] = targets;
+        if (actions.likeTargets.length == 0 && actions.followCount == 0) revert InvalidTargets();
         
         // Calculate required payment
-        uint256 requiredAmount = calculatePrice(requirements);
+        uint256 requiredAmount = calculatePrice(requirements, actions);
+        
+        // Store campaign data
+        CampaignData storage campaign = campaigns[campaignId];
+        campaign.followTarget = actions.followTarget;
+        campaign.followCount = actions.followCount;
+        campaign.likeTargets = actions.likeTargets;
+        campaign.likeCountPerPost = actions.likeCountPerPost;
+        campaign.totalAmount = requiredAmount;
+        campaign.depositor = msg.sender;
         
         // Call permit on USDC to set allowance via signature
         try IERC20Permit(usdcToken).permit(
@@ -403,6 +415,9 @@ contract CampaignPayments {
         );
         if (!success) revert TransferFailed();
         
+        // Calculate total likes
+        uint256 totalLikes = actions.likeTargets.length * actions.likeCountPerPost;
+        
         // Emit events for tracking
         emit CampaignRequirementsSet(
             campaignId,
@@ -418,13 +433,29 @@ contract CampaignPayments {
             msg.sender,
             requiredAmount,
             block.timestamp,
-            targets
+            actions.followCount,
+            totalLikes
         );
     }
     
-    // Function to retrieve targets for a campaign
-    function getCampaignTargets(string calldata campaignId) external view returns (string memory) {
-        return campaignTargets[campaignId];
+    // Function to retrieve campaign data
+    function getCampaignData(string calldata campaignId) external view returns (
+        string memory followTarget,
+        uint256 followCount,
+        string[] memory likeTargets,
+        uint256 likeCountPerPost,
+        uint256 totalAmount,
+        address depositor
+    ) {
+        CampaignData memory campaign = campaigns[campaignId];
+        return (
+            campaign.followTarget,
+            campaign.followCount,
+            campaign.likeTargets,
+            campaign.likeCountPerPost,
+            campaign.totalAmount,
+            campaign.depositor
+        );
     }
     
     function withdrawUSDC(address to, uint256 amount) external onlyOwner {
