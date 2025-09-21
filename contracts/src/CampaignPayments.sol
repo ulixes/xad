@@ -293,11 +293,11 @@ contract CampaignPayments {
         string accountLanguage;
     }
     
-    // Struct for campaign actions
+    // Struct for campaign actions (privacy-protected)
     struct CampaignActions {
-        string followTarget;       // Single account URL for follows
+        string followTarget;       // Encoded account identifier (obfuscated for privacy)
         uint256 followCount;       // Number of follows requested
-        string[] likeTargets;      // Array of post URLs for likes
+        string[] likeTargets;      // Array of encoded post identifiers (obfuscated for privacy)
         uint256 likeCountPerPost;  // Same number of likes for each post
     }
     

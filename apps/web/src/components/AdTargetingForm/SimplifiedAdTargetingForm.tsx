@@ -19,6 +19,7 @@ import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig } from '../../config/networks';
 import { useNavigate } from 'react-router-dom';
+import { validateTikTokUrl } from '../../utils/urlEncoder';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -88,6 +89,12 @@ export function SimplifiedAdTargetingForm({
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+  
+  // URL validation states
+  const [urlErrors, setUrlErrors] = useState<{
+    follow?: string;
+    likes?: { [key: number]: string };
+  }>({});
   
   // Real wallet hooks (will be undefined in Storybook)
   const { wallets } = useWallets();
@@ -610,10 +617,28 @@ export function SimplifiedAdTargetingForm({
                           type="url"
                           placeholder="https://tiktok.com/@username"
                           value={campaignTargets.followTarget}
-                          onChange={(e) => setCampaignTargets(prev => ({ ...prev, followTarget: e.target.value }))}
-                          className="font-mono text-base h-11"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setCampaignTargets(prev => ({ ...prev, followTarget: value }));
+                            
+                            // Validate URL
+                            if (value.trim()) {
+                              const validation = validateTikTokUrl(value, 'follow');
+                              if (!validation.isValid) {
+                                setUrlErrors(prev => ({ ...prev, follow: validation.error }));
+                              } else {
+                                setUrlErrors(prev => ({ ...prev, follow: undefined }));
+                              }
+                            } else {
+                              setUrlErrors(prev => ({ ...prev, follow: undefined }));
+                            }
+                          }}
+                          className={`font-mono text-base h-11 ${urlErrors.follow ? 'border-red-500' : ''}`}
                           required
                         />
+                        {urlErrors.follow && (
+                          <p className="text-sm text-red-500 mt-1">{urlErrors.follow}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="follow-count" className="text-sm font-medium">
@@ -654,19 +679,44 @@ export function SimplifiedAdTargetingForm({
                     
                     <div className="space-y-3">
                       {campaignTargets.likeTargets.map((url, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Input
-                            type="url"
-                            placeholder="https://tiktok.com/@username/video/123456789"
-                            value={url}
-                            onChange={(e) => {
-                              const newTargets = [...campaignTargets.likeTargets];
-                              newTargets[index] = e.target.value;
-                              setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
-                            }}
-                            className="font-mono text-base h-11 flex-1"
-                            required={index === 0}
-                          />
+                        <div key={index} className="space-y-1">
+                          <div className="flex gap-2">
+                            <Input
+                              type="url"
+                              placeholder="https://tiktok.com/@username/video/123456789"
+                              value={url}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const newTargets = [...campaignTargets.likeTargets];
+                                newTargets[index] = value;
+                                setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+                                
+                                // Validate URL
+                                if (value.trim()) {
+                                  const validation = validateTikTokUrl(value, 'like');
+                                  if (!validation.isValid) {
+                                    setUrlErrors(prev => ({
+                                      ...prev,
+                                      likes: { ...prev.likes, [index]: validation.error }
+                                    }));
+                                  } else {
+                                    setUrlErrors(prev => {
+                                      const newLikes = { ...prev.likes };
+                                      delete newLikes[index];
+                                      return { ...prev, likes: newLikes };
+                                    });
+                                  }
+                                } else {
+                                  setUrlErrors(prev => {
+                                    const newLikes = { ...prev.likes };
+                                    delete newLikes[index];
+                                    return { ...prev, likes: newLikes };
+                                  });
+                                }
+                              }}
+                              className={`font-mono text-base h-11 flex-1 ${urlErrors.likes?.[index] ? 'border-red-500' : ''}`}
+                              required={index === 0}
+                            />
                           {campaignTargets.likeTargets.length > 1 && (
                             <Button
                               type="button"
@@ -680,6 +730,10 @@ export function SimplifiedAdTargetingForm({
                             >
                               <span className="text-lg">×</span>
                             </Button>
+                          )}
+                          </div>
+                          {urlErrors.likes?.[index] && (
+                            <p className="text-sm text-red-500 pl-1">{urlErrors.likes[index]}</p>
                           )}
                         </div>
                       ))}
@@ -768,7 +822,9 @@ export function SimplifiedAdTargetingForm({
               campaignTargets.likeTargets.filter(url => url.trim()).length === 0 ||
               !campaignTargets.followTarget.trim() ||
               contractData.loading ||
-              isCalculating
+              isCalculating ||
+              !!urlErrors.follow ||
+              !!(urlErrors.likes && Object.keys(urlErrors.likes).length > 0)
             }
             size="lg"
             className="w-full"

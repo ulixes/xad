@@ -2,6 +2,7 @@
 
 import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig, USDC_ABI } from "@/config/networks"
 import { encodeFunctionData } from 'viem'
+import { encodeCampaignActions } from '@/utils/urlEncoder'
 
 const networkConfig = getNetworkConfig()
 
@@ -153,11 +154,22 @@ export class PaymentFlowEmbeddedService {
       const followUrl = formData.followUrl || 'https://www.tiktok.com/@defaultuser'
       const followCount = formData.followCount || 10
       
-      // Prepare CampaignActions struct
+      // Encode URLs for privacy before storing on-chain
+      const { encodedFollowTarget, encodedLikeTargets } = encodeCampaignActions(
+        followUrl,
+        likeUrls
+      )
+      
+      console.log('[PaymentFlow] Encoded targets for privacy:', {
+        followTargetEncoded: encodedFollowTarget.substring(0, 20) + '...',
+        likeTargetsCount: encodedLikeTargets.length
+      })
+      
+      // Prepare CampaignActions struct with encoded URLs
       const campaignActions = {
-        followTarget: followUrl,
+        followTarget: encodedFollowTarget,
         followCount: BigInt(followCount),
-        likeTargets: likeUrls,
+        likeTargets: encodedLikeTargets,
         likeCountPerPost: BigInt(likeCountPerPost)
       }
       
