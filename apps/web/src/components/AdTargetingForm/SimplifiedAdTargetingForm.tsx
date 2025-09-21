@@ -296,8 +296,7 @@ export function SimplifiedAdTargetingForm({
   };
   
   const estimatedCost = Number(formatPrice(calculatedPrice));
-  const validLikeTargets = campaignTargets.likeTargets.filter(url => url.trim());
-  const totalActions = (validLikeTargets.length || 1) * campaignTargets.likeCountPerPost + campaignTargets.followCount;
+  const totalActions = (campaignTargets.likeTargets.filter(url => url.trim()).length || 1) * campaignTargets.likeCountPerPost + campaignTargets.followCount;
 
   const handleSave = async () => {
     // Reset previous states
