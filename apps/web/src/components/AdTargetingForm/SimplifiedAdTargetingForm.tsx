@@ -724,11 +724,10 @@ export function SimplifiedAdTargetingForm({
                         <input
                           id="follow-count"
                           type="number"
-                          min="1"
                           value={campaignTargets.followCount}
                           onChange={(e) => {
                             const value = parseInt(e.target.value) || 0;
-                            setCampaignTargets(prev => ({ ...prev, followCount: Math.max(1, value) }));
+                            setCampaignTargets(prev => ({ ...prev, followCount: value }));
                           }}
                           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                           placeholder="e.g., 100"
@@ -764,11 +763,10 @@ export function SimplifiedAdTargetingForm({
                           <input
                             id="like-count"
                             type="number"
-                            min="1"
                             value={campaignTargets.likeCountPerPost}
                             onChange={(e) => {
                               const value = parseInt(e.target.value) || 0;
-                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: Math.max(1, value) }));
+                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: value }));
                             }}
                             className="mt-1 block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="e.g., 50"
