@@ -17,7 +17,7 @@ import { useWallets } from '@privy-io/react-auth';
 import { usePublicClient, useWalletClient } from 'wagmi';
 import { formatUnits } from 'viem';
 import { usePrivyAuth } from '../../hooks/usePrivyAuth';
-import { CAMPAIGN_PAYMENTS_ABI } from '../../config/networks';
+import { CAMPAIGN_PAYMENTS_ABI, getNetworkConfig } from '../../config/networks';
 
 type Platform = 'tiktok' | 'instagram' | 'x' | 'facebook' | 'reddit' | 'farcaster';
 
@@ -100,6 +100,7 @@ export function SimplifiedAdTargetingForm({
   // Privy auth hook
   const { 
     isPrivyAuthenticated,
+    walletAddress,
     triggerSignIn, 
     checkAuthStatus 
   } = usePrivyAuth();
@@ -209,17 +210,28 @@ export function SimplifiedAdTargetingForm({
   // Load USDC balance when wallet connects
   useEffect(() => {
     const loadUsdcBalance = async () => {
-      if (!publicClient || (!connectedAddress && !mockWalletAddress)) {
+      if (!publicClient || !walletAddress) {
+        console.log('[USDC Balance] Skipping load - missing publicClient or walletAddress', {
+          hasPublicClient: !!publicClient,
+          walletAddress
+        });
         return;
       }
 
       setIsLoadingBalance(true);
       try {
-        const walletAddress = connectedAddress || mockWalletAddress;
+        const address = walletAddress;
 
         // Get network config to determine USDC address
         const networkConfig = getNetworkConfig();
         const usdcAddress = networkConfig.usdcAddress;
+        
+        console.log('[USDC Balance] Loading balance for:', {
+          walletAddress: address,
+          usdcAddress,
+          chainId: networkConfig.chainId,
+          network: networkConfig.networkName
+        });
 
         // ERC20 ABI for balanceOf function
         const erc20Abi = [
@@ -236,19 +248,24 @@ export function SimplifiedAdTargetingForm({
           address: usdcAddress,
           abi: erc20Abi,
           functionName: 'balanceOf',
-          args: [walletAddress as `0x${string}`]
+          args: [address as `0x${string}`]
+        });
+
+        console.log('[USDC Balance] Loaded balance:', {
+          balanceRaw: balance.toString(),
+          balanceFormatted: formatUnits(balance, 6)
         });
 
         setUsdcBalance(balance);
       } catch (error) {
-        console.error('Error loading USDC balance:', error);
+        console.error('[USDC Balance] Error loading balance:', error);
         setUsdcBalance(0n);
       }
       setIsLoadingBalance(false);
     };
 
     loadUsdcBalance();
-  }, [publicClient, connectedAddress, mockWalletAddress]);
+  }, [publicClient, walletAddress, mockWalletConnected]);
   
   // Convert price to USD string
   const formatPrice = (price: bigint) => {
