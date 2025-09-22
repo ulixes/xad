@@ -493,12 +493,24 @@ export function SimplifiedAdTargetingForm({
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 sm:p-6">
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-left">Create Tiktok Campaign</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-left">Tiktok micro-influencer marketing at scale</h1>
+          <p className="text-lg leading-relaxed tracking-tight text-muted-foreground mt-2">
+            Pay humans, not bots, to like, follow, and engage with your content. Powered by{' '}
+            <a
+              href="https://self.xyz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Self.xyz
+            </a>
+            .
+          </p>
         </div>
 
         {/* Account Qualifications */}
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Account Qualifications</h2>
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Account Requirements</h2>
           <div className="border border-border rounded-lg p-4 bg-card space-y-4">
             {/* Verified Account */}
             <div className="flex items-center space-x-3">
@@ -514,7 +526,7 @@ export function SimplifiedAdTargetingForm({
                 className="flex items-center gap-2 cursor-pointer flex-1"
               >
                 <span className="text-base font-medium">
-                  Verified Account
+                  Verified
                 </span>
                 <BadgeCheck className="w-5 h-5 text-primary" />
               </Label>
@@ -529,7 +541,7 @@ export function SimplifiedAdTargetingForm({
                 id="min-followers"
                 type="number"
                 min="0"
-                placeholder="Enter minimum followers (e.g., 1000)"
+                placeholder="500"
                 value={requirements.minFollowers || ''}
                 onChange={(e) => {
                   const value = parseInt(e.target.value) || 0;
@@ -537,7 +549,6 @@ export function SimplifiedAdTargetingForm({
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">Higher follower counts increase pricing (optional)</p>
             </div>
 
             {/* Minimum Unique Views (28 days) */}
@@ -549,7 +560,7 @@ export function SimplifiedAdTargetingForm({
                 id="min-views"
                 type="number"
                 min="0"
-                placeholder="Enter minimum views (e.g., 10000)"
+                placeholder="1000"
                 value={requirements.minUniqueViews28Days || ''}
                 onChange={(e) => {
                   const value = parseInt(e.target.value) || 0;
@@ -557,13 +568,12 @@ export function SimplifiedAdTargetingForm({
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">Higher view counts increase pricing (optional)</p>
             </div>
 
             {/* Account Location */}
             <div className="space-y-2">
               <Label htmlFor="account-location" className="text-base font-medium">
-                Account Location
+                Location
               </Label>
               <Select 
                 value={requirements.accountLocation} 
@@ -585,7 +595,7 @@ export function SimplifiedAdTargetingForm({
             {/* Account Language */}
             <div className="space-y-2">
               <Label htmlFor="account-language" className="text-base font-medium">
-                Account Language
+                Language
               </Label>
               <Select 
                 value={requirements.accountLanguage} 
@@ -624,10 +634,10 @@ export function SimplifiedAdTargetingForm({
         {/* Campaign Actions - Configurable */}
         {(
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">Campaign Actions</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">Actions</h2>
 
             {/* Actions Details Card */}
-            <div className="p-4 border border-border rounded-lg bg-card space-y-6">
+            <div className="p-4 border border-border rounded-lg bg-card">
               {contractData.loading ? (
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -637,20 +647,17 @@ export function SimplifiedAdTargetingForm({
                 <>
                   {/* Follow Action */}
                   <div className="space-y-4 pb-4 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-semibold">Follow Action</h3>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="follow-toggle" className="text-sm">
-                          Enable Follows
-                        </Label>
-                        <Checkbox
-                          id="follow-toggle"
-                          checked={campaignTargets.followEnabled}
-                          onCheckedChange={(checked) => 
-                            setCampaignTargets(prev => ({ ...prev, followEnabled: checked as boolean }))
-                          }
-                        />
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="follow-toggle"
+                        checked={campaignTargets.followEnabled}
+                        onCheckedChange={(checked) =>
+                          setCampaignTargets(prev => ({ ...prev, followEnabled: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="follow-toggle" className="text-base font-semibold cursor-pointer">
+                        Follow
+                      </Label>
                     </div>
                     {campaignTargets.followEnabled && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -690,7 +697,7 @@ export function SimplifiedAdTargetingForm({
                         <Label htmlFor="follow-count" className="text-sm font-medium">
                           Number of Follows
                         </Label>
-                        <input
+                        <Input
                           id="follow-count"
                           type="number"
                           value={campaignTargets.followCount}
@@ -698,7 +705,7 @@ export function SimplifiedAdTargetingForm({
                             const value = parseInt(e.target.value) || 0;
                             setCampaignTargets(prev => ({ ...prev, followCount: value }));
                           }}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                          className="h-11"
                           placeholder="e.g., 100"
                         />
                       </div>
@@ -707,116 +714,155 @@ export function SimplifiedAdTargetingForm({
                   </div>
 
                   {/* Like Actions */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-semibold">Like Actions</h3>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="like-toggle" className="text-sm">
-                          Enable Likes
-                        </Label>
-                        <Checkbox
-                          id="like-toggle"
-                          checked={campaignTargets.likeEnabled}
-                          onCheckedChange={(checked) => 
-                            setCampaignTargets(prev => ({ ...prev, likeEnabled: checked as boolean }))
-                          }
-                        />
-                      </div>
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="like-toggle"
+                        checked={campaignTargets.likeEnabled}
+                        onCheckedChange={(checked) =>
+                          setCampaignTargets(prev => ({ ...prev, likeEnabled: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="like-toggle" className="text-base font-semibold cursor-pointer">
+                        Like
+                      </Label>
                     </div>
                     {campaignTargets.likeEnabled && (
                       <>
-                        <div className="space-y-2">
-                          <Label htmlFor="like-count" className="text-sm font-medium">
-                            Likes per Post
-                          </Label>
-                          <input
-                            id="like-count"
-                            type="number"
-                            value={campaignTargets.likeCountPerPost}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 0;
-                              setCampaignTargets(prev => ({ ...prev, likeCountPerPost: value }));
-                            }}
-                            className="mt-1 block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="e.g., 50"
-                          />
-                        </div>
-                    
-                    <div className="space-y-3">
-                      {campaignTargets.likeTargets.map((url, index) => (
-                        <div key={index} className="space-y-1">
-                          <div className="flex gap-2">
-                            <Input
-                              type="url"
-                              placeholder="https://tiktok.com/@username/video/123456789"
-                              value={url}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                const newTargets = [...campaignTargets.likeTargets];
-                                newTargets[index] = value;
-                                setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
-                                
-                                // Validate URL
-                                if (value.trim()) {
-                                  const validation = validateTikTokUrl(value, 'like');
-                                  if (!validation.isValid) {
-                                    setUrlErrors(prev => ({
-                                      ...prev,
-                                      likes: { ...prev.likes, [index]: validation.error }
-                                    }));
+                        <div className="space-y-3">
+                          <div className="flex items-end gap-4">
+                            <div className="flex-1 space-y-1">
+                              <Label className="text-sm font-medium">Post URLs</Label>
+                              <Input
+                                type="url"
+                                placeholder="https://tiktok.com/@username/video/123456789"
+                                value={campaignTargets.likeTargets[0] || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const newTargets = [...campaignTargets.likeTargets];
+                                  newTargets[0] = value;
+                                  setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+
+                                  // Validate URL
+                                  if (value.trim()) {
+                                    const validation = validateTikTokUrl(value, 'like');
+                                    if (!validation.isValid) {
+                                      setUrlErrors(prev => ({
+                                        ...prev,
+                                        likes: { ...prev.likes, [0]: validation.error }
+                                      }));
+                                    } else {
+                                      setUrlErrors(prev => {
+                                        const newLikes = { ...prev.likes };
+                                        delete newLikes[0];
+                                        return { ...prev, likes: newLikes };
+                                      });
+                                    }
                                   } else {
                                     setUrlErrors(prev => {
                                       const newLikes = { ...prev.likes };
-                                      delete newLikes[index];
+                                      delete newLikes[0];
                                       return { ...prev, likes: newLikes };
                                     });
                                   }
-                                } else {
-                                  setUrlErrors(prev => {
-                                    const newLikes = { ...prev.likes };
-                                    delete newLikes[index];
-                                    return { ...prev, likes: newLikes };
-                                  });
-                                }
-                              }}
-                              className={`font-mono text-base h-11 flex-1 ${urlErrors.likes?.[index] ? 'border-red-500' : ''}`}
-                              required={index === 0}
-                            />
-                          {campaignTargets.likeTargets.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                const newTargets = campaignTargets.likeTargets.filter((_, i) => i !== index);
-                                setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
-                              }}
-                              className="h-11 w-11"
-                            >
-                              <span className="text-lg">×</span>
-                            </Button>
-                          )}
+                                }}
+                                className={`font-mono text-base h-11 ${urlErrors.likes?.[0] ? 'border-red-500' : ''}`}
+                                required
+                              />
+                              {urlErrors.likes?.[0] && (
+                                <p className="text-sm text-red-500 pl-1">{urlErrors.likes[0]}</p>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="like-count" className="text-sm font-medium">
+                                Likes per Post
+                              </Label>
+                              <Input
+                                id="like-count"
+                                type="number"
+                                value={campaignTargets.likeCountPerPost}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  setCampaignTargets(prev => ({ ...prev, likeCountPerPost: value }));
+                                }}
+                                className="h-11 w-32"
+                                placeholder="50"
+                              />
+                            </div>
                           </div>
-                          {urlErrors.likes?.[index] && (
-                            <p className="text-sm text-red-500 pl-1">{urlErrors.likes[index]}</p>
-                          )}
+
+                          {campaignTargets.likeTargets.slice(1).map((url, index) => (
+                            <div key={index + 1} className="space-y-1">
+                              <div className="flex gap-2">
+                                <Input
+                                  type="url"
+                                  placeholder="https://tiktok.com/@username/video/123456789"
+                                  value={url}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const newTargets = [...campaignTargets.likeTargets];
+                                    newTargets[index + 1] = value;
+                                    setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+
+                                    // Validate URL
+                                    const actualIndex = index + 1;
+                                    if (value.trim()) {
+                                      const validation = validateTikTokUrl(value, 'like');
+                                      if (!validation.isValid) {
+                                        setUrlErrors(prev => ({
+                                          ...prev,
+                                          likes: { ...prev.likes, [actualIndex]: validation.error }
+                                        }));
+                                      } else {
+                                        setUrlErrors(prev => {
+                                          const newLikes = { ...prev.likes };
+                                          delete newLikes[actualIndex];
+                                          return { ...prev, likes: newLikes };
+                                        });
+                                      }
+                                    } else {
+                                      setUrlErrors(prev => {
+                                        const newLikes = { ...prev.likes };
+                                        delete newLikes[actualIndex];
+                                        return { ...prev, likes: newLikes };
+                                      });
+                                    }
+                                  }}
+                                  className={`font-mono text-base h-11 flex-1 ${urlErrors.likes?.[index + 1] ? 'border-red-500' : ''}`}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    const newTargets = campaignTargets.likeTargets.filter((_, i) => i !== (index + 1));
+                                    setCampaignTargets(prev => ({ ...prev, likeTargets: newTargets }));
+                                  }}
+                                  className="h-11 w-11"
+                                >
+                                  <span className="text-lg">×</span>
+                                </Button>
+                              </div>
+                              {urlErrors.likes?.[index + 1] && (
+                                <p className="text-sm text-red-500 pl-1">{urlErrors.likes[index + 1]}</p>
+                              )}
+                            </div>
+                          ))}
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setCampaignTargets(prev => ({
+                                ...prev,
+                                likeTargets: [...prev.likeTargets, '']
+                              }));
+                            }}
+                            className="w-full"
+                          >
+                            +
+                          </Button>
                         </div>
-                      ))}
-                      
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setCampaignTargets(prev => ({ 
-                            ...prev, 
-                            likeTargets: [...prev.likeTargets, ''] 
-                          }));
-                        }}
-                        className="w-full"
-                      >
-                        + Add Another Post URL
-                      </Button>
-                    </div>
                       </>
                     )}
                   </div>
@@ -829,27 +875,29 @@ export function SimplifiedAdTargetingForm({
         {/* Total Campaign Cost with Minimum Requirement */}
         <div className="border-t border-border pt-6">
           <div className="space-y-4">
-            {/* Pricing Breakdown */}
-            <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-sm">
-              {requirements.minFollowers >= 1000 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Quality Multiplier ({requirements.minFollowers.toLocaleString()}+ followers):</span>
-                  <span>×{requirements.minFollowers >= 1000000 ? '2.0' : requirements.minFollowers >= 500000 ? '1.75' : requirements.minFollowers >= 100000 ? '1.5' : requirements.minFollowers >= 50000 ? '1.35' : requirements.minFollowers >= 10000 ? '1.2' : '1.1'}</span>
-                </div>
-              )}
-              {requirements.minUniqueViews28Days >= 10000 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Views Multiplier ({requirements.minUniqueViews28Days.toLocaleString()}+ views):</span>
-                  <span>×{requirements.minUniqueViews28Days >= 10000000 ? '2.1' : requirements.minUniqueViews28Days >= 5000000 ? '1.85' : requirements.minUniqueViews28Days >= 1000000 ? '1.6' : requirements.minUniqueViews28Days >= 500000 ? '1.45' : requirements.minUniqueViews28Days >= 100000 ? '1.3' : requirements.minUniqueViews28Days >= 50000 ? '1.2' : '1.1'}</span>
-                </div>
-              )}
-              {requirements.verifiedOnly && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Verified Accounts Only:</span>
-                  <span>×1.5</span>
-                </div>
-              )}
-            </div>
+            {/* Pricing Breakdown - Only show if there are multipliers */}
+            {(requirements.minFollowers >= 1000 || requirements.minUniqueViews28Days >= 10000 || requirements.verifiedOnly) && (
+              <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-sm">
+                {requirements.minFollowers >= 1000 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Quality Multiplier ({requirements.minFollowers.toLocaleString()}+ followers):</span>
+                    <span>×{requirements.minFollowers >= 1000000 ? '2.0' : requirements.minFollowers >= 500000 ? '1.75' : requirements.minFollowers >= 100000 ? '1.5' : requirements.minFollowers >= 50000 ? '1.35' : requirements.minFollowers >= 10000 ? '1.2' : '1.1'}</span>
+                  </div>
+                )}
+                {requirements.minUniqueViews28Days >= 10000 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Views Multiplier ({requirements.minUniqueViews28Days.toLocaleString()}+ views):</span>
+                    <span>×{requirements.minUniqueViews28Days >= 10000000 ? '2.1' : requirements.minUniqueViews28Days >= 5000000 ? '1.85' : requirements.minUniqueViews28Days >= 1000000 ? '1.6' : requirements.minUniqueViews28Days >= 500000 ? '1.45' : requirements.minUniqueViews28Days >= 100000 ? '1.3' : requirements.minUniqueViews28Days >= 50000 ? '1.2' : '1.1'}</span>
+                  </div>
+                )}
+                {requirements.verifiedOnly && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Verified Accounts Only:</span>
+                    <span>×1.5</span>
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Total */}
             <div className="flex justify-between items-center">
@@ -867,7 +915,7 @@ export function SimplifiedAdTargetingForm({
                     </div>
                     {estimatedCost < 40 && (
                       <p className="text-sm text-orange-500 mt-1">
-                        Minimum campaign value is $40.00
+                        Minimum: $40.00
                       </p>
                     )}
                   </div>
