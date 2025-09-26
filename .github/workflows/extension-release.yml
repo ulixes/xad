@@ -49,7 +49,8 @@ jobs:
       - name: Build extension
         if: steps.check_tag.outputs.exists == 'false'
         env:
-          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_PARA_API_KEY: ${{ secrets.VITE_PARA_API_KEY }}
+          VITE_PARA_ENVIRONMENT: ${{ secrets.VITE_PARA_ENVIRONMENT }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_ENV: production
         run: bun run build
