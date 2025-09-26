@@ -22,7 +22,10 @@ export default defineConfig({
       'https://api.getpara.com/*',
       'https://api.beta.getpara.com/*',
       'https://api.sandbox.getpara.com/*'
-    ]
+    ],
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    }
   },
   vite: (inlineConfig) => {
     return mergeConfig(inlineConfig, {
