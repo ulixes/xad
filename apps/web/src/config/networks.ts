@@ -14,9 +14,9 @@ export const getNetworkConfig = () => {
     networkName: isProduction ? 'Base' : 'Base Sepolia',
     chainId: isProduction ? 8453 : 84532,
     
-    // Smart Contract (CampaignPayments) - v2 with updated pricing
+    // Smart Contract (CampaignPayments) - v3 with comments support
     campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
-      '0x1500e44974088eCe2A5e25d9a8Df7033D650A08B', // Base Sepolia deployment with $0.30/$0.60 pricing
+      '0x2ab9a8239F409ee1B7330F8cf01f34a425856B6E', // Base Sepolia deployment with comments support
     
     // USDC Token Address (payment currency)
     usdcAddress: isProduction
@@ -93,7 +93,10 @@ export const CAMPAIGN_PAYMENTS_ABI = [
           { name: 'followTarget', type: 'string' },
           { name: 'followCount', type: 'uint256' },
           { name: 'likeTargets', type: 'string[]' },
-          { name: 'likeCountPerPost', type: 'uint256' }
+          { name: 'likeCountPerPost', type: 'uint256' },
+          { name: 'commentTarget', type: 'string' },
+          { name: 'commentContent', type: 'string' },
+          { name: 'commentCount', type: 'uint256' }
         ]
       },
       { name: 'deadline', type: 'uint256' },
@@ -126,7 +129,10 @@ export const CAMPAIGN_PAYMENTS_ABI = [
           { name: 'followTarget', type: 'string' },
           { name: 'followCount', type: 'uint256' },
           { name: 'likeTargets', type: 'string[]' },
-          { name: 'likeCountPerPost', type: 'uint256' }
+          { name: 'likeCountPerPost', type: 'uint256' },
+          { name: 'commentTarget', type: 'string' },
+          { name: 'commentContent', type: 'string' },
+          { name: 'commentCount', type: 'uint256' }
         ]
       }
     ],

@@ -205,7 +205,7 @@ cast send $CONTRACT_ADDRESS "withdrawUSDC(address,uint256)" \
 ```bash
 # Withdraw all USDC to treasury
 cast send $CONTRACT_ADDRESS "withdrawAllUSDC(address)" \
-  "0xYourTreasuryAddress" \
+  "0x5BC5A8AaB758aB989d321de88fDA10009b2BD413" \
   --rpc-url $RPC_URL \
   --private-key $PRIVATE_KEY
 ```

@@ -34,7 +34,10 @@ export class PaymentFlowEmbeddedService {
       followTarget: string,
       followCount: bigint,
       likeTargets: string[],
-      likeCountPerPost: bigint
+      likeCountPerPost: bigint,
+      commentTarget: string,
+      commentContent: string,
+      commentCount: bigint
     },
     walletAddress: string,
     publicClient: any
@@ -155,10 +158,15 @@ export class PaymentFlowEmbeddedService {
       const likeCountPerPost = formData.likeCountPerPost || 0
       const followUrl = formData.followUrl || ''
       const followCount = formData.followCount || 0
+      const commentUrl = formData.commentUrl || ''
+      const commentEmojis = formData.commentEmojis || []
+      const commentCount = formData.commentCount || 0
       
       // Encode URLs for privacy before storing on-chain (handle optional actions)
       let encodedFollowTarget = ''
       let encodedLikeTargets: string[] = []
+      let encodedCommentTarget = ''
+      let encodedCommentContent = ''
       
       // Only encode if actions are enabled
       if (followUrl && followCount > 0) {
@@ -175,9 +183,20 @@ export class PaymentFlowEmbeddedService {
         }).filter(encoded => encoded !== '')
       }
       
+      if (commentUrl && commentCount > 0) {
+        const commentValidation = validateTikTokUrl(commentUrl, 'like')
+        if (commentValidation.isValid) {
+          encodedCommentTarget = encodeUrl(commentUrl)
+          // Encode emojis as a comma-separated string
+          encodedCommentContent = commentEmojis.join(',')
+        }
+      }
+      
       console.log('[PaymentFlow] Encoded targets for privacy:', {
         followTargetEncoded: encodedFollowTarget.substring(0, 20) + '...',
-        likeTargetsCount: encodedLikeTargets.length
+        likeTargetsCount: encodedLikeTargets.length,
+        commentTargetEncoded: encodedCommentTarget.substring(0, 20) + '...',
+        commentContent: encodedCommentContent
       })
       
       // Prepare CampaignActions struct with encoded URLs
@@ -185,7 +204,10 @@ export class PaymentFlowEmbeddedService {
         followTarget: encodedFollowTarget,
         followCount: BigInt(followCount),
         likeTargets: encodedLikeTargets,
-        likeCountPerPost: BigInt(likeCountPerPost)
+        likeCountPerPost: BigInt(likeCountPerPost),
+        commentTarget: encodedCommentTarget,
+        commentContent: encodedCommentContent,
+        commentCount: BigInt(commentCount)
       }
       
       // Step 4: Get payment data and check balance

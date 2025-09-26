@@ -1,3 +1,5 @@
+import { TikTokCommentTracker } from '@/src/trackers/TikTokCommentTracker';
+
 export default defineContentScript({
   matches: ['*://*.tiktok.com/*'],
   main() {
@@ -758,6 +760,11 @@ export default defineContentScript({
               sendResponse({ acknowledged: true, tracking: 'started' });
             } else if (message.actionType === 'follow') {
               this.trackFollowAction(message.actionId);
+              sendResponse({ acknowledged: true, tracking: 'started' });
+            } else if (message.actionType === 'comment') {
+              // Use the new comment tracker
+              const commentTracker = new TikTokCommentTracker(message.actionId);
+              commentTracker.start();
               sendResponse({ acknowledged: true, tracking: 'started' });
             } else {
               console.log(`[TikTok Action Tracker] ⚠️ Unknown action type: ${message.actionType}`);

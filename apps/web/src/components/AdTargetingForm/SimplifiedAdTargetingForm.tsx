@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { AlertCircle, CheckCircle, Loader2, BadgeCheck, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, BadgeCheck, ArrowRight, MessageCircle, UserPlus, Heart } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { PaymentFlowEmbeddedService } from '../../services/paymentFlowEmbedded';
@@ -79,6 +79,12 @@ type CampaignTargets = {
   likeEnabled: boolean;
   likeTargets: string[];  // Array of post URLs for likes
   likeCountPerPost: number;  // Number of likes per post
+  
+  // Comment action (optional)
+  commentEnabled: boolean;
+  commentTarget: string;  // Single post URL for comments
+  commentEmojis: string[];  // Selected emojis
+  commentCount: number;  // Number of comments
 };
 
 type AccountRequirements = {
@@ -110,7 +116,13 @@ export function SimplifiedAdTargetingForm({
     // Like action
     likeEnabled: true,  // Default enabled
     likeTargets: [''],  // Start with one empty URL field
-    likeCountPerPost: 50  // Default 50 likes per post
+    likeCountPerPost: 50,  // Default 50 likes per post
+    
+    // Comment action
+    commentEnabled: false,  // Default disabled
+    commentTarget: '',
+    commentEmojis: ['🔥', '😍', '💯'],  // Default selected emojis
+    commentCount: 50  // Default 50 comments
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -149,6 +161,7 @@ export function SimplifiedAdTargetingForm({
   const [contractData, setContractData] = useState({
     baseLikePrice: 300000, // $0.30 in USDC (6 decimals) - increased from $0.20
     baseFollowPrice: 600000, // $0.60 in USDC (6 decimals) - increased from $0.40
+    baseCommentPrice: 150000, // $0.15 in USDC (6 decimals)
     loading: true
   });
   
@@ -177,6 +190,7 @@ export function SimplifiedAdTargetingForm({
         setContractData({
           baseLikePrice: 300000,  // $0.30
           baseFollowPrice: 600000, // $0.60
+          baseCommentPrice: 150000, // $0.15
           loading: false
         });
         return;
@@ -190,6 +204,7 @@ export function SimplifiedAdTargetingForm({
         setContractData({
           baseLikePrice: 300000, // 0.3 USDC per like (6 decimals)
           baseFollowPrice: 600000, // 0.6 USDC per follow (6 decimals)
+          baseCommentPrice: 150000, // 0.15 USDC per comment (6 decimals)
           loading: false
         });
       } catch (error) {
@@ -218,8 +233,12 @@ export function SimplifiedAdTargetingForm({
         const totalFollows = campaignTargets.followEnabled 
           ? campaignTargets.followCount 
           : 0;
+        const totalComments = campaignTargets.commentEnabled
+          ? campaignTargets.commentCount
+          : 0;
         const baseTotal = (totalLikes * contractData.baseLikePrice +
-                          totalFollows * contractData.baseFollowPrice);
+                          totalFollows * contractData.baseFollowPrice +
+                          totalComments * contractData.baseCommentPrice);
         setCalculatedPrice(BigInt(baseTotal));
         return;
       }
@@ -233,28 +252,36 @@ export function SimplifiedAdTargetingForm({
         const dummyTargets = campaignTargets.likeEnabled 
           ? Array(Math.max(1, likeTargetsCount)).fill('post') 
           : [];
+        const accountRequirements = {
+          verifiedOnly: requirements.verifiedOnly || false,
+          minFollowers: BigInt(requirements.minFollowers || 0),
+          minUniqueViews28Days: BigInt(requirements.minUniqueViews28Days || 0),
+          accountLocation: requirements.accountLocation || 'all',
+          accountLanguage: requirements.accountLanguage || 'all'
+        };
+        
+        const campaignActions = {
+          followTarget: campaignTargets.followEnabled ? 'account' : '',
+          followCount: BigInt(campaignTargets.followEnabled ? campaignTargets.followCount : 0),
+          likeTargets: dummyTargets,
+          likeCountPerPost: BigInt(campaignTargets.likeEnabled ? campaignTargets.likeCountPerPost : 0),
+          commentTarget: campaignTargets.commentEnabled ? 'post' : '',
+          commentContent: campaignTargets.commentEnabled ? campaignTargets.commentEmojis.join(',') : '',
+          commentCount: BigInt(campaignTargets.commentEnabled ? campaignTargets.commentCount : 0)
+        };
+        
+        console.log('Sending to contract - Requirements:', accountRequirements);
+        console.log('Sending to contract - Actions:', campaignActions);
         
         const price = await publicClient.readContract({
           address: contractAddress,
           abi: CAMPAIGN_PAYMENTS_ABI,
           functionName: 'calculatePrice',
-          args: [
-            {
-              verifiedOnly: requirements.verifiedOnly || false,
-              minFollowers: BigInt(requirements.minFollowers || 0),
-              minUniqueViews28Days: BigInt(requirements.minUniqueViews28Days || 0),
-              accountLocation: requirements.accountLocation || 'all',
-              accountLanguage: requirements.accountLanguage || 'all'
-            },
-            {
-              followTarget: campaignTargets.followEnabled ? 'account' : '',
-              followCount: BigInt(campaignTargets.followEnabled ? campaignTargets.followCount : 0),
-              likeTargets: dummyTargets,
-              likeCountPerPost: BigInt(campaignTargets.likeEnabled ? campaignTargets.likeCountPerPost : 0)
-            }
-          ]
+          args: [accountRequirements, campaignActions]
         });
 
+        console.log('Calculated price from contract:', price, 'raw value');
+        console.log('Calculated price in USD:', Number(price) / 1e6);
         setCalculatedPrice(price);
       } catch (error) {
         console.error('Error calculating price:', error);
@@ -265,8 +292,12 @@ export function SimplifiedAdTargetingForm({
         const totalFollows = campaignTargets.followEnabled 
           ? campaignTargets.followCount 
           : 0;
+        const totalComments = campaignTargets.commentEnabled
+          ? campaignTargets.commentCount
+          : 0;
         const baseTotal = (totalLikes * contractData.baseLikePrice +
-                          totalFollows * contractData.baseFollowPrice);
+                          totalFollows * contractData.baseFollowPrice +
+                          totalComments * contractData.baseCommentPrice);
         setCalculatedPrice(BigInt(baseTotal));
       }
       setIsCalculating(false);
@@ -379,8 +410,8 @@ export function SimplifiedAdTargetingForm({
     }
 
     // Check that at least one action is enabled
-    if (!campaignTargets.followEnabled && !campaignTargets.likeEnabled) {
-      setPaymentError('Please enable at least one action (follows or likes)');
+    if (!campaignTargets.followEnabled && !campaignTargets.likeEnabled && !campaignTargets.commentEnabled) {
+      setPaymentError('Please enable at least one action (follows, likes, or comments)');
       return;
     }
     
@@ -408,6 +439,22 @@ export function SimplifiedAdTargetingForm({
       }
       if (campaignTargets.likeCountPerPost < 1) {
         setPaymentError('Like count per post must be at least 1');
+        return;
+      }
+    }
+    
+    // Validate emoji comment action if enabled
+    if (campaignTargets.commentEnabled) {
+      if (!campaignTargets.commentTarget.trim()) {
+        setPaymentError('Please provide a TikTok post URL for comments');
+        return;
+      }
+      if (campaignTargets.commentEmojis.length === 0) {
+        setPaymentError('Please select at least one emoji for comments');
+        return;
+      }
+      if (campaignTargets.commentCount < 1) {
+        setPaymentError('Comment count must be at least 1');
         return;
       }
     }
@@ -442,7 +489,10 @@ export function SimplifiedAdTargetingForm({
           likeUrls: campaignTargets.likeEnabled ? validLikeTargets : [],
           likeCountPerPost: campaignTargets.likeEnabled ? campaignTargets.likeCountPerPost : 0,
           followUrl: campaignTargets.followEnabled ? campaignTargets.followTarget : '',
-          followCount: campaignTargets.followEnabled ? campaignTargets.followCount : 0
+          followCount: campaignTargets.followEnabled ? campaignTargets.followCount : 0,
+          commentUrl: campaignTargets.commentEnabled ? campaignTargets.commentTarget : '',
+          commentEmojis: campaignTargets.commentEnabled ? campaignTargets.commentEmojis : [],
+          commentCount: campaignTargets.commentEnabled ? campaignTargets.commentCount : 0
         };
         
         const result = await PaymentFlowEmbeddedService.createCampaignWithPayment(
@@ -539,8 +589,7 @@ export function SimplifiedAdTargetingForm({
               </Label>
               <Input
                 id="min-followers"
-                type="number"
-                min="0"
+                type="text"
                 placeholder="500"
                 value={requirements.minFollowers || ''}
                 onChange={(e) => {
@@ -558,8 +607,7 @@ export function SimplifiedAdTargetingForm({
               </Label>
               <Input
                 id="min-views"
-                type="number"
-                min="0"
+                type="text"
                 placeholder="1000"
                 value={requirements.minUniqueViews28Days || ''}
                 onChange={(e) => {
@@ -655,13 +703,14 @@ export function SimplifiedAdTargetingForm({
                           setCampaignTargets(prev => ({ ...prev, followEnabled: checked as boolean }))
                         }
                       />
-                      <Label htmlFor="follow-toggle" className="text-base font-semibold cursor-pointer">
+                      <Label htmlFor="follow-toggle" className="text-base font-semibold cursor-pointer flex items-center gap-2">
+                        <UserPlus className="w-4 h-4" />
                         Follow
                       </Label>
                     </div>
                     {campaignTargets.followEnabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2 space-y-2">
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1 space-y-1">
                         <Label htmlFor="follow-target" className="text-sm font-medium">
                           Account URL
                         </Label>
@@ -693,20 +742,20 @@ export function SimplifiedAdTargetingForm({
                           <p className="text-sm text-red-500 mt-1">{urlErrors.follow}</p>
                         )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Label htmlFor="follow-count" className="text-sm font-medium">
                           Number of Follows
                         </Label>
                         <Input
                           id="follow-count"
-                          type="number"
+                          type="text"
                           value={campaignTargets.followCount}
                           onChange={(e) => {
                             const value = parseInt(e.target.value) || 0;
                             setCampaignTargets(prev => ({ ...prev, followCount: value }));
                           }}
-                          className="h-11"
-                          placeholder="e.g., 100"
+                          className="h-11 w-32"
+                          placeholder="100"
                         />
                       </div>
                     </div>
@@ -723,7 +772,8 @@ export function SimplifiedAdTargetingForm({
                           setCampaignTargets(prev => ({ ...prev, likeEnabled: checked as boolean }))
                         }
                       />
-                      <Label htmlFor="like-toggle" className="text-base font-semibold cursor-pointer">
+                      <Label htmlFor="like-toggle" className="text-base font-semibold cursor-pointer flex items-center gap-2">
+                        <Heart className="w-4 h-4" />
                         Like
                       </Label>
                     </div>
@@ -779,7 +829,7 @@ export function SimplifiedAdTargetingForm({
                               </Label>
                               <Input
                                 id="like-count"
-                                type="number"
+                                type="text"
                                 value={campaignTargets.likeCountPerPost}
                                 onChange={(e) => {
                                   const value = parseInt(e.target.value) || 0;
@@ -864,6 +914,91 @@ export function SimplifiedAdTargetingForm({
                           </Button>
                         </div>
                       </>
+                    )}
+                  </div>
+
+                  {/* Comment Action */}
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="emoji-comment-toggle"
+                        checked={campaignTargets.commentEnabled}
+                        onCheckedChange={(checked) =>
+                          setCampaignTargets(prev => ({ ...prev, commentEnabled: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="emoji-comment-toggle" className="text-base font-semibold cursor-pointer flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4" />
+                        Comments
+                      </Label>
+                    </div>
+                    {campaignTargets.commentEnabled && (
+                      <div className="space-y-3">
+                        {/* Target Post URL and Number aligned like the Like action */}
+                        <div className="flex items-end gap-4">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-sm font-medium">Post URL</Label>
+                            <Input
+                              type="url"
+                              placeholder="https://tiktok.com/@username/video/123456789"
+                              value={campaignTargets.commentTarget}
+                              onChange={(e) => {
+                                setCampaignTargets(prev => ({ ...prev, commentTarget: e.target.value }));
+                              }}
+                              className="font-mono text-base h-11"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="emoji-comment-count" className="text-sm font-medium">
+                              Number of Comments
+                            </Label>
+                            <Input
+                              id="emoji-comment-count"
+                              type="text"
+                              value={campaignTargets.commentCount}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 0;
+                                setCampaignTargets(prev => ({ ...prev, commentCount: value }));
+                              }}
+                              className="h-11 w-32"
+                              placeholder="50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Emoji Selection */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Select Emojis (will be randomly distributed)</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {['🔥', '😍', '💯', '🤩', '👏', '❤️', '😂', '🙌', '💪', '✨', '🎉', '🚀'].map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => {
+                                  setCampaignTargets(prev => ({
+                                    ...prev,
+                                    commentEmojis: prev.commentEmojis.includes(emoji)
+                                      ? prev.commentEmojis.filter(e => e !== emoji)
+                                      : [...prev.commentEmojis, emoji]
+                                  }));
+                                }}
+                                className={`text-2xl p-2 rounded border-2 transition-all ${
+                                  campaignTargets.commentEmojis.includes(emoji)
+                                    ? 'border-primary bg-primary/10'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                          {campaignTargets.commentEmojis.length > 0 && (
+                            <p className="text-sm text-muted-foreground">
+                              Selected: {campaignTargets.commentEmojis.join(' ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </>
@@ -966,9 +1101,10 @@ export function SimplifiedAdTargetingForm({
             onClick={handleSave}
             disabled={
               isProcessingPayment ||
-              (!campaignTargets.followEnabled && !campaignTargets.likeEnabled) ||  // At least one action
+              (!campaignTargets.followEnabled && !campaignTargets.likeEnabled && !campaignTargets.commentEnabled) ||  // At least one action
               (campaignTargets.likeEnabled && campaignTargets.likeTargets.filter(url => url.trim()).length === 0) ||
               (campaignTargets.followEnabled && !campaignTargets.followTarget.trim()) ||
+              (campaignTargets.commentEnabled && (!campaignTargets.commentTarget.trim() || campaignTargets.commentEmojis.length === 0)) ||
               contractData.loading ||
               isCalculating ||
               (campaignTargets.followEnabled && !!urlErrors.follow) ||

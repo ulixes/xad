@@ -10,9 +10,9 @@ import { parseTargetsFromBlockchain } from '../utils/targetEncoder'
 
 const USDC_DECIMALS = 6
 
-// CampaignPaymentReceived event ABI - updated with new structure including follow/like counts
+// CampaignPaymentReceived event ABI - updated with new structure including follow/like/comment counts
 const CAMPAIGN_PAYMENT_EVENT_ABI = parseAbiItem(
-  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp, uint256 totalFollows, uint256 totalLikes)'
+  'event CampaignPaymentReceived(string indexed campaignId, address indexed sender, uint256 amount, uint256 timestamp, uint256 totalFollows, uint256 totalLikes, uint256 totalComments)'
 )
 
 // Contract ABI for depositForCampaignWithPermit function - NEW STRUCTURE
@@ -40,7 +40,10 @@ const DEPOSIT_FOR_CAMPAIGN_ABI = [
           { name: 'followTarget', type: 'string' },  // Encoded URL
           { name: 'followCount', type: 'uint256' },
           { name: 'likeTargets', type: 'string[]' },  // Array of encoded URLs
-          { name: 'likeCountPerPost', type: 'uint256' }
+          { name: 'likeCountPerPost', type: 'uint256' },
+          { name: 'commentTarget', type: 'string' },  // Encoded URL
+          { name: 'commentContent', type: 'string' },  // Comment content (e.g., emojis)
+          { name: 'commentCount', type: 'uint256' }
         ]
       },
       { name: 'deadline', type: 'uint256' },
@@ -169,6 +172,9 @@ export class WebhookListenerService {
             followCount: bigint
             likeTargets: string[]  // Array of encoded URLs
             likeCountPerPost: bigint
+            commentTarget: string  // Encoded URL
+            commentContent: string  // Comment content
+            commentCount: bigint
           }
           
           console.log('[WEBHOOK] Decoded campaign payment:', {
@@ -183,7 +189,9 @@ export class WebhookListenerService {
             actions: {
               followCount: actions.followCount.toString(),
               likeCount: actions.likeCountPerPost.toString(),
-              likeTargetsCount: actions.likeTargets.length
+              likeTargetsCount: actions.likeTargets.length,
+              commentCount: actions.commentCount.toString(),
+              commentContent: actions.commentContent || 'None'
             },
             from: tx.from,
             hash: tx.hash
@@ -262,7 +270,10 @@ export class WebhookListenerService {
       followTarget: string,  // Encoded URL
       followCount: bigint,
       likeTargets: string[],  // Array of encoded URLs
-      likeCountPerPost: bigint
+      likeCountPerPost: bigint,
+      commentTarget: string,  // Encoded URL
+      commentContent: string,  // Comment content
+      commentCount: bigint
     }
   }, db: any) {
     const { campaignId, amount, senderAddress, transactionHash, blockNumber, timestamp, requirements, actions } = data
@@ -292,12 +303,15 @@ export class WebhookListenerService {
       // Decode URLs
       const followUrl = decodeUrl(actions.followTarget)
       const likeUrls = actions.likeTargets.map(url => decodeUrl(url))
+      const commentUrl = decodeUrl(actions.commentTarget)
       
       console.log('[WEBHOOK] Decoded URLs from contract:', {
         followUrl: followUrl ? 'Found' : 'None',
         likeUrlsCount: likeUrls.filter(u => u).length,
+        commentUrl: commentUrl ? 'Found' : 'None',
         followCount: actions.followCount.toString(),
-        likeCountPerPost: actions.likeCountPerPost.toString()
+        likeCountPerPost: actions.likeCountPerPost.toString(),
+        commentCount: actions.commentCount.toString()
       })
       
       // Create new campaign from payment data
@@ -309,7 +323,8 @@ export class WebhookListenerService {
         requirements,
         actions,
         followUrl,
-        likeUrls
+        likeUrls,
+        commentUrl
       }, db)
       
       if (!campaign) {
@@ -383,12 +398,16 @@ export class WebhookListenerService {
       followTarget: string,
       followCount: bigint,
       likeTargets: string[],
-      likeCountPerPost: bigint
+      likeCountPerPost: bigint,
+      commentTarget: string,
+      commentContent: string,
+      commentCount: bigint
     },
     followUrl: string,
-    likeUrls: string[]
+    likeUrls: string[],
+    commentUrl: string
   }, db: any) {
-    const { campaignId, amount, senderAddress, requirements, actions, followUrl, likeUrls } = data
+    const { campaignId, amount, senderAddress, requirements, actions, followUrl, likeUrls, commentUrl } = data
     
     console.log('[WEBHOOK] Creating new campaign from payment:', {
       campaignId,
@@ -485,6 +504,22 @@ export class WebhookListenerService {
             })
           }
         }
+      }
+      
+      // Add comment action if requested
+      if (commentUrl && Number(actions.commentCount) > 0) {
+        campaignActionsList.push({
+          campaignId: campaign.id,
+          actionType: 'comment',
+          target: commentUrl,
+          pricePerAction: 15, // $0.15 in cents
+          maxVolume: Number(actions.commentCount),
+          currentVolume: 0,
+          isActive: false,
+          metadata: {
+            commentContent: actions.commentContent // Store emoji selection or other content
+          }
+        })
       }
       
       const defaultActions = campaignActionsList

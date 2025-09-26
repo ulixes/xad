@@ -27,24 +27,9 @@ export async function handleExecuteAction(payload: ActionPayload): Promise<{ suc
     accountHandle
   });
 
-  // Block comment actions - they are disabled for now
+  // Log comment action for debugging
   if (actionType === 'comment') {
-    console.log('Comment actions are currently disabled');
-    
-    // Send error message back to sidepanel
-    await browser.runtime.sendMessage({
-      type: 'actionCompleted',
-      payload: {
-        actionId,
-        success: false,
-        error: 'Comment actions are temporarily disabled'
-      }
-    });
-    
-    return { 
-      success: false, 
-      error: 'Comment actions are temporarily disabled' 
-    };
+    console.log('Processing comment action on TikTok post:', url);
   }
 
   try {

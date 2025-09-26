@@ -26,6 +26,7 @@ contract CampaignPayments {
     // Base prices in USDC (6 decimals) - 30% reduction for affordability
     uint256 public baseLikePrice = 210000;    // $0.21 per like (reduced 30% from $0.30)
     uint256 public baseFollowPrice = 420000;  // $0.42 per follow (reduced 30% from $0.60)
+    uint256 public baseCommentPrice = 105000;  // $0.105 per comment (50% of like price)
     uint256 public constant BASE_PRECISION = 1000;       // For multiplier calculations
     
     // Account quality multipliers (1000 = 1.0x) - configurable by owner
@@ -63,6 +64,9 @@ contract CampaignPayments {
         uint256 followCount;      // Number of follows requested
         string[] likeTargets;     // Array of post URLs for likes
         uint256 likeCountPerPost;  // Same number of likes for each post
+        string commentTarget; // Single post URL for comments
+        string commentContent; // Comment content (could be emojis, text, etc.)
+        uint256 commentCount; // Number of comments
         uint256 totalAmount;      // Total USDC paid
         address depositor;        // Who paid for the campaign
     }
@@ -77,7 +81,8 @@ contract CampaignPayments {
         uint256 amount,
         uint256 timestamp,
         uint256 totalFollows,
-        uint256 totalLikes
+        uint256 totalLikes,
+        uint256 totalComments
     );
     
     event CampaignRequirementsSet(
@@ -91,7 +96,8 @@ contract CampaignPayments {
     
     event BasePricesUpdated(
         uint256 likePrice,
-        uint256 followPrice
+        uint256 followPrice,
+        uint256 commentPrice
     );
     
     event VerifiedMultiplierUpdated(uint256 multiplier);
@@ -199,11 +205,12 @@ contract CampaignPayments {
     }
     
     // Owner functions to update configuration
-    function updateBasePrices(uint256 _likePrice, uint256 _followPrice) external onlyOwner {
-        if (_likePrice == 0 || _followPrice == 0) revert InvalidAmount();
+    function updateBasePrices(uint256 _likePrice, uint256 _followPrice, uint256 _commentPrice) external onlyOwner {
+        if (_likePrice == 0 || _followPrice == 0 || _commentPrice == 0) revert InvalidAmount();
         baseLikePrice = _likePrice;
         baseFollowPrice = _followPrice;
-        emit BasePricesUpdated(_likePrice, _followPrice);
+        baseCommentPrice = _commentPrice;
+        emit BasePricesUpdated(_likePrice, _followPrice, _commentPrice);
     }
     
     function updateVerifiedMultiplier(uint256 _multiplier) external onlyOwner {
@@ -322,6 +329,9 @@ contract CampaignPayments {
         uint256 followCount;       // Number of follows requested
         string[] likeTargets;      // Array of encoded post identifiers (obfuscated for privacy)
         uint256 likeCountPerPost;  // Same number of likes for each post
+        string commentTarget; // Encoded post identifier for comments
+        string commentContent; // Comment content (could be emojis, text, etc.)
+        uint256 commentCount; // Number of comments
     }
     
     function calculatePrice(
@@ -383,12 +393,13 @@ contract CampaignPayments {
         // Calculate prices with multipliers applied (5 multipliers now)
         uint256 adjustedLikePrice = (baseLikePrice * combinedMultiplier) / (BASE_PRECISION ** 5);
         uint256 adjustedFollowPrice = (baseFollowPrice * combinedMultiplier) / (BASE_PRECISION ** 5);
+        uint256 adjustedCommentPrice = (baseCommentPrice * combinedMultiplier) / (BASE_PRECISION ** 5);
         
         // Calculate total likes requested
         uint256 totalLikes = actions.likeTargets.length * actions.likeCountPerPost;
         
         // Calculate total price
-        return (totalLikes * adjustedLikePrice) + (actions.followCount * adjustedFollowPrice);
+        return (totalLikes * adjustedLikePrice) + (actions.followCount * adjustedFollowPrice) + (actions.commentCount * adjustedCommentPrice);
     }
     
     function depositForCampaignWithPermit(
@@ -402,8 +413,8 @@ contract CampaignPayments {
     ) external {
         if (bytes(campaignId).length == 0) revert InvalidCampaignId();
         
-        // Must have at least one action (follows OR likes)
-        if (actions.likeTargets.length == 0 && actions.followCount == 0) revert InvalidTargets();
+        // Must have at least one action (follows OR likes OR comments)
+        if (actions.likeTargets.length == 0 && actions.followCount == 0 && actions.commentCount == 0) revert InvalidTargets();
         
         // If follows are specified, enforce minimum
         if (actions.followCount > 0 && actions.followCount < MIN_FOLLOW_COUNT) {
@@ -429,6 +440,9 @@ contract CampaignPayments {
         campaign.followCount = actions.followCount;
         campaign.likeTargets = actions.likeTargets;
         campaign.likeCountPerPost = actions.likeCountPerPost;
+        campaign.commentTarget = actions.commentTarget;
+        campaign.commentContent = actions.commentContent;
+        campaign.commentCount = actions.commentCount;
         campaign.totalAmount = requiredAmount;
         campaign.depositor = msg.sender;
         
@@ -474,7 +488,8 @@ contract CampaignPayments {
             requiredAmount,
             block.timestamp,
             actions.followCount,
-            totalLikes
+            totalLikes,
+            actions.commentCount
         );
     }
     
@@ -484,6 +499,9 @@ contract CampaignPayments {
         uint256 followCount,
         string[] memory likeTargets,
         uint256 likeCountPerPost,
+        string memory commentTarget,
+        string memory commentContent,
+        uint256 commentCount,
         uint256 totalAmount,
         address depositor
     ) {
@@ -493,6 +511,9 @@ contract CampaignPayments {
             campaign.followCount,
             campaign.likeTargets,
             campaign.likeCountPerPost,
+            campaign.commentTarget,
+            campaign.commentContent,
+            campaign.commentCount,
             campaign.totalAmount,
             campaign.depositor
         );
