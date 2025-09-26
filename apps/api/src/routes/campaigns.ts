@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { Env } from '../types';
-import { campaigns, payments, campaignActions, actions, actionRuns, socialAccounts, brands } from '../db/schema';
+import { campaigns, payments, campaignActions, actionRuns, socialAccounts, brands } from '../db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { brandAuthMiddleware, requireBrandWalletOwnership } from '../middleware/brandAuth';
 import { getContractConfig } from '../config/contracts';
@@ -77,26 +77,6 @@ campaignRoutes.post('/:id/activate', async (c) => {
       .set({ isActive: true })
       .where(eq(campaignActions.campaignId, campaignId));
 
-    // Create trackable actions for the extension
-    const campaignActionsData = await db.select().from(campaignActions)
-      .where(eq(campaignActions.campaignId, campaignId));
-
-    for (const campaignAction of campaignActionsData) {
-      await db.insert(actions).values({
-        id: campaignAction.id, // Use same ID to maintain relationship
-        platform: updatedCampaign.platform,
-        actionType: campaignAction.actionType,
-        target: campaignAction.target,
-        title: `${updatedCampaign.platform} ${campaignAction.actionType}`,
-        description: `${campaignAction.actionType} on ${updatedCampaign.platform}`,
-        price: campaignAction.pricePerAction,
-        maxVolume: campaignAction.maxVolume,
-        currentVolume: 0,
-        eligibilityCriteria: updatedCampaign.targetingRules,
-        isActive: true,
-        expiresAt: updatedCampaign.expiresAt
-      });
-    }
 
     return c.json({ 
       success: true, 
@@ -113,46 +93,6 @@ campaignRoutes.post('/:id/activate', async (c) => {
   }
 });
 
-// Get available actions for extension users
-campaignRoutes.get('/actions/available', async (c) => {
-  const db = c.get('db');
-  const userId = c.req.query('userId');
-  const platform = c.req.query('platform');
-
-  try {
-    // Get user's social accounts for eligibility checking
-    let userSocialAccounts: any[] = [];
-    if (userId) {
-      userSocialAccounts = await db.select().from(socialAccounts)
-        .where(eq(socialAccounts.userId, userId));
-    }
-
-    // Get available actions that still have remaining volume
-    const baseQuery = db.select().from(actions)
-      .where(eq(actions.isActive, true))
-      .orderBy(desc(actions.price));
-
-    let availableActions;
-    if (platform) {
-      availableActions = await baseQuery.where(eq(actions.platform, platform as any));
-    } else {
-      availableActions = await baseQuery;
-    }
-
-    return c.json({ 
-      success: true, 
-      actions: availableActions,
-      userAccounts: userSocialAccounts 
-    });
-
-  } catch (error) {
-    console.error('Available actions fetch error:', error);
-    return c.json({ 
-      success: false, 
-      error: 'Failed to fetch available actions' 
-    }, 500);
-  }
-});
 
 // Get campaigns for authenticated brand (no wallet param needed - uses token)
 campaignRoutes.get('/my-campaigns', brandAuthMiddleware, async (c) => {
@@ -281,58 +221,5 @@ campaignRoutes.get('/brand/:walletAddress', brandAuthMiddleware, requireBrandWal
   }
 });
 
-// Complete an action (for extension users)
-campaignRoutes.post('/actions/:id/complete', async (c) => {
-  const db = c.get('db');
-  const actionId = c.req.param('id');
-  const body = await c.req.json();
-
-  try {
-    // Get action
-    const [action] = await db.select().from(actions)
-      .where(eq(actions.id, actionId))
-      .limit(1);
-
-    if (!action) {
-      return c.json({ success: false, error: 'Action not found' }, 404);
-    }
-
-    if (action.currentVolume >= action.maxVolume) {
-      return c.json({ success: false, error: 'Action volume limit reached' }, 400);
-    }
-
-    // Create action run (completion record)
-    const [actionRun] = await db.insert(actionRuns).values({
-      actionId: actionId,
-      userId: body.userId || 'anonymous',
-      socialAccountId: body.socialAccountId || 'anonymous',
-      status: 'dom_verified',
-      completedAt: new Date(),
-    }).returning();
-
-    // Update action volume and deactivate if fully completed
-    const newVolume = action.currentVolume + 1;
-    await db.update(actions)
-      .set({ 
-        currentVolume: newVolume,
-        isActive: newVolume < action.maxVolume,
-        updatedAt: new Date()
-      })
-      .where(eq(actions.id, actionId));
-
-    return c.json({ 
-      success: true, 
-      actionRun,
-      message: 'Action completed successfully' 
-    });
-
-  } catch (error) {
-    console.error('Action completion error:', error);
-    return c.json({ 
-      success: false, 
-      error: 'Failed to complete action' 
-    }, 500);
-  }
-});
 
 export default campaignRoutes;

@@ -1,13 +1,19 @@
 import type { Context, Next } from 'hono'
-import { ParaAuthService } from '../services/paraAuth'
+import { ParaAuthService, type ParaAuthSession } from '../services/paraAuth'
 import { ConfigManager } from '../config'
 import type { Env } from '../types'
 
+// Extend Hono context to include Para auth session
+declare module 'hono' {
+  interface ContextVariableMap {
+    paraSession: ParaAuthSession
+  }
+}
+
 /**
- * User authentication middleware - for extension users
- * Verifies Para JWT token for regular users (not brands)
+ * Para authentication middleware - verifies Para JWT tokens
  */
-export async function userAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+export async function paraAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   try {
     const config = ConfigManager.fromContext(c)
     const db = c.get('db')
@@ -34,12 +40,12 @@ export async function userAuthMiddleware(c: Context<{ Bindings: Env }>, next: Ne
     // Get or create user session
     const session = await ParaAuthService.getOrCreateUserFromPara(payload, db, config)
     
-    // Set paraSession for use in protected routes
+    // Add session to context for use in protected routes
     c.set('paraSession', session)
     
     await next()
   } catch (error) {
-    console.error('User auth middleware error:', error)
+    console.error('Para auth middleware error:', error)
     return c.json({ 
       success: false, 
       error: 'Authentication failed' 
@@ -48,9 +54,9 @@ export async function userAuthMiddleware(c: Context<{ Bindings: Env }>, next: Ne
 }
 
 /**
- * Optional user authentication - for endpoints that work with or without auth
+ * Optional Para authentication middleware - doesn't block if no auth provided
  */
-export async function optionalUserAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+export async function optionalParaAuthMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   try {
     const config = ConfigManager.fromContext(c)
     const db = c.get('db')
@@ -67,7 +73,7 @@ export async function optionalUserAuthMiddleware(c: Context<{ Bindings: Env }>, 
     
     await next()
   } catch (error) {
-    console.error('Optional user auth middleware error:', error)
+    console.error('Optional Para auth middleware error:', error)
     // Continue without auth if there's an error
     await next()
   }

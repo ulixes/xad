@@ -19,15 +19,14 @@ const updateUserSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// Get or create current user using Privy authentication
+// Get or create current user using Para authentication
 usersRouter.post("/current", userAuthMiddleware, async (c) => {
   const db = c.get("db");
-  const privySession = c.get("privySession");
-  const authSession = c.get("authSession");
+  const paraSession = c.get("paraSession");
 
   try {
-    // Get user ID from either Privy or old JWT session
-    const userId = privySession?.dbUserId || authSession?.userId;
+    // Get user ID from Para session
+    const userId = paraSession?.dbUserId;
     
     if (!userId) {
       return c.json({ error: "User ID not found in session" }, 400);

@@ -16,7 +16,7 @@ class APIClient {
     this.baseUrl = baseUrl;
   }
 
-  // Set the function to get Privy access token
+  // Set the function to get Para JWT access token
   setAccessTokenGetter(getter: () => Promise<string | null>) {
     this.getAccessToken = getter;
   }
@@ -27,7 +27,7 @@ class APIClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
-    // Get Privy access token if available
+    // Get Para JWT token if available
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'ngrok-skip-browser-warning': 'true', // Skip ngrok warning page
@@ -41,7 +41,7 @@ class APIClient {
           headers['Authorization'] = `Bearer ${token}`;
         }
       } catch (error) {
-        console.error('Failed to get access token:', error);
+        console.error('Failed to get Para JWT token:', error);
       }
     }
     
@@ -63,7 +63,7 @@ class APIClient {
   // Get or create user with current authentication
   async getOrCreateCurrentUser(): Promise<User | null> {
     try {
-      // This endpoint will use the Privy token to identify the user
+      // This endpoint will use the Para JWT token to identify the user
       return await this.request<User>('/api/users/current', {
         method: 'POST',
       });

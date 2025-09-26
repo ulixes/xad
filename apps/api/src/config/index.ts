@@ -18,6 +18,18 @@ export interface Config {
     serviceName: string;
     version: string;
   };
+  // Para configuration
+  para?: {
+    environment: 'SANDBOX' | 'BETA' | 'PROD';
+    apiKey?: string;
+    secretKey?: string;
+  };
+  // Keep Privy config for backward compatibility during migration
+  privy?: {
+    appId: string;
+    appSecret: string;
+    verificationKey?: string;
+  };
 }
 
 export class ConfigManager {
@@ -64,6 +76,18 @@ export class ConfigManager {
         serviceName: "xad-api",
         version: "1.0.0",
       },
+      // Para configuration
+      para: env.PARA_ENVIRONMENT ? {
+        environment: env.PARA_ENVIRONMENT as 'SANDBOX' | 'BETA' | 'PROD',
+        apiKey: env.PARA_API_KEY,
+        secretKey: env.PARA_SECRET_KEY,
+      } : undefined,
+      // Keep Privy config for backward compatibility
+      privy: env.PRIVY_APP_ID ? {
+        appId: env.PRIVY_APP_ID,
+        appSecret: env.PRIVY_APP_SECRET || '',
+        verificationKey: env.PRIVY_VERIFICATION_KEY,
+      } : undefined,
     };
 
     return this.config;

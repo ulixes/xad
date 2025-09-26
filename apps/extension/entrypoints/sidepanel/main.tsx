@@ -5,9 +5,21 @@ import { Home, ActionListPage, WithdrawPage, ActionHistory } from '@xad/ui';
 import './style.css';
 import { Platform, SocialAccount, User, UserStatus, EligibleAction, ActionType } from '@/src/types';
 import { adaptSocialAccountsForUI } from '@/src/utils/adapters';
-import { PrivyProvider, usePrivy, useWallets, useCreateWallet } from '@privy-io/react-auth';
+import { 
+  ParaProvider, 
+  ParaModal,
+  useModal,
+  useAccount,
+  useWallet,
+  useIssueJwt,
+  useLogout,
+  AuthLayout,
+  OAuthMethod
+} from '@getpara/react-sdk';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { apiClient } from '@/src/services/api';
 import { ActionRunStatus } from '@/src/types/actionRun';
+import { chromeStorageOverrides } from '@/src/services/chromeStorage';
 
 // Ensure Buffer is available for SDKs that expect Node globals
 (window as any).Buffer = (window as any).Buffer || Buffer;
@@ -15,10 +27,17 @@ import { ActionRunStatus } from '@/src/types/actionRun';
 type ViewState = 'home' | 'actions' | 'withdraw';
 type ActionStatus = 'pending' | 'loading' | 'completed' | 'error';
 
+// Create Query Client for React Query
+const queryClient = new QueryClient();
+
 const AppContent = () => {
-  const { authenticated, login, logout, user: privyUser, getAccessToken } = usePrivy();
-  const { wallets } = useWallets();
-  const { createWallet } = useCreateWallet();
+  // Para hooks
+  const { openModal } = useModal();
+  const account = useAccount();
+  const { data: wallet } = useWallet();
+  const { issueJwtAsync } = useIssueJwt();
+  const { logout } = useLogout();
+
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -34,46 +53,49 @@ const AppContent = () => {
   const [loadingActions, setLoadingActions] = useState(false);
   const [actionStatuses, setActionStatuses] = useState<Record<string, ActionStatus>>({});
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
-  const [actionRunIds, setActionRunIds] = useState<Record<string, string>>({});  // Map action ID to action run ID
-  const actionRunIdsRef = useRef<Record<string, string>>({});  // Ref for immediate access to action run IDs
-  const [activeActionId, setActiveActionId] = useState<string | null>(null); // Track currently active action
+  const [actionRunIds, setActionRunIds] = useState<Record<string, string>>({});
+  const actionRunIdsRef = useRef<Record<string, string>>({});
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
   
   // Withdraw page state
   const [actionHistory, setActionHistory] = useState<ActionHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Set up API client with Privy token getter
+  // Set up API client with Para JWT token getter
   useEffect(() => {
     apiClient.setAccessTokenGetter(async () => {
       try {
-        if (authenticated) {
-          return await getAccessToken();
+        if (account.isConnected) {
+          const { token } = await issueJwtAsync();
+          return token;
         }
       } catch (error) {
-        console.error('Failed to get Privy access token:', error);
+        console.error('Failed to get Para JWT token:', error);
       }
       return null;
     });
-  }, [authenticated, getAccessToken]);
+  }, [account.isConnected, issueJwtAsync]);
 
-  // Check wallet connection and load user data when Privy auth changes
+  // Check wallet connection and load user data when Para auth changes
   useEffect(() => {
     const initialize = async () => {
       try {
-        if (authenticated && wallets.length > 0) {
-          const address = wallets[0].address;
+        if (account.isConnected && wallet) {
+          const address = wallet.address;
           setWalletAddress(address);
           
-          // Get or create user using Privy authentication
+          // Get or create user using Para authentication
           const userData = await apiClient.getOrCreateCurrentUser();
-          setUser(userData);
-          setSocialAccounts(userData.socialAccounts || []);
-          
-          // Fetch eligible actions for each account
-          if (userData.socialAccounts) {
-            await fetchActionsForAccounts(userData.socialAccounts);
+          if (userData) {
+            setUser(userData);
+            setSocialAccounts(userData.socialAccounts || []);
+            
+            // Fetch eligible actions for each account
+            if (userData.socialAccounts) {
+              await fetchActionsForAccounts(userData.socialAccounts);
+            }
           }
-        } else if (!authenticated) {
+        } else if (!account.isConnected) {
           setWalletAddress(null);
           setUser(null);
           setSocialAccounts([]);
@@ -85,31 +107,7 @@ const AppContent = () => {
       }
     };
     initialize();
-  }, [authenticated, wallets]);
-
-  // Function to fetch eligible actions for accounts
-  const fetchActionsForAccounts = async (accounts: SocialAccount[]) => {
-    const actionsMap: Record<string, number> = {};
-    
-    for (const account of accounts) {
-      // Skip accounts with undefined or invalid IDs
-      if (!account?.id) {
-        console.warn('Skipping account with undefined ID:', account);
-        continue;
-      }
-      
-      try {
-        const response = await apiClient.getEligibleActions(account.id);
-        // Use the summary for total available actions (not completed)
-        actionsMap[account.id] = response.summary?.available || 0;
-      } catch (error) {
-        console.error(`Failed to fetch actions for account ${account.id}:`, error);
-        actionsMap[account.id] = 0;
-      }
-    }
-    
-    setAccountActions(actionsMap);
-  };
+  }, [account.isConnected, wallet]);
 
   // Listen for messages from background script
   useEffect(() => {
@@ -137,20 +135,13 @@ const AppContent = () => {
         }
         
         // Update action run in database based on result
-        // Use ref for immediate access since state might not have updated yet
         const actionRunId = actionRunIdsRef.current[actionId] || actionRunIds[actionId];
-        console.log('[DEBUG] Looking for actionRunId for actionId:', actionId);
-        console.log('[DEBUG] Current actionRunIds state:', actionRunIds);
-        console.log('[DEBUG] Current actionRunIds ref:', actionRunIdsRef.current);
         console.log('[DEBUG] Found actionRunId:', actionRunId);
         
         if (actionRunId) {
           try {
             if (success) {
-              // Step 3: Update to dom_verified when DOM tracking confirms action
-              console.log('[DEBUG] Preparing to update action run to DOM_VERIFIED');
-              console.log('[DEBUG] ActionRunStatus.DOM_VERIFIED value:', ActionRunStatus.DOM_VERIFIED);
-              
+              // Update to dom_verified when DOM tracking confirms action
               const updatePayload = {
                 status: ActionRunStatus.DOM_VERIFIED,
                 proof: {
@@ -163,14 +154,9 @@ const AppContent = () => {
                 verificationData: details
               };
               
-              console.log('[DEBUG] Update payload:', JSON.stringify(updatePayload, null, 2));
-              console.log('[DEBUG] Calling apiClient.updateActionRun with:', actionRunId);
-              
+              console.log('[DEBUG] Updating action run to DOM_VERIFIED');
               const updateResult = await apiClient.updateActionRun(actionRunId, updatePayload);
-              console.log('[DEBUG] Update result from API:', updateResult);
-              
-              // TODO: Step 4: Backend will verify via CDP and update to cdp_verified/completed
-              // TODO: Step 5: Payment processing will update to paid
+              console.log('[DEBUG] Update result:', updateResult);
             } else {
               // Update to failed if action failed
               await apiClient.updateActionRun(actionRunId, {
@@ -184,12 +170,6 @@ const AppContent = () => {
             }
           } catch (updateError) {
             console.error('[DEBUG] Failed to update action run:', updateError);
-            console.error('[DEBUG] Error details:', {
-              message: updateError instanceof Error ? updateError.message : 'Unknown error',
-              stack: updateError instanceof Error ? updateError.stack : undefined,
-              actionRunId,
-              actionId
-            });
           }
         }
         
@@ -298,12 +278,217 @@ const AppContent = () => {
       }
     };
 
-    browser.runtime.onMessage.addListener(messageListener);
+    chrome.runtime.onMessage.addListener(messageListener);
     
     return () => {
-      browser.runtime.onMessage.removeListener(messageListener);
+      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, [socialAccounts, user, actionStatuses]);
+
+  // Function to fetch eligible actions for accounts
+  const fetchActionsForAccounts = async (accounts: SocialAccount[]) => {
+    const actionsMap: Record<string, number> = {};
+    
+    for (const account of accounts) {
+      if (!account?.id) {
+        console.warn('Skipping account with undefined ID:', account);
+        continue;
+      }
+      
+      try {
+        const response = await apiClient.getEligibleActions(account.id);
+        if (response?.actions) {
+          actionsMap[account.id] = response.actions.length;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch actions for account ${account.id}:`, error);
+        actionsMap[account.id] = 0;
+      }
+    }
+    
+    setAccountActions(actionsMap);
+  };
+
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    try {
+      openModal();
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await logout();
+      setWalletAddress(null);
+      setUser(null);
+      setSocialAccounts([]);
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+    }
+  };
+
+  const handleAddSocialAccount = async (platform: Platform, username: string) => {
+    console.log('Add social account:', { platform, username });
+    
+    if (!user) {
+      console.error('No user connected');
+      return;
+    }
+
+    try {
+      // Create social account in API
+      const newAccount = await apiClient.createSocialAccount({
+        userId: user.id,
+        platform: platform.toLowerCase() as any,
+        handle: username,
+      });
+
+      // Add to accounts list and mark as verifying
+      setSocialAccounts(prev => [...prev, newAccount]);
+      setVerifyingAccounts(prev => new Set(prev).add(newAccount.id));
+
+      // Send message to background script to collect data (TikTok only for now)
+      if (platform.toLowerCase() !== 'tiktok') {
+        console.error('Only TikTok platform is supported');
+        // Remove account from API and UI on error
+        await apiClient.deleteSocialAccount(newAccount.id);
+        setSocialAccounts(prev => prev.filter(acc => acc.id !== newAccount.id));
+        setVerifyingAccounts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(newAccount.id);
+          return newSet;
+        });
+        return;
+      }
+      
+      chrome.runtime.sendMessage({
+        type: 'addTikTokAccount',
+        handle: username,
+        accountId: newAccount.id,
+      });
+      
+      console.log('TikTok account created and verification started:', newAccount);
+    } catch (error) {
+      console.error('Failed to add social account:', error);
+    }
+  };
+
+  const handleStartVerification = async (accountId: string) => {
+    try {
+      setVerifyingAccounts(prev => new Set(prev).add(accountId));
+      await apiClient.startVerification(accountId);
+      
+      // Open new tab for manual verification
+      chrome.tabs.create({
+        url: 'chrome://extensions/?id=' + chrome.runtime.id,
+        active: false
+      }, (tab) => {
+        setTimeout(() => {
+          if (tab.id) chrome.tabs.remove(tab.id);
+        }, 1000);
+      });
+      
+      // Refresh user data after delay
+      setTimeout(async () => {
+        const userData = await apiClient.getOrCreateCurrentUser();
+        if (userData) {
+          setSocialAccounts(userData.socialAccounts || []);
+          await fetchActionsForAccounts(userData.socialAccounts || []);
+        }
+        setVerifyingAccounts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(accountId);
+          return newSet;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to start verification:', error);
+      setVerifyingAccounts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(accountId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleWithdrawRequest = async (amount: number, address: string) => {
+    console.log('Processing withdrawal:', { amount, address });
+    try {
+      await apiClient.createWithdrawal({
+        amount: Math.floor(amount),
+        walletAddress: address,
+      });
+      
+      const userData = await apiClient.getOrCreateCurrentUser();
+      if (userData) {
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Failed to create withdrawal:', error);
+      throw error;
+    }
+  };
+
+  // Navigation handlers
+  const handleActionClick = async (account: SocialAccount) => {
+    console.log('Account clicked:', account);
+    
+    // Navigate immediately for better UX
+    setSelectedAccount(account);
+    setCurrentView('actions');
+    setLoadingActions(true);
+    
+    // Clear previous actions while loading new ones
+    setEligibleActions([]);
+    setActionStatuses({});
+    
+    try {
+      const response = await apiClient.getEligibleActions(account.id);
+      
+      if (response && response.actions) {
+        // Store the enhanced actions with user run data
+        setEligibleActions(response.actions);
+        
+        // Update action statuses and run IDs based on user action runs
+        const statuses: Record<string, ActionStatus> = {};
+        const runIds: Record<string, string> = {};
+        
+        response.actions.forEach(action => {
+          if (action.userActionRun) {
+            console.log('Action run status from API:', {
+              actionId: action.id,
+              actionRunId: action.userActionRun.id,
+              dbStatus: action.userActionRun.status,
+              derivedUIStatus: deriveUIStatus(action.userActionRun.status)
+            });
+            statuses[action.id] = deriveUIStatus(action.userActionRun.status);
+            // Store the action run ID for future updates
+            runIds[action.id] = action.userActionRun.id;
+          } else {
+            statuses[action.id] = 'pending';
+          }
+        });
+        
+        setActionStatuses(statuses);
+        setActionRunIds(runIds);
+        // Also update ref for immediate access
+        actionRunIdsRef.current = runIds;
+      } else {
+        console.error('Invalid response format:', response);
+        setEligibleActions([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch eligible actions:', error);
+      // Show empty state on error
+      setEligibleActions([]);
+    } finally {
+      setLoadingActions(false);
+    }
+  };
 
   // Derive UI status from action run status
   const deriveUIStatus = (actionRunStatus: string): ActionStatus => {
@@ -322,195 +507,59 @@ const AppContent = () => {
     }
   };
 
-  // Transform eligible actions to ActionListPage format
-  const transformActionsForUI = (actions: EligibleAction[]) => {
-    return actions.map(action => ({
-      id: action.id,
-      type: action.actionType as any, // Map ActionType enum to UI action types
-      status: (actionStatuses[action.id] || 'pending') as ActionStatus,
-      url: action.target,
-      payment: action.price / 100, // Convert cents to dollars
-      platform: (action.platform || selectedAccount?.platform || 'instagram').toLowerCase() as any,
-      errorMessage: actionErrors[action.id], // Include error message if exists
-      actionRunId: action.userActionRun?.id,
-      isResumable: ['pending_verification', 'dom_verified', 'cdp_verified'].includes(action.userActionRun?.status || '')
-    }));
+  const handleNavigateHome = () => {
+    setCurrentView('home');
+    setSelectedAccount(null);
+    setEligibleActions([]);
   };
 
-  // Fetch and transform action runs for withdraw page
-  const fetchActionHistory = async () => {
-    if (!user) return;
-    
+  const handleNavigateWithdraw = async () => {
+    setCurrentView('withdraw');
     setLoadingHistory(true);
     try {
-      const actionRuns = await apiClient.getUserActionRuns(user.id);
-      
-      // Transform action runs to ActionHistory format
-      const history: ActionHistory[] = actionRuns.map(run => {
-        // Calculate days/hours remaining for pending actions
-        const now = new Date();
-        const completedAt = run.completedAt ? new Date(run.completedAt) : new Date(run.createdAt);
-        const verificationEndDate = new Date(completedAt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const timeRemaining = verificationEndDate.getTime() - now.getTime();
-        const daysRemaining = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
-        const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
-        
-        // Map database status to UI status
-        let uiStatus: 'pending' | 'verified' | 'failed';
-        if (run.status === ActionRunStatus.FAILED) {
-          uiStatus = 'failed';
-        } else if (
-          run.status === ActionRunStatus.DOM_VERIFIED || 
-          run.status === ActionRunStatus.CDP_VERIFIED || 
-          run.status === ActionRunStatus.COMPLETED ||
-          run.status === ActionRunStatus.PAID
-        ) {
-          // If more than 7 days have passed, it's verified
-          if (timeRemaining <= 0) {
-            uiStatus = 'verified';
-          } else {
-            uiStatus = 'pending';
-          }
-        } else {
-          uiStatus = 'pending';
-        }
-        
-        return {
-          id: run.id,
-          type: (run.action?.actionType?.toLowerCase() || 'like') as any,
-          status: uiStatus,
-          url: run.action?.target || '',
-          payment: (run.rewardAmount || 0) / 100, // Convert cents to dollars
-          platform: (run.action?.platform?.toLowerCase() || 'instagram') as any,
-          completedAt: completedAt,
-          daysRemaining: uiStatus === 'pending' && daysRemaining > 0 ? daysRemaining : undefined,
-          hoursRemaining: uiStatus === 'pending' && hoursRemaining < 24 && hoursRemaining > 0 ? hoursRemaining : undefined,
-        };
-      });
-      
+      const withdrawals = await apiClient.getUserWithdrawals();
+      const history = withdrawals.map(w => ({
+        date: new Date(w.createdAt).toLocaleDateString(),
+        amount: w.amount,
+        status: w.status as 'pending' | 'completed' | 'failed',
+        transactionHash: w.transactionHash
+      }));
       setActionHistory(history);
     } catch (error) {
-      console.error('Failed to fetch action history:', error);
+      console.error('Failed to fetch withdrawal history:', error);
+      setActionHistory([]);
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  // Calculate pending and available earnings from action runs
-  const [pendingEarnings, setPendingEarnings] = useState(0);
-  const [availableEarnings, setAvailableEarnings] = useState(0);
-
-  useEffect(() => {
-    const calculateEarnings = async () => {
-      if (!user) return;
-      
-      try {
-        const actionRuns = await apiClient.getUserActionRuns(user.id);
-        
-        let pending = 0;
-        let available = 0;
-        const now = new Date();
-        
-        actionRuns.forEach(run => {
-          // Skip failed runs
-          if (run.status === ActionRunStatus.FAILED) return;
-          
-          // Skip already paid runs
-          if (run.status === ActionRunStatus.PAID) return;
-          
-          const amount = (run.rewardAmount || 0) / 100; // Convert cents to dollars
-          const completedAt = run.completedAt ? new Date(run.completedAt) : new Date(run.createdAt);
-          const daysSinceCompletion = (now.getTime() - completedAt.getTime()) / (24 * 60 * 60 * 1000);
-          
-          // Check if action is verified (any of these statuses means action was completed successfully)
-          const isVerified = (
-            run.status === ActionRunStatus.DOM_VERIFIED || 
-            run.status === ActionRunStatus.CDP_VERIFIED || 
-            run.status === ActionRunStatus.COMPLETED
-          );
-          
-          if (isVerified) {
-            // If more than 7 days have passed, it's available for cashout
-            if (daysSinceCompletion >= 7) {
-              available += amount;
-            } else {
-              // Still in 7-day verification period
-              pending += amount;
-            }
-          }
-          // PENDING_VERIFICATION actions are not counted as they haven't been completed yet
-        });
-        
-        setPendingEarnings(pending);
-        setAvailableEarnings(available);
-      } catch (error) {
-        console.error('Failed to calculate earnings:', error);
-      }
-    };
-    
-    if (user) {
-      calculateEarnings();
-    }
-  }, [user]);
-
-  // Render withdraw page
-  if (currentView === 'withdraw') {
+  if (isLoading) {
     return (
-      <WithdrawPage
-        availableEarnings={availableEarnings}
-        actionHistory={actionHistory}
-        onBack={() => {
-          setCurrentView('home');
-          setActionHistory([]);
-        }}
-        onCashOut={async () => {
-          console.log('Processing withdrawal...');
-          
-          // Calculate total verified amount
-          const totalVerified = actionHistory
-            .filter(a => a.status === 'verified')
-            .reduce((sum, a) => sum + a.payment, 0);
-          
-          if (totalVerified >= 5 && user) {
-            try {
-              // Process the withdrawal through the API (with Privy auth)
-              const result = await apiClient.processWithdrawal(user.id, totalVerified);
-              
-              console.log('Withdrawal result:', result);
-              
-              if (result.success) {
-                alert(`Withdrawal of $${result.amount.toFixed(2)} successfully initiated!`);
-                
-                // Navigate back to home
-                setCurrentView('home');
-                setActionHistory([]);
-                
-                // Refresh user data to update balance
-                const updatedUser = await apiClient.getUserByWallet(walletAddress!);
-                if (updatedUser) {
-                  setUser(updatedUser);
-                  
-                  // Refresh social accounts and eligible actions
-                  if (updatedUser.socialAccounts) {
-                    setSocialAccounts(updatedUser.socialAccounts);
-                    await fetchActionsForAccounts(updatedUser.socialAccounts);
-                  }
-                }
-              } else {
-                alert('Withdrawal failed. Please try again.');
-              }
-            } catch (error: any) {
-              console.error('Withdrawal failed:', error);
-              alert(error.message || 'Withdrawal failed. Please try again.');
-            }
-          } else if (totalVerified < 5) {
-            alert('Minimum withdrawal amount is $5.00');
-          }
-        }}
-      />
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
     );
   }
 
+  // Transform eligible actions to ActionListPage format
+  const transformActionsForUI = (actions: EligibleAction[]) => {
+    return actions.map(action => ({
+      id: action.id,
+      type: action.actionType as any,
+      status: (actionStatuses[action.id] || 'pending') as ActionStatus,
+      url: action.target,
+      payment: action.price / 100, // Convert cents to dollars
+      platform: (action.platform || selectedAccount?.platform || 'instagram').toLowerCase() as any,
+      errorMessage: actionErrors[action.id],
+      actionRunId: action.userActionRun?.id,
+      isResumable: ['pending_verification', 'dom_verified', 'cdp_verified'].includes(action.userActionRun?.status || '')
+    }));
+  };
+
+  // Render different views based on navigation state
   if (currentView === 'actions' && selectedAccount) {
     return (
       <ActionListPage
@@ -519,13 +568,7 @@ const AppContent = () => {
         actions={transformActionsForUI(eligibleActions)}
         availableActionsCount={eligibleActions.length}
         isLoading={loadingActions}
-        onBack={() => {
-          setCurrentView('home');
-          setSelectedAccount(null);
-          setEligibleActions([]);
-          setActionStatuses({});
-          setActionErrors({});
-        }}
+        onBack={handleNavigateHome}
         onActionClick={async (actionId: string) => {
           console.log('Action clicked:', actionId);
           
@@ -581,7 +624,7 @@ const AppContent = () => {
             }
             
             // Resume/retry the action by opening the tab again
-            await browser.runtime.sendMessage({
+            await chrome.runtime.sendMessage({
               type: 'executeAction',
               payload: {
                 actionId: selectedAction.id,
@@ -623,15 +666,8 @@ const AppContent = () => {
             console.log('Action run started:', actionRun);
             
             // Store the action run ID for later updates
-            console.log('[DEBUG] Storing actionRunId:', {
-              key: selectedAction.id,
-              value: actionRun.id,
-              actionId: actionId
-            });
-            
-            // Update ref immediately for instant access
             actionRunIdsRef.current[selectedAction.id] = actionRun.id;
-            console.log('[DEBUG] Updated actionRunIds ref immediately:', actionRunIdsRef.current);
+            console.log('[DEBUG] Updated actionRunIds ref:', actionRunIdsRef.current);
             
             // Also update state for React rendering
             setActionRunIds(prev => {
@@ -644,7 +680,7 @@ const AppContent = () => {
             });
             
             // Send message to background script to open tab and start tracking
-            await browser.runtime.sendMessage({
+            await chrome.runtime.sendMessage({
               type: 'executeAction',
               payload: {
                 actionId: selectedAction.id,
@@ -688,11 +724,24 @@ const AppContent = () => {
     );
   }
 
+  if (currentView === 'withdraw') {
+    return (
+      <WithdrawPage
+        points={user?.points || 0}
+        history={actionHistory}
+        loadingHistory={loadingHistory}
+        onWithdrawRequest={handleWithdrawRequest}
+        onBack={handleNavigateHome}
+      />
+    );
+  }
+
+  // Home view
   return (
     <Home
       // Earnings data
-      pendingEarnings={pendingEarnings}
-      availableEarnings={availableEarnings}
+      pendingEarnings={user?.totalEarnings || 0}
+      availableEarnings={user?.availableEarnings || 0}
       dailyActionsCompleted={0} // TODO: Calculate from today's action runs
       dailyActionsRequired={10} // TODO: Get from campaign requirements
 
@@ -702,80 +751,25 @@ const AppContent = () => {
       // Connected accounts with eligible actions count and verification state
       connectedAccounts={socialAccounts.map(account => {
         console.log('Mapping account for UI:', account);
-        console.log('Account ID:', account.id);
-        console.log('Account isVerified:', account.isVerified);
-        
-        // Determine UI state:
-        // - isVerifying: true = currently collecting data (shows spinner)
-        // - isVerified: true = data collected successfully 
-        // - both false = account added but not yet verified
         const isCurrentlyVerifying = verifyingAccounts.has(account.id);
         const isVerified = account.isVerified || false;
         
-        const mapped = {
+        return {
           platform: account.platform,
           handle: account.handle,
           availableActions: accountActions[account.id] || 0,
           isVerifying: isCurrentlyVerifying,
-          isVerified: isVerified // Add this to show verified status!
+          isVerified: isVerified
         };
-        console.log('Mapped to UI format:', mapped);
-        return mapped;
       })}
       
       // Disable all platforms except TikTok
       disabledPlatforms={['instagram', 'x', 'reddit']}
 
       // Handlers
-      onAddAccount={async (platform: string, handle: string) => {
-        if (!user) {
-          console.error('No user connected');
-          return;
-        }
-
-        try {
-          // Create social account in API
-          const newAccount = await apiClient.createSocialAccount({
-            userId: user.id,
-            platform: platform.toLowerCase() as any,
-            handle: handle,
-          });
-
-          // Add to accounts list and mark as verifying
-          setSocialAccounts(prev => [...prev, newAccount]);
-          setVerifyingAccounts(prev => new Set(prev).add(newAccount.id));
-
-          // Send message to background script to collect data (TikTok only now)
-          if (platform.toLowerCase() !== 'tiktok') {
-            console.error('Only TikTok platform is supported');
-            // Remove account from API and UI on error
-            await apiClient.deleteSocialAccount(newAccount.id);
-            setSocialAccounts(prev => prev.filter(acc => acc.id !== newAccount.id));
-            setVerifyingAccounts(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(newAccount.id);
-              return newSet;
-            });
-            return;
-          }
-          
-          browser.runtime.sendMessage({
-            type: 'addTikTokAccount',
-            handle: handle,
-            accountId: newAccount.id,
-          }).catch(async (error) => {
-            console.error('Failed to send add account message:', error);
-            // Remove account from API and UI on error
-            await apiClient.deleteSocialAccount(newAccount.id);
-            setSocialAccounts(prev => prev.filter(acc => acc.id !== newAccount.id));
-          });
-        } catch (error) {
-          console.error('Failed to create social account:', error);
-        }
-      }}
-
+      onAddAccount={handleAddSocialAccount}
       onAccountClick={async (account: any) => {
-        console.log('Account clicked:', account);
+        console.log('Account clicked from Home:', account);
         
         // Find the full social account data
         const fullAccount = socialAccounts.find(
@@ -787,114 +781,74 @@ const AppContent = () => {
           return;
         }
         
-        // Navigate immediately for better UX
-        setSelectedAccount(fullAccount);
-        setCurrentView('actions');
-        setLoadingActions(true);
-        
-        // Clear previous actions while loading new ones
-        setEligibleActions([]);
-        setActionStatuses({});
-        
-        // Fetch actions in background
-        try {
-          const response = await apiClient.getEligibleActions(fullAccount.id);
-          
-          if (response && response.actions) {
-            // Store the enhanced actions with user run data
-            setEligibleActions(response.actions);
-            
-            // Update action statuses and run IDs based on user action runs
-            const statuses: Record<string, ActionStatus> = {};
-            const runIds: Record<string, string> = {};
-            
-            response.actions.forEach(action => {
-              if (action.userActionRun) {
-                console.log('Action run status from API:', {
-                  actionId: action.id,
-                  actionRunId: action.userActionRun.id,
-                  dbStatus: action.userActionRun.status,
-                  derivedUIStatus: deriveUIStatus(action.userActionRun.status)
-                });
-                statuses[action.id] = deriveUIStatus(action.userActionRun.status);
-                // Store the action run ID for future updates
-                runIds[action.id] = action.userActionRun.id;
-              } else {
-                statuses[action.id] = 'pending';
-              }
-            });
-            
-            setActionStatuses(statuses);
-            setActionRunIds(runIds);
-            // Also update ref for immediate access
-            actionRunIdsRef.current = runIds;
-          } else {
-            console.error('Invalid response format:', response);
-            setEligibleActions([]);
-          }
-        } catch (error) {
-          console.error('Failed to fetch eligible actions:', error);
-          // Show empty state on error
-          setEligibleActions([]);
-        } finally {
-          setLoadingActions(false);
-        }
+        await handleActionClick(fullAccount);
       }}
-
-      onWalletClick={async () => {
-        if (walletAddress) {
-          // Disconnect
-          await logout();
-        } else {
-          // Connect
-          setIsConnecting(true);
-          try {
-            // Connect with Privy
-            await login();
-            
-            // If no wallet exists after login, create embedded wallet
-            if (wallets.length === 0) {
-              await createWallet();
-            }
-          } catch (error) {
-            console.error('Failed to connect wallet:', error);
-          } finally {
-            setIsConnecting(false);
-          }
-        }
-      }}
-
+      onWalletClick={walletAddress ? handleDisconnect : handleConnectWallet}
       onJackpotClick={() => {
         console.log('Mock jackpot clicked');
       }}
-
-      onCashOut={async () => {
-        // Navigate to withdraw page and fetch action history
-        setCurrentView('withdraw');
-        await fetchActionHistory();
-      }}
+      onCashOut={handleNavigateWithdraw}
     />
   );
 };
 
-const App = () => {
-  return (
-    <PrivyProvider 
-      appId={import.meta.env.VITE_PRIVY_APP_ID || ''}
-      config={{
-        appearance: {
-          theme: 'dark',
-        },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
-      }}
-    >
-      <AppContent />
-    </PrivyProvider>
-  );
-};
+// Main App Component with Providers
+function App() {
+  const apiKey = import.meta.env.VITE_PARA_API_KEY || '';
 
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ParaProvider
+        paraClientConfig={{
+          apiKey,
+          environment: import.meta.env.VITE_PARA_ENVIRONMENT || 'BETA',
+          options: {
+            ...chromeStorageOverrides,
+            useStorageOverrides: true,
+          }
+        }}
+        config={{
+          appName: 'ZKAD Actions'
+        }}
+        callbacks={{
+          onLogin: (event) => {
+            console.log('Para login event:', event);
+          },
+          onLogout: (event) => {
+            console.log('Para logout event:', event);
+          },
+          onAccountCreation: (event) => {
+            console.log('Para account creation:', event);
+          },
+          onError: (error) => {
+            console.error('Para error:', error);
+          }
+        }}
+        paraModalConfig={{
+          authLayout: [AuthLayout.AUTH_FULL],
+          disableEmailLogin: false,
+          disablePhoneLogin: false,
+          oAuthMethods: [],
+          theme: {
+            mode: 'dark',
+            foregroundColor: '#FFFFFF',
+            backgroundColor: '#1A1A1A',
+            accentColor: '#3B82F6'
+          },
+          logo: '/icon.svg',
+          appName: 'ZKAD Actions',
+          recoverySecretStepEnabled: true,
+          onRampTestMode: false
+        }}
+      >
+        <AppContent />
+        <ParaModal />
+      </ParaProvider>
+    </QueryClientProvider>
+  );
+}
+
+// Render the app
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

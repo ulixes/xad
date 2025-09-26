@@ -51,11 +51,15 @@ function needsReverification(account: SocialAccount): boolean {
  * Adapts SocialAccount array to ConnectedAccount array for Home component UI
  * Transforms backend SocialAccount model to UI ConnectedAccount interface
  */
-export function adaptSocialAccountsForUI(socialAccounts: SocialAccount[]): ConnectedAccount[] {
+export function adaptSocialAccountsForUI(
+  socialAccounts: SocialAccount[], 
+  accountActions: Record<string, number> = {},
+  verifyingAccounts: Set<string> = new Set()
+): ConnectedAccount[] {
   return socialAccounts.map(account => ({
     platform: account.platform,
     handle: account.handle,
-    availableActions: calculateAvailableActions(account),
-    isVerifying: needsReverification(account)
+    availableActions: accountActions[account.id] || 0,
+    isVerifying: verifyingAccounts.has(account.id) || !account.is_verified
   }));
 }

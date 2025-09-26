@@ -390,7 +390,7 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
           .insert(tiktokViewerDemographics)
           .values({
             tiktokAccountId,
-            rangeDays: 7, // Default to 7 days
+            rangeDays: 28, // Use 28 days to match analytics URL
             genderFemale: validatedData.viewerDemographics.genderFemale?.toString() || '0',
             genderMale: validatedData.viewerDemographics.genderMale?.toString() || '0',
             genderOther: validatedData.viewerDemographics.genderOther?.toString() || '0',
@@ -472,7 +472,7 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
           .insert(tiktokFollowerDemographics)
           .values({
             tiktokAccountId,
-            rangeDays: 7, // Default to 7 days
+            rangeDays: 28, // Use 28 days to match analytics URL
             followerCount: validatedData.followerDemographics.followerCount || 0,
             genderFemale: validatedData.followerDemographics.genderFemale?.toString() || '0',
             genderMale: validatedData.followerDemographics.genderMale?.toString() || '0',
@@ -544,7 +544,10 @@ socialAccountsRouter.post("/:id/tiktok-data", async (c) => {
     let viewerMetricsResult = null;
     if (validatedData.viewerMetrics) {
       try {
-        console.log("Processing TikTok viewer metrics time-series data...");
+        console.log("Processing TikTok viewer metrics time-series data...", {
+          totalUniqueViewers: validatedData.viewerMetrics.totalUniqueViewers,
+          rangeDays: validatedData.viewerMetrics.rangeDays
+        });
         
         // Get the TikTok account ID
         const tiktokAccountId = tiktokAccountData[0].id;
@@ -885,7 +888,7 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         tiktokViewerMetrics,
         and(
           eq(tiktokAccounts.id, tiktokViewerMetrics.tiktokAccountId),
-          eq(tiktokViewerMetrics.rangeDays, 28) // Get 28-day metrics
+          sql`${tiktokViewerMetrics.rangeDays} IN (7, 28)` // Accept both 7-day and 28-day metrics
         )
       )
       .where(eq(socialAccounts.id, accountId))
@@ -993,6 +996,11 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         )
       );
     console.log('Campaign actions with runs found:', actionsWithRuns.length);
+    console.log('TikTok metrics for eligibility check:', {
+      hasTiktokMetrics: !!tiktokMetrics,
+      rangeDays: tiktokMetrics?.rangeDays,
+      totalUniqueViewers: tiktokMetrics?.totalUniqueViewers
+    });
 
     // Filter actions based on campaign targeting rules and completion status
     const eligibleActions = actionsWithRuns.filter(action => {
@@ -1029,13 +1037,17 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
       if (criteria.minUniqueViews28Days && criteria.minUniqueViews28Days > 0) {
         // Check if we have TikTok view metrics data
         if (!tiktokMetrics || !tiktokMetrics.totalUniqueViewers) {
+          console.log(`Action ${action.actionId} excluded: No TikTok viewer metrics data (required: ${criteria.minUniqueViews28Days} unique views)`);
           return false; // No metrics = can't verify views = not eligible
         }
         
         // Check if unique viewers meet the requirement
         if (tiktokMetrics.totalUniqueViewers < criteria.minUniqueViews28Days) {
+          console.log(`Action ${action.actionId} excluded: Insufficient unique viewers (has: ${tiktokMetrics.totalUniqueViewers}, required: ${criteria.minUniqueViews28Days})`);
           return false;
         }
+        
+        console.log(`Action ${action.actionId} passed view requirement (has: ${tiktokMetrics.totalUniqueViewers}, required: ${criteria.minUniqueViews28Days}, rangeDays: ${tiktokMetrics.rangeDays})`);
       }
 
       // Check minimum engagement rate

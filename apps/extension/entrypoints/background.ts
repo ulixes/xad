@@ -68,6 +68,12 @@ export default defineBackground(() => {
       return true;
     }
     
+    // Handle debug logs from content script
+    else if (message.type === "TIKTOK_DEBUG_LOG") {
+      console.log(`[TikTok Content] ${message.message}:`, message.data || '');
+      return true;
+    }
+    
     // Handle TikTok profile data collection (PHASE 1)
     else if (message.type === "TIKTOK_DATA_COLLECTED") {
       const { accountId, handle, payload } = message;

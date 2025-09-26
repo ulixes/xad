@@ -1,6 +1,7 @@
 import { defineConfig } from 'wxt';
 import path from 'path';
 import { mergeConfig } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -18,11 +19,24 @@ export default defineConfig({
       '*://*.tiktok.com/*',
       'https://www.tiktok.com/tiktokstudio/api/*',
       'https://www.tiktok.com/api/*',
-      'https://auth.privy.io/*'
+      'https://api.getpara.com/*',
+      'https://api.beta.getpara.com/*',
+      'https://api.sandbox.getpara.com/*'
     ]
   },
   vite: (inlineConfig) => {
     return mergeConfig(inlineConfig, {
+      plugins: [
+        // Add polyfills for Node.js modules like Buffer and crypto
+        nodePolyfills({
+          // Include specific modules as needed
+          include: ['buffer', 'crypto', 'stream', 'util'],
+          globals: {
+            Buffer: true,
+            process: true
+          }
+        })
+      ],
       css: {
         postcss: './postcss.config.js',
       },
@@ -35,7 +49,11 @@ export default defineConfig({
           // Map UI package internal paths to resolve @ aliases within UI components
           '@/lib': path.resolve(__dirname, '../../packages/ui/src/lib'),
           '@/components': path.resolve(__dirname, '../../packages/ui/src/components'),
+          // Add crypto fallback for browser
+          'crypto': 'crypto-browserify'
         },
+        // Force deduplication of React Query to prevent multiple instances
+        dedupe: ['@tanstack/react-query'],
       },
       optimizeDeps: {
         include: ['@xad/ui'],

@@ -197,22 +197,6 @@ export const payments = pgTable("payments", {
 	unique("payments_transaction_hash_unique").on(table.transactionHash),
 ]);
 
-export const actions = pgTable("actions", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	platform: platform().notNull(),
-	actionType: actionType("action_type").notNull(),
-	target: text().notNull(),
-	title: text().notNull(),
-	description: text(),
-	price: integer().notNull(),
-	maxVolume: integer("max_volume").notNull(),
-	currentVolume: integer("current_volume").default(0).notNull(),
-	eligibilityCriteria: jsonb("eligibility_criteria").default({}).notNull(),
-	isActive: boolean("is_active").default(true).notNull(),
-	expiresAt: timestamp("expires_at", { mode: 'string' }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-});
 
 export const socialAccounts = pgTable("social_accounts", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -450,8 +434,8 @@ export const actionRuns = pgTable("action_runs", {
 }, (table) => [
 	foreignKey({
 			columns: [table.actionId],
-			foreignColumns: [actions.id],
-			name: "action_runs_action_id_actions_id_fk"
+			foreignColumns: [campaignActions.id],
+			name: "action_runs_action_id_campaign_actions_id_fk"
 		}).onDelete("cascade"),
 	foreignKey({
 			columns: [table.userId],
@@ -504,11 +488,12 @@ export const brandsRelations = relations(brands, ({many}) => ({
 	actionRuns: many(actionRuns),
 }));
 
-export const campaignActionsRelations = relations(campaignActions, ({one}) => ({
+export const campaignActionsRelations = relations(campaignActions, ({one, many}) => ({
 	campaign: one(campaigns, {
 		fields: [campaignActions.campaignId],
 		references: [campaigns.id]
 	}),
+	actionRuns: many(actionRuns),
 }));
 
 export const instagramAccountsRelations = relations(instagramAccounts, ({one, many}) => ({
@@ -605,9 +590,9 @@ export const tiktokFollowerGeographyRelations = relations(tiktokFollowerGeograph
 }));
 
 export const actionRunsRelations = relations(actionRuns, ({one}) => ({
-	action: one(actions, {
+	campaignAction: one(campaignActions, {
 		fields: [actionRuns.actionId],
-		references: [actions.id]
+		references: [campaignActions.id]
 	}),
 	user: one(users, {
 		fields: [actionRuns.userId],
@@ -623,6 +608,3 @@ export const actionRunsRelations = relations(actionRuns, ({one}) => ({
 	}),
 }));
 
-export const actionsRelations = relations(actions, ({many}) => ({
-	actionRuns: many(actionRuns),
-}));
