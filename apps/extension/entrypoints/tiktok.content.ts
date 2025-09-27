@@ -2,17 +2,93 @@ import { TikTokCommentTracker } from '@/src/trackers/TikTokCommentTracker';
 
 export default defineContentScript({
   matches: ['*://*.tiktok.com/*'],
+  world: 'MAIN', // Run in MAIN world to intercept fetch/XHR
   main() {
-    console.log('[TikTok Tracker] ✅ Content script loaded on:', window.location.href);
+    console.log('[TikTok Tracker] Content script loaded in MAIN world on:', window.location.href);
+
+    // ========== GLOBAL NETWORK INTERCEPTOR ==========
+    // This handles ALL network interception for the entire content script
+    function setupGlobalNetworkInterceptor() {
+      console.log('[Global Network Interceptor] Setting up...');
+      
+      // Save the real original fetch
+      const originalFetch = window.fetch;
+      (window as any).__originalFetch = originalFetch;
+      
+      // Override fetch to intercept all API calls
+      window.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        const url = args[0].toString();
+        
+        // Log all API calls for debugging
+        if (url.includes('/api/')) {
+          console.log('[Network Interceptor] API Call:', url.split('?')[0]);
+        }
+        
+        // Check for comment list API (for comment verification)
+        if (url.includes('/api/comment/list/')) {
+          console.log('[Network Interceptor] Comment list API detected!');
+          
+          // Check if there's an active comment tracker
+          const commentTracker = (window as any).__activeCommentTracker;
+          if (commentTracker) {
+            try {
+              const clonedResponse = response.clone();
+              const data = await clonedResponse.json();
+              console.log('[Network Interceptor] Passing comment data to tracker');
+              commentTracker.processCommentResponse(data);
+            } catch (e) {
+              console.error('[Network Interceptor] Failed to parse comment response:', e);
+            }
+          }
+        }
+        
+        // Check for account/analytics APIs (for account collection)
+        const accountTracker = (window as any).__tiktokAccountTracker;
+        if (accountTracker && accountTracker.isCollecting) {
+          try {
+            const clonedResponse = response.clone();
+            const data = await clonedResponse.json();
+            
+            // Process various account-related APIs
+            if (url.includes('/api/web/user') || 
+                url.includes('/api/common-app-context') ||
+                url.includes('/api/web/relation') ||
+                url.includes('/api/web/counter')) {
+              console.log('[Network Interceptor] Account API captured:', url.split('?')[0]);
+              accountTracker.processApiResponse(url, data);
+            }
+            
+            // Process analytics APIs
+            if (url.includes('/aweme/v2/data/insight/') || url.includes('type_requests')) {
+              console.log('[Network Interceptor] Analytics API captured');
+              accountTracker.processApiResponse(url, data);
+            }
+          } catch (e) {
+            // Not JSON or error parsing
+          }
+        }
+        
+        return response;
+      };
+      
+      console.log('[Global Network Interceptor] Setup complete');
+    }
+    
+    // Set up the global interceptor immediately
+    setupGlobalNetworkInterceptor();
 
     class TikTokAccountTracker {
       private accountId: string | null = null;
       private handle: string | null = null;
-      private isCollecting: boolean = false;
+      public isCollecting: boolean = false;
       private collectedData: any = {};
       private capturedApiCalls: any[] = [];
 
       constructor() {
+        // Register this tracker globally
+        (window as any).__tiktokAccountTracker = this;
+        
         // Check URL params for auto-collection
         const urlParams = new URLSearchParams(window.location.search);
         const shouldCollect = urlParams.get('tiktok_collect');
@@ -21,16 +97,14 @@ export default defineContentScript({
           this.isCollecting = true;
           this.accountId = urlParams.get('account_id');
           this.handle = urlParams.get('handle');
-          console.log('[TikTok Tracker] 🟢 Auto-collecting for:', this.handle);
+          console.log('[TikTok Tracker] Auto-collecting for:', this.handle);
           
           this.setupMessageListener();
-          this.setupNetworkInterceptor();
           
           // Start collection after 1 second
           setTimeout(() => this.collectTikTokData(), 1000);
         } else {
           this.setupMessageListener();
-          this.setupNetworkInterceptor();
         }
       }
 
@@ -100,104 +174,8 @@ export default defineContentScript({
         });
       }
 
-      private setupNetworkInterceptor() {
-        // Intercept fetch for API responses
-        const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
-          const response = await originalFetch(...args);
-          const url = args[0].toString();
-          
-          // Log ALL TikTok API calls for debugging
-          if (url.includes('tiktok.com') && url.includes('/api')) {
-            console.log('[TikTok Tracker] 🔍 API Call detected:', url.split('?')[0]);
             
-            // Track all analytics-related APIs
-            if (url.includes('insight') || url.includes('analytics') || url.includes('viewer')) {
-              browser.runtime.sendMessage({
-                type: 'TIKTOK_DEBUG_LOG', 
-                message: '🔎 ANALYTICS-RELATED API',
-                data: {
-                  endpoint: url.split('?')[0],
-                  has_type_requests: url.includes('type_requests'),
-                  url_length: url.length
-                }
-              });
-            }
-          }
-          
-          // Check for analytics/insight APIs specifically
-          if (url.includes('/aweme/v2/data/insight/') || url.includes('type_requests')) {
-            // Log FULL URL to see exactly which API is being called
-            browser.runtime.sendMessage({
-              type: 'TIKTOK_DEBUG_LOG',
-              message: '🎯 FULL ANALYTICS URL',
-              data: url
-            });
-            
-            console.log('[TikTok Tracker] 🎯 ANALYTICS API DETECTED:', url.substring(0, 100));
-            const clonedResponse = response.clone();
-            try {
-              const rawText = await clonedResponse.text();
-              
-              // Parse the JSON
-              const data = JSON.parse(rawText);
-              
-              // Send detailed info to background
-              browser.runtime.sendMessage({
-                type: 'TIKTOK_DEBUG_LOG',
-                message: '📊 API RESPONSE ANALYSIS',
-                data: {
-                  url_length: url.length,
-                  has_type_requests: url.includes('type_requests'),
-                  response_size: rawText.length,
-                  unique_viewer_num_value: data.unique_viewer_num?.value,
-                  new_viewer_num_value: data.new_viewer_num?.value,
-                  all_keys: Object.keys(data).join(', ')
-                }
-              });
-              
-              const apiCall = { url, timestamp: Date.now(), data };
-              this.capturedApiCalls.push(apiCall);
-              
-              if (this.isCollecting) {
-                console.log('[TikTok Tracker] 🔄 Processing analytics response (isCollecting=true)');
-                this.processApiResponse(url, data);
-              } else {
-                console.log('[TikTok Tracker] ⏸️ Storing analytics response (isCollecting=false)');
-              }
-            } catch (e) {
-              console.log('[TikTok Tracker] ❌ Failed to parse analytics response:', e);
-            }
-          }
-          
-          // Capture profile API calls
-          else if (url.includes('tiktok.com') && (
-              url.includes('/api/web/user') ||
-              url.includes('/api/common-app-context') ||
-              url.includes('/api/web/relation') ||
-              url.includes('/api/web/counter')
-          )) {
-            const clonedResponse = response.clone();
-            try {
-              const data = await clonedResponse.json();
-              console.log('[TikTok Tracker] API captured:', url.split('?')[0]);
-              
-              const apiCall = { url, timestamp: Date.now(), data };
-              this.capturedApiCalls.push(apiCall);
-              
-              if (this.isCollecting) {
-                this.processApiResponse(url, data);
-              }
-            } catch (e) {
-              // Not JSON, ignore
-            }
-          }
-          
-          return response;
-        };
-      }
-
-      private processApiResponse(url: string, data: any) {
+      public processApiResponse(url: string, data: any) {
         // Log what we're processing
         console.log('[TikTok Tracker] 🔧 processApiResponse called for:', url.split('?')[0]);
         console.log('[TikTok Tracker] 📊 Data structure keys:', Object.keys(data || {}));
@@ -762,8 +740,14 @@ export default defineContentScript({
               this.trackFollowAction(message.actionId);
               sendResponse({ acknowledged: true, tracking: 'started' });
             } else if (message.actionType === 'comment') {
-              // Use the new comment tracker
-              const commentTracker = new TikTokCommentTracker(message.actionId);
+              console.log('[TikTok Action Tracker] 📝 Comment action received:', {
+                actionId: message.actionId,
+                accountHandle: message.accountHandle,
+                targetUrl: message.targetUrl
+              });
+              
+              // Pass account handle to the tracker
+              const commentTracker = new TikTokCommentTracker(message.actionId, message.accountHandle);
               commentTracker.start();
               sendResponse({ acknowledged: true, tracking: 'started' });
             } else {

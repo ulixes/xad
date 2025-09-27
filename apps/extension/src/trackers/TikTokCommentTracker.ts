@@ -1,368 +1,185 @@
 export class TikTokCommentTracker {
   private actionId: string;
   private accountHandle: string;
-  private originalFetch: typeof window.fetch;
-  private commentFound: boolean = false;
-  private scrollInterval: NodeJS.Timeout | null = null;
-  private startTime: number;
-  private maxScrollAttempts: number = 10;
-  private scrollAttempts: number = 0;
+  private isActive: boolean = false;
+  private foundComment: boolean = false;
   
-  constructor(actionId: string) {
+  constructor(actionId: string, providedHandle?: string) {
     this.actionId = actionId;
-    this.accountHandle = this.getAccountHandleFromCookies() || this.getAccountHandleFromURL();
-    this.originalFetch = window.fetch;
-    this.startTime = Date.now();
+    this.accountHandle = providedHandle || '';
     
-    console.log('[TikTok Comment Tracker] 🎯 Initialized:', {
+    console.log('[TikTokCommentTracker] Initialized:', {
       actionId: this.actionId,
       accountHandle: this.accountHandle,
       url: window.location.href
     });
+    
+    // Fail if no account handle provided
+    if (!this.accountHandle) {
+      console.error('[TikTokCommentTracker] CRITICAL: No account handle provided!');
+      this.reportFailure('No account handle provided from social account');
+      return;
+    }
   }
   
   async start(): Promise<void> {
-    console.log('[TikTok Comment Tracker] 🚀 Starting comment tracking');
+    console.log('[TikTokCommentTracker] Starting comment tracking');
+    this.isActive = true;
     
-    // Setup network interceptor
-    this.setupNetworkInterceptor();
+    // Register this tracker globally so the network interceptor can use it
+    (window as any).__activeCommentTracker = this;
     
-    // Start auto-scrolling to trigger comment loading
-    this.startAutoScroll();
+    // Trigger comment reload by clicking comment button
+    this.triggerCommentReload();
     
-    // Set timeout
+    // Set timeout (60 seconds)
     setTimeout(() => {
-      if (!this.commentFound) {
-        this.reportFailure('Timeout: No comment detected within 60 seconds');
+      if (!this.foundComment) {
+        this.cleanup();
+        this.reportFailure('Timeout: No matching comment found within 60 seconds');
       }
     }, 60000);
   }
   
-  private getAccountHandleFromURL(): string {
-    // Try to extract from current user's profile link or page
-    const profileLinks = document.querySelectorAll('a[href*="/@"]');
-    for (const link of profileLinks) {
-      const href = link.getAttribute('href');
-      if (href?.includes('/@')) {
-        const match = href.match(/@([^\/\?]+)/);
-        if (match) {
-          console.log('[TikTok Comment Tracker] Found handle from profile link:', match[1]);
-          return match[1];
-        }
+  private triggerCommentReload(): void {
+    console.log('[TikTokCommentTracker] Attempting to trigger comment reload...');
+    
+    // Try to find and click the comment button to refresh comments
+    const commentButtons = document.querySelectorAll('[data-e2e="comment-icon"], [data-e2e="browse-comment-icon"], button[aria-label*="comment" i], button[aria-label*="Comment" i]');
+    
+    if (commentButtons.length > 0) {
+      const button = commentButtons[0] as HTMLElement;
+      console.log('[TikTokCommentTracker] Found comment button, clicking to reload comments');
+      
+      // Click twice - once to close if open, once to reopen and trigger fresh load
+      button.click();
+      setTimeout(() => {
+        button.click();
+        console.log('[TikTokCommentTracker] Clicked comment button to trigger reload');
+      }, 500);
+    } else {
+      console.log('[TikTokCommentTracker] No comment button found, comments might already be loaded');
+      
+      // Try scrolling the comment container to trigger more loads
+      const commentContainers = document.querySelectorAll('[class*="CommentList"], [class*="comment-list"], [data-e2e="comment-list"]');
+      if (commentContainers.length > 0) {
+        const container = commentContainers[0] as HTMLElement;
+        console.log('[TikTokCommentTracker] Found comment container, scrolling to trigger load');
+        container.scrollTop = 0; // Scroll to top to get latest comments
+        setTimeout(() => {
+          container.scrollTop = 100; // Small scroll to trigger load
+        }, 100);
       }
     }
-    
-    // Fallback to URL parsing
-    const match = window.location.pathname.match(/@([^\/]+)/);
-    return match ? match[1] : '';
   }
   
-  private getAccountHandleFromCookies(): string {
-    // TikTok sometimes stores user info in localStorage or sessionStorage
-    try {
-      const userDataKeys = ['user_data', 'login_info', 'currentUser'];
-      for (const key of userDataKeys) {
-        const data = localStorage.getItem(key) || sessionStorage.getItem(key);
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (parsed.uniqueId || parsed.unique_id || parsed.username) {
-            return parsed.uniqueId || parsed.unique_id || parsed.username;
-          }
-        }
-      }
-    } catch (e) {
-      console.log('[TikTok Comment Tracker] Could not parse user data from storage');
-    }
-    return '';
-  }
-  
-  private setupNetworkInterceptor(): void {
-    console.log('[TikTok Comment Tracker] 🔍 Setting up network interceptor');
+  // Called by the global network interceptor
+  processCommentResponse(data: any): void {
+    if (!this.isActive || this.foundComment) return;
     
-    // Override fetch to intercept API calls
-    window.fetch = async (...args) => {
-      const response = await this.originalFetch(...args);
-      const url = args[0].toString();
-      
-      // Check for comment list API
-      if (url.includes('/api/comment/list/')) {
-        console.log('[TikTok Comment Tracker] 📋 Comment API call detected');
-        
-        const clonedResponse = response.clone();
-        try {
-          const data = await clonedResponse.json();
-          this.processCommentResponse(data, url);
-        } catch (e) {
-          console.error('[TikTok Comment Tracker] Failed to parse comment response:', e);
-        }
-      }
-      
-      // Check for comment publish API (when user posts a comment)
-      if (url.includes('/api/comment/publish/') || url.includes('/api/comment/post/')) {
-        console.log('[TikTok Comment Tracker] 📤 Comment publish API detected');
-        
-        const clonedResponse = response.clone();
-        try {
-          const data = await clonedResponse.json();
-          if (data.status_code === 0) {
-            console.log('[TikTok Comment Tracker] Comment posted successfully, waiting for verification...');
-            // Trigger immediate scroll to load the new comment
-            this.scrollToLoadComments(true);
-          }
-        } catch (e) {
-          console.error('[TikTok Comment Tracker] Failed to parse publish response:', e);
-        }
-      }
-      
-      return response;
-    };
-  }
-  
-  private processCommentResponse(data: any, url: string): void {
-    if (!data.comments || !Array.isArray(data.comments)) {
-      return;
-    }
+    console.log('[TikTokCommentTracker] ====== PROCESSING COMMENT RESPONSE ======');
+    console.log('[TikTokCommentTracker] Response keys:', Object.keys(data));
     
-    console.log(`[TikTok Comment Tracker] Processing ${data.comments.length} comments`);
-    
-    // Look for our comment
-    for (const comment of data.comments) {
-      // Check multiple fields for account matching
-      const commentUserId = comment.user?.unique_id || comment.user?.uniqueId;
-      const commentNickname = comment.user?.nickname;
+    if (data.comments && Array.isArray(data.comments)) {
+      console.log('[TikTokCommentTracker] Total comments:', data.comments.length);
+      console.log('[TikTokCommentTracker] Has more:', data.has_more);
+      console.log('[TikTokCommentTracker] Looking for account:', this.accountHandle);
       
-      console.log('[TikTok Comment Tracker] Checking comment:', {
-        userId: commentUserId,
-        nickname: commentNickname,
-        text: comment.text?.substring(0, 50),
-        createTime: comment.create_time
+      // Log each comment's structure
+      data.comments.forEach((comment: any, index: number) => {
+        console.log(`[TikTokCommentTracker] Comment ${index + 1}:`, {
+          cid: comment.cid,
+          text: comment.text,
+          create_time: comment.create_time,
+          user_unique_id: comment.user?.unique_id,
+          user_uid: comment.user?.uid,
+          user_nickname: comment.user?.nickname,
+          aweme_id: comment.aweme_id,
+          digg_count: comment.digg_count,
+          reply_id: comment.reply_id
+        });
       });
       
-      // Match by unique_id (most reliable)
-      if (commentUserId === this.accountHandle) {
-        this.verifyAndReportComment(comment, url);
-        break;
-      }
+      // Check if any comment matches our account
+      const matchingComment = data.comments.find((comment: any) => 
+        comment.user?.unique_id === this.accountHandle
+      );
       
-      // Also check if this is a very recent comment (within last 30 seconds)
-      // This helps catch comments even if handle matching fails
-      const commentTime = comment.create_time * 1000;
-      const timeSinceStart = commentTime - this.startTime;
-      
-      if (timeSinceStart > 0 && timeSinceStart < 30000) {
-        console.log('[TikTok Comment Tracker] Found recent comment, might be ours:', {
-          text: comment.text,
-          timeSinceStart: timeSinceStart / 1000 + 's'
-        });
+      if (matchingComment) {
+        console.log('[TikTokCommentTracker] ====== MATCH FOUND! ======');
+        console.log('[TikTokCommentTracker] Matching comment:', matchingComment);
         
-        // Store as potential match
-        if (!this.commentFound) {
-          // Could implement additional verification here
-          // For now, we'll rely on unique_id matching
-        }
+        this.foundComment = true;
+        this.reportSuccess(matchingComment);
+        this.cleanup();
+      } else {
+        console.log('[TikTokCommentTracker] No match found in this batch');
       }
     }
     
-    // Check if we need to continue scrolling
-    if (!this.commentFound && data.has_more) {
-      console.log('[TikTok Comment Tracker] More comments available, continuing scroll...');
-    }
+    console.log('[TikTokCommentTracker] ====== END PROCESSING ======');
   }
   
-  private verifyAndReportComment(comment: any, apiUrl: string): void {
-    const commentTime = comment.create_time * 1000;
-    const currentTime = Date.now();
-    const timeDiff = currentTime - commentTime;
-    
-    // Verify it's recent (within 2 minutes)
-    if (timeDiff > 120000) {
-      console.log('[TikTok Comment Tracker] Comment too old:', timeDiff / 1000, 'seconds');
-      return;
-    }
-    
-    console.log('[TikTok Comment Tracker] ✅ COMMENT VERIFIED!');
-    
-    // Extract post ID from URL or comment data
-    const postIdMatch = apiUrl.match(/aweme_id=(\d+)/) || 
-                       window.location.pathname.match(/video\/(\d+)/);
-    const postId = comment.aweme_id || (postIdMatch ? postIdMatch[1] : '');
-    
-    // Build proof object
+  private reportSuccess(comment: any): void {
     const proof = {
-      // Comment details
       commentId: comment.cid,
       commentText: comment.text,
       createTime: comment.create_time,
-      
-      // Post details
       awemeId: comment.aweme_id,
-      postId: postId,
-      postUrl: window.location.href,
-      
-      // User details
       userId: comment.user?.uid,
       uniqueId: comment.user?.unique_id,
       nickname: comment.user?.nickname,
-      
-      // Verification details
       platform: 'tiktok',
       actionType: 'comment',
       timestamp: Date.now(),
       verificationMethod: 'network_api',
-      
-      // Additional metadata
-      shareUrl: comment.share_info?.url,
-      replyId: comment.reply_id || '0',
-      diggCount: comment.digg_count || 0,
-      
-      // API response metadata
-      apiEndpoint: apiUrl.split('?')[0],
-      statusCode: 0, // Successful response
-      
-      // Timing
-      timeToVerify: (Date.now() - this.startTime) / 1000 + 's'
+      postUrl: window.location.href
     };
     
-    console.log('[TikTok Comment Tracker] 🎉 Comment proof:', proof);
+    console.log('[TikTokCommentTracker] Sending success with proof:', proof);
     
-    // Mark as found and stop scrolling
-    this.commentFound = true;
-    this.stopAutoScroll();
-    
-    // Report success
-    this.reportSuccess(proof);
-    
-    // Restore original fetch
-    this.cleanup();
-  }
-  
-  private startAutoScroll(): void {
-    console.log('[TikTok Comment Tracker] 📜 Starting auto-scroll');
-    
-    // Initial scroll to load comments
-    this.scrollToLoadComments();
-    
-    // Set up periodic scrolling
-    this.scrollInterval = setInterval(() => {
-      if (this.scrollAttempts >= this.maxScrollAttempts) {
-        console.log('[TikTok Comment Tracker] Max scroll attempts reached');
-        this.stopAutoScroll();
-        if (!this.commentFound) {
-          this.reportFailure('Could not find comment after scrolling through all available comments');
-        }
-        return;
-      }
-      
-      if (!this.commentFound) {
-        this.scrollToLoadComments();
-        this.scrollAttempts++;
-      }
-    }, 3000); // Scroll every 3 seconds
-  }
-  
-  private scrollToLoadComments(immediate: boolean = false): void {
-    // Find the comment container
-    const selectors = [
-      '[class*="DivCommentListContainer"]',
-      '[class*="CommentList"]',
-      '[data-e2e="comment-list"]',
-      'div[class*="comment"]',
-      // Fallback: any scrollable container with comments
-      'div:has(> div[class*="CommentItem"])'
-    ];
-    
-    let commentContainer: Element | null = null;
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element) {
-        commentContainer = element;
-        console.log(`[TikTok Comment Tracker] Found comment container: ${selector}`);
-        break;
-      }
-    }
-    
-    if (!commentContainer) {
-      console.log('[TikTok Comment Tracker] No comment container found, trying window scroll');
-      // Fallback to window scroll
-      window.scrollBy(0, 500);
-      return;
-    }
-    
-    // Scroll the comment container
-    const scrollHeight = commentContainer.scrollHeight;
-    const currentScroll = commentContainer.scrollTop;
-    const clientHeight = commentContainer.clientHeight;
-    
-    console.log('[TikTok Comment Tracker] Scrolling comments:', {
-      scrollHeight,
-      currentScroll,
-      clientHeight,
-      remaining: scrollHeight - currentScroll - clientHeight
-    });
-    
-    if (immediate) {
-      // Scroll to top to load newest comments
-      commentContainer.scrollTop = 0;
-    } else {
-      // Scroll down to load more comments
-      commentContainer.scrollTop += clientHeight * 0.8;
-    }
-    
-    // Also trigger a small scroll to ensure loading
-    setTimeout(() => {
-      commentContainer.scrollTop += 10;
-      commentContainer.scrollTop -= 10;
-    }, 100);
-  }
-  
-  private stopAutoScroll(): void {
-    if (this.scrollInterval) {
-      clearInterval(this.scrollInterval);
-      this.scrollInterval = null;
-      console.log('[TikTok Comment Tracker] 🛑 Stopped auto-scroll');
-    }
-  }
-  
-  private reportSuccess(proof: any): void {
-    browser.runtime.sendMessage({
-      type: 'ACTION_COMPLETED',
+    // Send via postMessage to bridge script (we're in MAIN world)
+    window.postMessage({
+      source: 'TIKTOK_MAIN_WORLD',
+      type: 'SEND_TO_BACKGROUND',
       payload: {
-        actionId: this.actionId,
-        success: true,
-        details: proof,
-        timestamp: Date.now()
-      }
-    }).catch(err => console.error('[TikTok Comment Tracker] Failed to report success:', err));
-  }
-  
-  private reportFailure(error: string): void {
-    console.error('[TikTok Comment Tracker] ❌ Failed:', error);
-    
-    this.stopAutoScroll();
-    this.cleanup();
-    
-    browser.runtime.sendMessage({
-      type: 'ACTION_COMPLETED',
-      payload: {
-        actionId: this.actionId,
-        success: false,
-        details: {
-          error,
-          accountHandle: this.accountHandle,
-          url: window.location.href,
+        type: 'ACTION_COMPLETED',
+        payload: {
+          actionId: this.actionId,
+          success: true,
+          details: proof,
           timestamp: Date.now()
         }
       }
-    }).catch(err => console.error('[TikTok Comment Tracker] Failed to report failure:', err));
+    }, '*');
+  }
+  
+  private reportFailure(error: string): void {
+    console.error('[TikTokCommentTracker] Failed:', error);
+    
+    // Send via postMessage to bridge script (we're in MAIN world)
+    window.postMessage({
+      source: 'TIKTOK_MAIN_WORLD',
+      type: 'SEND_TO_BACKGROUND',
+      payload: {
+        type: 'ACTION_COMPLETED',
+        payload: {
+          actionId: this.actionId,
+          success: false,
+          details: {
+            error,
+            accountHandle: this.accountHandle,
+            url: window.location.href,
+            timestamp: Date.now()
+          }
+        }
+      }
+    }, '*');
   }
   
   private cleanup(): void {
-    // Restore original fetch
-    window.fetch = this.originalFetch;
-    
-    // Stop scrolling
-    this.stopAutoScroll();
-    
-    console.log('[TikTok Comment Tracker] 🧹 Cleaned up');
+    this.isActive = false;
+    delete (window as any).__activeCommentTracker;
+    console.log('[TikTokCommentTracker] Cleaned up');
   }
 }
