@@ -3,6 +3,7 @@ import { TikTokCommentTracker } from '@/src/trackers/TikTokCommentTracker';
 export default defineContentScript({
   matches: ['*://*.tiktok.com/*'],
   world: 'MAIN', // Run in MAIN world to intercept fetch/XHR
+  runAt: 'document_start', // Run IMMEDIATELY before page scripts
   main() {
     console.log('[TikTok Tracker] Content script loaded in MAIN world on:', window.location.href);
 
@@ -15,68 +16,347 @@ export default defineContentScript({
       const originalFetch = window.fetch;
       (window as any).__originalFetch = originalFetch;
       
-      // Override fetch to intercept all API calls
-      window.fetch = async (...args) => {
-        const response = await originalFetch(...args);
-        const url = args[0].toString();
-        
-        // Log all API calls for debugging
-        if (url.includes('/api/')) {
-          console.log('[Network Interceptor] API Call:', url.split('?')[0]);
+      // Override fetch to intercept ONLY specific API calls we care about
+      const interceptedFetch = async (...args: any[]) => {
+        // Safely get URL - handle all edge cases
+        let url = '';
+        try {
+          url = args[0]?.toString() || '';
+        } catch (e) {
+          // If we can't even get the URL, pass through unchanged
+          return originalFetch(...args);
         }
         
-        // Check for comment list API (for comment verification)
-        if (url.includes('/api/comment/list/')) {
-          console.log('[Network Interceptor] Comment list API detected!');
-          
-          // Check if there's an active comment tracker
-          const commentTracker = (window as any).__activeCommentTracker;
-          if (commentTracker) {
-            try {
-              const clonedResponse = response.clone();
-              const data = await clonedResponse.json();
-              console.log('[Network Interceptor] Passing comment data to tracker');
-              commentTracker.processCommentResponse(data);
-            } catch (e) {
-              console.error('[Network Interceptor] Failed to parse comment response:', e);
-            }
-          }
+        // ONLY intercept our specific endpoints, pass everything else through immediately
+        const shouldIntercept = url.includes('/api/commit/item/digg/') || 
+                               url.includes('/api/commit/follow/user') ||
+                               url.includes('/api/comment/publish/');
+        
+        if (!shouldIntercept) {
+          return originalFetch(...args);
         }
         
-        // Check for account/analytics APIs (for account collection)
-        const accountTracker = (window as any).__tiktokAccountTracker;
-        if (accountTracker && accountTracker.isCollecting) {
-          try {
-            const clonedResponse = response.clone();
-            const data = await clonedResponse.json();
-            
-            // Process various account-related APIs
-            if (url.includes('/api/web/user') || 
-                url.includes('/api/common-app-context') ||
-                url.includes('/api/web/relation') ||
-                url.includes('/api/web/counter')) {
-              console.log('[Network Interceptor] Account API captured:', url.split('?')[0]);
-              accountTracker.processApiResponse(url, data);
-            }
-            
-            // Process analytics APIs
-            if (url.includes('/aweme/v2/data/insight/') || url.includes('type_requests')) {
-              console.log('[Network Interceptor] Analytics API captured');
-              accountTracker.processApiResponse(url, data);
-            }
-          } catch (e) {
-            // Not JSON or error parsing
-          }
+        // For our endpoints, get the response
+        let response;
+        try {
+          response = await originalFetch(...args);
+        } catch (e) {
+          // If original fetch fails, just rethrow - don't interfere
+          console.error('[Network Interceptor] Original fetch failed:', e);
+          throw e;
         }
         
+        // Process our interception in a try-catch to ensure we never break the original flow
+        try {
+          // Clone the response before reading it (responses can only be read once)
+          const clonedResponse = response.clone();
+          await processInterceptedResponse(url, args, clonedResponse);
+        } catch (e) {
+          // Log but don't break the original request
+          console.error('[Network Interceptor] Error processing response:', e);
+        }
+        
+        // ALWAYS return the original response unchanged
         return response;
       };
+      
+      // Helper function to process intercepted responses safely
+      const processInterceptedResponse = async (url: string, args: any[], response: Response) => {
+        // Log API calls for debugging
+        console.log('[Network Interceptor] API Call:', url.split('?')[0]);
+        
+        // Process specific API endpoints
+        try {
+          // Check for like/unlike API (digg endpoint)
+          if (url.includes('/api/commit/item/digg/')) {
+            await handleLikeAPI(url, args, response);
+          }
+          // Check for follow/unfollow API
+          else if (url.includes('/api/commit/follow/user')) {
+            await handleFollowAPI(url, args, response);
+          }
+          // Check for comment PUBLISH API
+          else if (url.includes('/api/comment/publish/')) {
+            await handleCommentAPI(url, response);
+          }
+        } catch (e) {
+          console.error('[Network Interceptor] Error in API handler:', e);
+        }
+      };
+      
+      // Handle like/unlike API
+      const handleLikeAPI = async (url: string, args: any[], response: Response) => {
+        console.log('[Network Interceptor] LIKE/UNLIKE API detected!');
+        const urlObj = new URL(url);
+        const actionType = urlObj.searchParams.get('type');
+        const awemeId = urlObj.searchParams.get('aweme_id');
+        console.log('[Network Interceptor] Action type:', actionType === '1' ? 'LIKE' : 'UNLIKE');
+        console.log('[Network Interceptor] Video ID:', awemeId);
+          
+        // Only process if it's a LIKE action (type=1) and response is OK
+        if (actionType === '1' && response.ok) {
+          let data;
+          try {
+            data = await response.json();
+          } catch (e) {
+            console.error('[Network Interceptor] Failed to parse like response:', e);
+            return;
+          }
+          console.log('[Network Interceptor] Like response:', data);
+          
+          // Check if like was successful
+          if (data.status_code === 0) {
+            console.log('[Network Interceptor] Like successful!');
+            
+            // Check if there's an active like tracker
+            const activeLikeAction = (window as any).__activeLikeAction;
+            if (activeLikeAction) {
+              console.log('[Network Interceptor] ✓✓✓ LIKE VERIFIED via network!');
+              
+              // Send success message
+              const proof = {
+                actionType: 'like',
+                awemeId: awemeId,
+                videoUrl: window.location.href,
+                timestamp: Date.now(),
+                verificationMethod: 'network_api',
+                apiResponse: data
+              };
+              
+              window.postMessage({
+                source: 'TIKTOK_MAIN_WORLD',
+                type: 'SEND_TO_BACKGROUND',
+                payload: {
+                  type: 'ACTION_COMPLETED',
+                  payload: {
+                    actionId: activeLikeAction.actionId,
+                    success: true,
+                    details: proof,
+                    timestamp: Date.now()
+                  }
+                }
+              }, '*');
+              
+              // Clear the active action
+              delete (window as any).__activeLikeAction;
+            } else {
+              console.log('[Network Interceptor] No active like action tracking');
+            }
+          } else {
+            console.log('[Network Interceptor] Like failed:', data.status_msg);
+          }
+        }
+      };
+        
+      // Handle follow/unfollow API
+      const handleFollowAPI = async (url: string, args: any[], response: Response) => {
+        console.log('[Network Interceptor] FOLLOW API detected!');
+        const method = args[1]?.method || 'GET';
+        console.log('[Network Interceptor] Method:', method);
+        
+        const urlObj = new URL(url);
+        const actionType = urlObj.searchParams.get('action_type') || urlObj.searchParams.get('type');
+        console.log('[Network Interceptor] Action type:', actionType === '1' ? 'FOLLOW' : 'UNFOLLOW');
+        
+        // Only process POST requests with action_type=1 (HEAD requests are empty)
+        if (method === 'POST' && actionType === '1' && response.ok) {
+          const contentType = response.headers.get('content-type');
+          
+          // Only process if response has JSON content
+          if (contentType && contentType.includes('application/json')) {
+            let data;
+            try {
+              data = await response.json();
+            } catch (e) {
+              console.error('[Network Interceptor] Failed to parse follow response:', e);
+              return;
+            }
+            console.log('[Network Interceptor] Follow response:', data);
+            
+            // Check if follow was successful
+            if (data.status_code === 0) {
+              console.log('[Network Interceptor] Follow successful!');
+              
+              // Check if there's an active follow tracker
+              const activeFollowAction = (window as any).__activeFollowAction;
+              if (activeFollowAction) {
+                console.log('[Network Interceptor] ✓✓✓ FOLLOW VERIFIED via network!');
+                
+                // Send success message
+                const proof = {
+                  actionType: 'follow',
+                  profileUrl: window.location.href,
+                  timestamp: Date.now(),
+                  verificationMethod: 'network_api',
+                  apiResponse: data
+                };
+                
+                window.postMessage({
+                  source: 'TIKTOK_MAIN_WORLD',
+                  type: 'SEND_TO_BACKGROUND',
+                  payload: {
+                    type: 'ACTION_COMPLETED',
+                    payload: {
+                      actionId: activeFollowAction.actionId,
+                      success: true,
+                      details: proof,
+                      timestamp: Date.now()
+                    }
+                  }
+                }, '*');
+                
+                // Clear the active action
+                delete (window as any).__activeFollowAction;
+              } else {
+                console.log('[Network Interceptor] No active follow action tracking');
+              }
+            } else {
+              console.log('[Network Interceptor] Follow failed:', data.status_msg);
+            }
+          } else {
+            console.log('[Network Interceptor] Response has no JSON content, skipping...');
+          }
+        }
+      };
+        
+      // Handle comment PUBLISH API
+      const handleCommentAPI = async (url: string, response: Response) => {
+        console.log('[Network Interceptor] Comment PUBLISH detected!');
+        console.log('[Network Interceptor] Response status:', response.status);
+        
+        if (!response.ok) {
+          console.log('[Network Interceptor] Comment response not OK, skipping');
+          return;
+        }
+        
+        // Check content-type before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.log('[Network Interceptor] Comment response is not JSON, skipping');
+          return;
+        }
+        
+        // Check content-length to avoid empty responses
+        const contentLength = response.headers.get('content-length');
+        if (contentLength === '0') {
+          console.log('[Network Interceptor] Comment response is empty, skipping');
+          return;
+        }
+        
+        // Extract the comment text from URL if present
+        const urlObj = new URL(url);
+        const commentText = urlObj.searchParams.get('text');
+        console.log('[Network Interceptor] Comment text from URL:', commentText);
+        
+        let data;
+        try {
+          const text = await response.text();
+          if (!text || text.trim() === '') {
+            console.log('[Network Interceptor] Empty response body, skipping');
+            return;
+          }
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error('[Network Interceptor] Failed to parse comment response:', e);
+          return;
+        }
+        console.log('[Network Interceptor] Publish response:', data);
+        console.log('[Network Interceptor] Response status:', data.status_code, data.status_msg);
+        
+        // Check if there's an active comment tracker
+        const commentTracker = (window as any).__activeCommentTracker;
+        if (commentTracker) {
+          console.log('[Network Interceptor] Active tracker found for:', commentTracker.accountHandle);
+          
+          if (data.status_code === 0 && data.comment) {
+            const commentUser = data.comment.user?.unique_id;
+            console.log('[Network Interceptor] Comment posted by:', commentUser);
+            console.log('[Network Interceptor] Tracking for:', commentTracker.accountHandle);
+            
+            if (commentUser === commentTracker.accountHandle) {
+              console.log('[Network Interceptor] ✓✓✓ MATCH! User posted the comment we are tracking!');
+              // Format it like list API for consistency
+              commentTracker.processCommentResponse({ comments: [data.comment] });
+            } else {
+              console.log('[Network Interceptor] Different user - posted by:', commentUser, 'tracking:', commentTracker.accountHandle);
+            }
+          } else {
+            console.log('[Network Interceptor] Comment publish failed or no comment in response');
+          }
+        } else {
+          console.log('[Network Interceptor] No active tracker - comment posted but not tracking');
+        }
+      };
+      
+      // Set our interceptor (but allow TikTok to override it if needed)
+      window.fetch = interceptedFetch;
+      
+      // Store processInterceptedResponse globally so the monitor can use it
+      (window as any).__processInterceptedResponse = processInterceptedResponse;
       
       console.log('[Global Network Interceptor] Setup complete');
     }
     
-    // Set up the global interceptor immediately
+    // Set up the global interceptor IMMEDIATELY before anything else
     setupGlobalNetworkInterceptor();
+    
+    // Monitor for fetch being overridden and re-apply our interceptor
+    let currentFetch = window.fetch;
+    setInterval(() => {
+      if (window.fetch !== currentFetch) {
+        console.log('[Global Network Interceptor] Fetch was overridden, re-applying interceptor...');
+        const newFetch = window.fetch;
+        
+        // Create a new interceptor that wraps the new fetch
+        window.fetch = async (...args: any[]) => {
+          // Safely get URL
+          let url = '';
+          try {
+            url = args[0]?.toString() || '';
+          } catch (e) {
+            return newFetch(...args);
+          }
+          
+          // ONLY intercept our specific endpoints
+          const shouldIntercept = url.includes('/api/commit/item/digg/') || 
+                                 url.includes('/api/commit/follow/user') ||
+                                 url.includes('/api/comment/publish/');
+          
+          if (!shouldIntercept) {
+            return newFetch(...args);
+          }
+          
+          // For our endpoints, get the response
+          let response;
+          try {
+            response = await newFetch(...args);
+          } catch (e) {
+            console.error('[Network Interceptor] Fetch failed:', e);
+            throw e;
+          }
+          
+          // Process our interception
+          try {
+            const clonedResponse = response.clone();
+            const processFunc = (window as any).__processInterceptedResponse;
+            if (processFunc) {
+              await processFunc(url, args, clonedResponse);
+            }
+          } catch (e) {
+            console.error('[Network Interceptor] Error processing response:', e);
+          }
+          
+          return response;
+        };
+        
+        currentFetch = window.fetch;
+        console.log('[Global Network Interceptor] Re-applied interceptor to new fetch');
+      }
+    }, 100); // Check every 100ms
+    
+    // Cache for the last comment data (in case it loads before tracker is ready)
+    let lastCommentData: any = null;
+    (window as any).__lastCommentData = null;
     
     // Helper function to send messages to background via bridge
     function sendToBackground(message: any) {
@@ -86,6 +366,9 @@ export default defineContentScript({
         payload: message
       }, '*');
     }
+    
+    // Expose a function to get cached comment data
+    (window as any).__getCachedCommentData = () => lastCommentData;
 
     class TikTokAccountTracker {
       private accountId: string | null = null;
@@ -762,6 +1045,12 @@ export default defineContentScript({
                 targetUrl: message.targetUrl
               });
               
+              // Check if we already have an active tracker
+              if ((window as any).__activeCommentTracker) {
+                console.log('[TikTok Action Tracker] Comment tracker already active, ignoring duplicate');
+                return;
+              }
+              
               // Pass account handle to the tracker
               const commentTracker = new TikTokCommentTracker(message.actionId, message.accountHandle);
               commentTracker.start();
@@ -787,673 +1076,86 @@ export default defineContentScript({
 
       // ============ LIKE ACTION TRACKING ============
       private trackLikeAction(actionId: string) {
-        console.log('[TikTok Like Tracker] 🎯 Starting like tracking for:', actionId);
+        console.log('[TikTok Like Tracker] Starting NETWORK-BASED like tracking for:', actionId);
         
-        // Send debug log to background
-        sendToBackground({
-          type: 'TIKTOK_DEBUG',
-          message: `Starting like tracking for action: ${actionId}`,
-          url: window.location.href
-        }).catch(() => {});
-
-        // Wait a bit for the page to stabilize
-        setTimeout(() => {
-          this.findAndTrackLikeButtons(actionId);
-        }, 500);
-      }
-      
-      private findAndTrackLikeButtons(actionId: string) {
-        const likeButtons = this.findLikeButtons();
-        
-        // Send button count to background
-        sendToBackground({
-          type: 'TIKTOK_DEBUG',
-          message: `Found ${likeButtons.length} like buttons on page`,
-          buttons: likeButtons.length,
-          url: window.location.href
-        }).catch(() => {});
-        
-        if (likeButtons.length === 0) {
-          console.log('[TikTok Like Tracker] ⏳ No like buttons found, retrying...');
-          
-          // Debug: Check what buttons exist on the page
-          const allButtons = document.querySelectorAll('button');
-          console.log(`[TikTok Like Tracker] Total buttons on page: ${allButtons.length}`);
-          
-          // Look for ANY button that might be a like button
-          allButtons.forEach((btn, idx) => {
-            const ariaLabel = btn.getAttribute('aria-label');
-            const ariaPressed = btn.getAttribute('aria-pressed');
-            const hasSvg = !!btn.querySelector('svg');
-            const text = btn.textContent?.trim();
-            
-            // Log buttons with potential like indicators
-            if (ariaLabel?.toLowerCase().includes('like') || 
-                ariaPressed !== null || 
-                (hasSvg && !text) ||
-                btn.querySelector('span[data-e2e="like-icon"]')) {
-              console.log(`[TikTok Like Tracker] Potential like button #${idx}:`, {
-                ariaLabel,
-                ariaPressed,
-                hasSvg,
-                text,
-                hasLikeIcon: !!btn.querySelector('span[data-e2e="like-icon"]'),
-                html: btn.outerHTML.substring(0, 200)
-              });
-            }
-          });
-          
-          setTimeout(() => this.findAndTrackLikeButtons(actionId), 1000);
-          return;
-        }
-
-        // Capture initial states with detailed info
-        const initialStates = likeButtons.map(btn => {
-          const svg = btn.querySelector('svg');
-          const pathFills = Array.from(svg?.querySelectorAll('path') || []).map(p => p.getAttribute('fill'));
-          const animatedHeartPath = btn.querySelector('path[fill*="rgb"]');
-          const currentFillColor = animatedHeartPath?.getAttribute('fill') || '';
-          
-          return {
-            element: btn,
-            isLiked: this.isLiked(btn),
-            likeCount: this.getLikeCount(btn),
-            ariaPressed: btn.getAttribute('aria-pressed'),
-            ariaLabel: btn.getAttribute('aria-label'),
-            className: btn.className,
-            pathFills: pathFills,
-            heartColor: currentFillColor,
-            hasDefs: !!svg?.querySelector('defs'),
-            hasFilter: !!svg?.querySelector('filter'),
-            svgHTML: svg?.outerHTML || ''
-          };
-        });
-
-        console.log('[TikTok Like Tracker] 📊 Initial states:', initialStates.map(s => ({
-          isLiked: s.isLiked,
-          ariaPressed: s.ariaPressed,
-          count: s.likeCount,
-          ariaLabel: s.ariaLabel
-        })));
-        
-        // Send detailed initial state to background for debugging
-        sendToBackground({
-          type: 'TIKTOK_DEBUG',
-          message: `Initial button states captured`,
-          states: initialStates.map(s => ({
-            isLiked: s.isLiked,
-            ariaPressed: s.ariaPressed,
-            ariaLabel: s.ariaLabel,
-            count: s.likeCount,
-            pathFills: s.pathFills,
-            hasDefs: s.hasDefs,
-            hasFilter: s.hasFilter
-          }))
-        }).catch(() => {});
-
-        // Store pending action
-        this.pendingActions.set(actionId, {
-          actionId,
-          actionType: 'like',
-          startTime: Date.now(),
-          initialState: initialStates
-        });
-
-        // Set up dual monitoring
-        this.setupLikeMonitoring(actionId, initialStates);
-      }
-
-      private findLikeButtons(): Element[] {
-        const buttons: Element[] = [];
-        
-        // Strategy 1: Find by aria-label containing "Like video" (MOST SPECIFIC)
-        // TikTok like buttons have aria-label="Like video X likes"
-        document.querySelectorAll('button[aria-label*="Like video"]').forEach(btn => {
-          if (!buttons.includes(btn)) {
-            buttons.push(btn);
-            console.log('[TikTok Like Tracker] Found like button by aria-label "Like video":', {
-              ariaPressed: btn.getAttribute('aria-pressed'),
-              ariaLabel: btn.getAttribute('aria-label')
-            });
-          }
-        });
-        
-        // Strategy 2: Find by aria-pressed AND like-icon (FALLBACK)
-        if (buttons.length === 0) {
-          document.querySelectorAll('button[aria-pressed]').forEach(btn => {
-            const ariaLabel = btn.getAttribute('aria-label') || '';
-            const hasLikeIcon = !!btn.querySelector('span[data-e2e="like-icon"]');
-            
-            // Check if it has like icon or aria-label contains "like"
-            if (hasLikeIcon || ariaLabel.toLowerCase().includes('like')) {
-              if (!buttons.includes(btn)) {
-                buttons.push(btn);
-                console.log('[TikTok Like Tracker] Found like button by aria-pressed + like attributes:', {
-                  ariaPressed: btn.getAttribute('aria-pressed'),
-                  ariaLabel,
-                  hasLikeIcon
-                });
-              }
-            }
-          });
-        }
-        
-        // Strategy 2: Find by data-e2e attribute
-        const likeIcons = document.querySelectorAll('span[data-e2e="like-icon"]');
-        likeIcons.forEach(icon => {
-          const btn = icon.closest('button');
-          if (btn && !buttons.includes(btn)) {
-            buttons.push(btn);
-            console.log('[TikTok Like Tracker] Found like button by data-e2e:', {
-              ariaPressed: btn.getAttribute('aria-pressed'),
-              ariaLabel: btn.getAttribute('aria-label')
-            });
-          }
-        });
-        
-        // Strategy 3: Find by aria-label (fallback)
-        document.querySelectorAll('button[aria-label*="Like"], button[aria-label*="like"]').forEach(btn => {
-          // Make sure it's not a comment like button
-          if (!btn.getAttribute('aria-label')?.toLowerCase().includes('comment') && !buttons.includes(btn)) {
-            buttons.push(btn);
-            console.log('[TikTok Like Tracker] Found like button by aria-label:', {
-              ariaPressed: btn.getAttribute('aria-pressed'),
-              ariaLabel: btn.getAttribute('aria-label')
-            });
-          }
-        });
-        
-        // Strategy 4: Find buttons with heart SVGs
-        document.querySelectorAll('button').forEach(btn => {
-          const svg = btn.querySelector('svg');
-          if (svg && !buttons.includes(btn)) {
-            // Check if SVG has heart-like path
-            const paths = svg.querySelectorAll('path');
-            paths.forEach(path => {
-              const d = path.getAttribute('d') || '';
-              // Check for heart shape patterns in path
-              if ((d.includes('M7.5 2.25C10.5') || d.includes('M15 4.5C21') || d.includes('HeartFill')) && !buttons.includes(btn)) {
-                buttons.push(btn);
-                console.log('[TikTok Like Tracker] Found like button by SVG path:', {
-                  ariaPressed: btn.getAttribute('aria-pressed'),
-                  ariaLabel: btn.getAttribute('aria-label')
-                });
-              }
-            });
-          }
-        });
-        
-        console.log(`[TikTok Like Tracker] Found ${buttons.length} like buttons`);
-        buttons.forEach((btn, index) => {
-          const svg = btn.querySelector('svg');
-          const pathFills = Array.from(svg?.querySelectorAll('path') || []).map(p => p.getAttribute('fill'));
-          console.log(`  Button ${index + 1}:`, {
-            ariaLabel: btn.getAttribute('aria-label'),
-            ariaPressed: btn.getAttribute('aria-pressed'),
-            hasLikeIcon: !!btn.querySelector('span[data-e2e="like-icon"]'),
-            text: btn.textContent?.trim(),
-            pathFills,
-            buttonHTML: btn.outerHTML.substring(0, 150)
-          });
-        });
-        
-        return buttons;
-      }
-
-      private isLiked(button: Element): boolean {
-        // PRIMARY: Check aria-pressed - TikTok does use this!
-        const ariaPressed = button.getAttribute('aria-pressed');
-        if (ariaPressed === 'true') return true;
-        if (ariaPressed === 'false') return false;
-        
-        // Check for the animated heart SVG color
-        // When liked, the heart animation uses rgb(254,44,85) instead of rgb(255,255,255)
-        const animatedPath = button.querySelector('path[fill="rgb(254,44,85)"], path[fill="rgb(254, 44, 85)"]');
-        if (animatedPath) return true;
-        
-        // Check for white heart (unliked state) - if we find white, it's NOT liked
-        const whitePath = button.querySelector('path[fill="rgb(255,255,255)"], path[fill="rgb(255, 255, 255)"]');
-        if (whitePath && !animatedPath) return false;
-        
-        // FALLBACK: Check for red heart fill color in standard SVG (TikTok's red color)
-        const redPath = button.querySelector('path[fill="#FE2C55"], path[fill="#ff2c55"], path[fill="rgb(254, 44, 85)"]');
-        if (redPath) return true;
-        
-        // FALLBACK: Check for shadow filter (only on liked state)
-        const hasFilter = button.querySelector('g[filter*="LikeRedShadowColor"]');
-        if (hasFilter) return true;
-        
-        // FALLBACK: Check SVG structure - liked hearts have more complex structure
-        const svg = button.querySelector('svg');
-        if (svg) {
-          // Liked hearts have defs, filters, and gradients
-          const hasDefs = svg.querySelector('defs');
-          const hasGradient = svg.querySelector('radialGradient, linearGradient');
-          if (hasDefs && hasGradient) return true;
-        }
-        
-        return false;
-      }
-
-      private getLikeCount(button: Element): number {
-        const countElement = button.parentElement?.querySelector('strong[data-e2e="like-count"]');
-        if (!countElement) return 0;
-        
-        const text = countElement.textContent || '0';
-        return this.parseCount(text);
-      }
-
-      private parseCount(text: string): number {
-        text = text.trim().toUpperCase();
-        if (text.includes('K')) return Math.round(parseFloat(text.replace('K', '')) * 1000);
-        if (text.includes('M')) return Math.round(parseFloat(text.replace('M', '')) * 1000000);
-        return parseInt(text.replace(/,/g, ''), 10) || 0;
-      }
-
-      private setupLikeMonitoring(actionId: string, initialStates: any[]) {
-        // Send monitoring started message
-        sendToBackground({
-          type: 'TIKTOK_DEBUG',
-          message: 'Like monitoring started - watching for changes'
-        }).catch(() => {});
-        
-        // MutationObserver
-        const observer = new MutationObserver((mutations) => {
-          for (const mutation of mutations) {
-            if (mutation.type === 'attributes' && 
-                mutation.target instanceof Element &&
-                (mutation.target.matches('button[aria-label*="Like video"]') || 
-                 mutation.target.matches('button[aria-pressed]'))) {
-              
-              const button = mutation.target;
-              const oldState = initialStates.find(s => s.element === button);
-              if (oldState) {
-                const newPressed = button.getAttribute('aria-pressed');
-                const wasLiked = oldState.ariaPressed === 'true';
-                const nowLiked = newPressed === 'true';
-                
-                if (!wasLiked && nowLiked) {
-                  console.log('[TikTok Like Tracker] ✅ LIKE DETECTED via aria-pressed change!');
-                  console.log(`  Button: ${button.getAttribute('aria-label')}`);
-                  console.log(`  aria-pressed: ${oldState.ariaPressed} → ${newPressed}`);
-                  this.reportLikeResult(actionId, button, oldState);
-                  return;
-                } else if (wasLiked && !nowLiked) {
-                  console.log('[TikTok Like Tracker] ⚠️ Unlike detected, updating state...');
-                  oldState.isLiked = false;
-                  oldState.ariaPressed = 'false';
-                }
-              }
-            }
-            
-            // Check for SVG replacements
-            if (mutation.type === 'childList') {
-              mutation.addedNodes.forEach(node => {
-                if (node instanceof Element && node.tagName === 'SVG') {
-                  const hasRedFill = node.querySelector('path[fill="#FE2C55"]');
-                  if (hasRedFill) {
-                    const button = node.closest('button');
-                    const oldState = initialStates.find(s => s.element === button);
-                    if (oldState && !oldState.isLiked) {
-                      console.log('[TikTok Like Tracker] ✅ LIKE DETECTED via SVG!');
-                      this.reportLikeResult(actionId, button!, oldState);
-                      return;
-                    }
-                  }
-                }
-              });
-            }
-          }
-        });
-        
-        const targetArea = document.querySelector('section[data-e2e="feed-video"]')?.parentElement || document.body;
-        observer.observe(targetArea, {
-          childList: true,
-          attributes: true,
-          subtree: true,
-          attributeFilter: ['aria-pressed', 'aria-label']
-        });
-        
-        this.observers.set(actionId, observer);
-        
-        // Polling fallback with debug
-        let pollCount = 0;
-        const pollInterval = setInterval(() => {
-          pollCount++;
-          
-          for (const state of initialStates) {
-            const currentLiked = this.isLiked(state.element);
-            const currentCount = this.getLikeCount(state.element);
-            const currentAriaPressed = state.element.getAttribute('aria-pressed');
-            const svg = state.element.querySelector('svg');
-            const currentSvgHTML = svg?.outerHTML || '';
-            const svgChanged = currentSvgHTML !== state.svgHTML;
-            
-            // Check if aria-pressed changed
-            const ariaPressedChanged = currentAriaPressed !== state.ariaPressed;
-            if (ariaPressedChanged) {
-              console.log(`[TikTok Like Tracker] aria-pressed CHANGED: ${state.ariaPressed} → ${currentAriaPressed}`);
-              sendToBackground({
-                type: 'TIKTOK_DEBUG',
-                message: `aria-pressed CHANGED at poll #${pollCount}!`,
-                before: state.ariaPressed,
-                after: currentAriaPressed,
-                ariaLabel: state.element.getAttribute('aria-label')
-              }).catch(() => {});
-            }
-            
-            // Check for SVG color change (white to red)
-            const animatedHeartPath = state.element.querySelector('path[fill*="rgb"]');
-            const currentHeartColor = animatedHeartPath?.getAttribute('fill') || '';
-            if (currentHeartColor !== state.heartColor && currentHeartColor) {
-              console.log(`[TikTok Like Tracker] Heart color CHANGED: ${state.heartColor} → ${currentHeartColor}`);
-              sendToBackground({
-                type: 'TIKTOK_DEBUG',
-                message: `Heart color CHANGED at poll #${pollCount}!`,
-                before: state.heartColor,
-                after: currentHeartColor
-              }).catch(() => {});
-              
-              // Update the stored color
-              state.heartColor = currentHeartColor;
-            }
-            
-            // Log every 10th poll for debug
-            if (pollCount % 10 === 0) {
-              const pathFills = Array.from(svg?.querySelectorAll('path') || []).map(p => p.getAttribute('fill'));
-              sendToBackground({
-                type: 'TIKTOK_DEBUG',
-                message: `Polling #${pollCount}: aria-pressed=${currentAriaPressed}, isLiked=${currentLiked}, count=${currentCount}`,
-                ariaLabel: state.element.getAttribute('aria-label'),
-                pathFills: pathFills,
-                hasDefs: !!svg?.querySelector('defs'),
-                hasFilter: !!svg?.querySelector('filter')
-              }).catch(() => {});
-            }
-            
-            // Detect like by aria-pressed change OR isLiked function
-            const likeDetected = (state.ariaPressed === 'false' && currentAriaPressed === 'true') ||
-                                (!state.isLiked && currentLiked);
-            
-            if (likeDetected) {
-              console.log('[TikTok Like Tracker] ✅ LIKE DETECTED via polling!');
-              console.log(`  aria-pressed: ${state.ariaPressed} → ${currentAriaPressed}`);
-              console.log(`  Count: ${state.likeCount} → ${currentCount}`);
-              console.log(`  Button: ${state.element.getAttribute('aria-label')}`);
-              
-              sendToBackground({
-                type: 'TIKTOK_DEBUG',
-                message: '✅ LIKE DETECTED! Sending verification...',
-                ariaPressedChange: `${state.ariaPressed} → ${currentAriaPressed}`,
-                countChange: `${state.likeCount} → ${currentCount}`,
-                ariaLabel: state.element.getAttribute('aria-label')
-              }).catch(() => {});
-              
-              this.reportLikeResult(actionId, state.element, { ...state, newCount: currentCount });
-              clearInterval(pollInterval);
-              return;
-            } else if ((state.ariaPressed === 'true' && currentAriaPressed === 'false') ||
-                      (state.isLiked && !currentLiked)) {
-              // Update state if unliked
-              state.isLiked = false;
-              state.ariaPressed = currentAriaPressed;
-              state.likeCount = currentCount;
-              state.svgHTML = currentSvgHTML;
-            }
-          }
-        }, 300);
-        
-        this.pollingIntervals.set(actionId, pollInterval);
-        
-        // Timeout
-        setTimeout(() => {
-          if (this.pendingActions.has(actionId)) {
-            this.reportActionResult(actionId, false, 'Timeout - no like detected');
-            this.cleanup(actionId);
-          }
-        }, 120000);
-      }
-
-      private reportLikeResult(actionId: string, button: Element, oldState: any) {
-        const currentLiked = this.isLiked(button);
-        const currentCount = this.getLikeCount(button);
-        
-        if (!currentLiked) {
-          console.log('[TikTok Like Tracker] ❌ Verification failed');
+        // Check if we're already tracking a like action
+        if ((window as any).__activeLikeAction) {
+          console.log('[TikTok Like Tracker] Already tracking a like action, ignoring duplicate');
           return;
         }
         
-        const proof = {
-          actionType: 'like',
-          platform: 'tiktok',
-          targetUrl: window.location.href,
-          timestamp: Date.now(),
-          verification: {
-            ariaPressed: {
-              before: oldState.ariaPressed,
-              after: button.getAttribute('aria-pressed')
-            },
-            likeCount: {
-              before: oldState.likeCount,
-              after: currentCount,
-              increased: currentCount > oldState.likeCount
-            },
-            svgChanged: oldState.svgHTML !== button.querySelector('svg')?.outerHTML,
-            hasRedHeart: !!button.querySelector('path[fill="#FE2C55"]')
-          }
+        // Store the action globally for the network interceptor
+        (window as any).__activeLikeAction = {
+          actionId: actionId,
+          startTime: Date.now()
         };
         
-        this.reportActionResult(actionId, true, proof);
-        this.cleanup(actionId);
+        console.log('[TikTok Like Tracker] Waiting for user to like the video...');
+        console.log('[TikTok Like Tracker] Network interceptor will catch the /api/commit/item/digg/ call');
+        
+        // Set timeout (30 seconds)
+        setTimeout(() => {
+          if ((window as any).__activeLikeAction?.actionId === actionId) {
+            console.log('[TikTok Like Tracker] Timeout - no like detected');
+            
+            sendToBackground({
+              type: 'ACTION_COMPLETED',
+              payload: {
+                actionId: actionId,
+                success: false,
+                details: {
+                  error: 'Timeout: User did not like the video within 30 seconds',
+                  timestamp: Date.now()
+                }
+              }
+            });
+            
+            delete (window as any).__activeLikeAction;
+          }
+        }, 30000);
       }
 
       // ============ FOLLOW ACTION TRACKING ============
       private trackFollowAction(actionId: string) {
-        console.log('[TikTok Follow Tracker] 🎯 Starting follow tracking for:', actionId);
-
-        const followButtons = this.findFollowButtons();
+        console.log('[TikTok Follow Tracker] Starting NETWORK-BASED follow tracking for:', actionId);
         
-        if (followButtons.length === 0) {
-          console.log('[TikTok Follow Tracker] ⏳ No follow buttons found, retrying...');
-          setTimeout(() => this.trackFollowAction(actionId), 1000);
-          return;
-        }
-
-        // Capture initial states
-        const initialStates = followButtons.map(btn => ({
-          element: btn,
-          isFollowing: this.isFollowing(btn),
-          buttonText: btn.textContent?.trim() || '',
-          ariaLabel: btn.getAttribute('aria-label') || '',
-          hasIcon: !!btn.querySelector('svg'),
-          classes: Array.from(btn.classList)
-        }));
-
-        console.log('[TikTok Follow Tracker] 📊 Initial states:', initialStates.map(s => ({
-          isFollowing: s.isFollowing,
-          text: s.buttonText,
-          ariaLabel: s.ariaLabel
-        })));
-
-        // Store pending action
-        this.pendingActions.set(actionId, {
-          actionId,
-          actionType: 'follow',
-          startTime: Date.now(),
-          initialState: initialStates
-        });
-
-        // Set up dual monitoring
-        this.setupFollowMonitoring(actionId, initialStates);
-      }
-
-      private findFollowButtons(): Element[] {
-        const buttons: Element[] = [];
-        
-        // Strategy 1: Find by data-e2e
-        document.querySelectorAll('button[data-e2e="follow-button"]').forEach(btn => {
-          buttons.push(btn);
-        });
-        
-        // Strategy 2: Find by aria-label
-        document.querySelectorAll('button[aria-label*="Follow"]').forEach(btn => {
-          if (!buttons.includes(btn)) buttons.push(btn);
-        });
-        
-        // Strategy 3: Find by text content
-        document.querySelectorAll('button').forEach(btn => {
-          const text = btn.textContent?.trim() || '';
-          if ((text === 'Follow' || text === 'Following') && !buttons.includes(btn)) {
-            buttons.push(btn);
-          }
-        });
-        
-        console.log(`[TikTok Follow Tracker] Found ${buttons.length} follow buttons`);
-        return buttons;
-      }
-
-      private isFollowing(button: Element): boolean {
-        // Check text content
-        const text = button.textContent?.trim() || '';
-        if (text === 'Following') return true;
-        if (text === 'Follow') return false;
-        
-        // Check aria-label
-        const ariaLabel = button.getAttribute('aria-label') || '';
-        if (ariaLabel.includes('Following')) return true;
-        if (ariaLabel.includes('Follow') && !ariaLabel.includes('Following')) return false;
-        
-        // Check for checkmark icon (TikTok shows checkmark when following)
-        const hasCheckIcon = !!button.querySelector('svg path[d*="M19 2.5a10"]'); // Part of check icon path
-        if (hasCheckIcon) return true;
-        
-        // Check button classes (TikTok uses TUXButton--secondary when following)
-        const isSecondary = button.classList.contains('TUXButton--secondary');
-        const isPrimary = button.classList.contains('TUXButton--primary');
-        if (isSecondary && text.includes('Following')) return true;
-        if (isPrimary && text === 'Follow') return false;
-        
-        return false;
-      }
-
-      private setupFollowMonitoring(actionId: string, initialStates: any[]) {
-        // MutationObserver
-        const observer = new MutationObserver((mutations) => {
-          for (const mutation of mutations) {
-            // Check for text changes
-            if (mutation.type === 'childList' || mutation.type === 'characterData') {
-              const button = mutation.target instanceof Element 
-                ? mutation.target.closest('button[data-e2e="follow-button"]')
-                : null;
-                
-              if (button) {
-                const oldState = initialStates.find(s => s.element === button);
-                if (oldState) {
-                  const currentFollowing = this.isFollowing(button);
-                  if (!oldState.isFollowing && currentFollowing) {
-                    console.log('[TikTok Follow Tracker] ✅ FOLLOW DETECTED via DOM!');
-                    this.reportFollowResult(actionId, button, oldState);
-                    return;
-                  } else if (oldState.isFollowing && !currentFollowing) {
-                    console.log('[TikTok Follow Tracker] ⚠️ Unfollow detected, updating state...');
-                    oldState.isFollowing = false;
-                    oldState.buttonText = button.textContent?.trim() || '';
-                  }
-                }
-              }
-            }
-            
-            // Check for attribute changes
-            if (mutation.type === 'attributes' && mutation.attributeName === 'aria-label') {
-              const button = mutation.target as Element;
-              const oldState = initialStates.find(s => s.element === button);
-              if (oldState) {
-                const newLabel = button.getAttribute('aria-label') || '';
-                if (!oldState.ariaLabel.includes('Following') && newLabel.includes('Following')) {
-                  console.log('[TikTok Follow Tracker] ✅ FOLLOW DETECTED via aria-label!');
-                  this.reportFollowResult(actionId, button, oldState);
-                  return;
-                }
-              }
-            }
-          }
-        });
-        
-        const targetArea = document.querySelector('.css-n42mkb-5e6d46e3--DivShareTitleContainer-5e6d46e3--CreatorPageHeaderShareContainer') || document.body;
-        observer.observe(targetArea, {
-          childList: true,
-          attributes: true,
-          subtree: true,
-          characterData: true,
-          attributeFilter: ['aria-label', 'class']
-        });
-        
-        this.observers.set(actionId, observer);
-        
-        // Polling fallback
-        const pollInterval = setInterval(() => {
-          for (const state of initialStates) {
-            const currentFollowing = this.isFollowing(state.element);
-            const currentText = state.element.textContent?.trim() || '';
-            
-            if (!state.isFollowing && currentFollowing) {
-              console.log('[TikTok Follow Tracker] ✅ FOLLOW DETECTED via polling!');
-              console.log(`  Text: "${state.buttonText}" → "${currentText}"`);
-              this.reportFollowResult(actionId, state.element, state);
-              clearInterval(pollInterval);
-              return;
-            } else if (state.isFollowing && !currentFollowing) {
-              state.isFollowing = false;
-              state.buttonText = currentText;
-            }
-          }
-        }, 300);
-        
-        this.pollingIntervals.set(actionId, pollInterval);
-        
-        // Timeout
-        setTimeout(() => {
-          if (this.pendingActions.has(actionId)) {
-            this.reportActionResult(actionId, false, 'Timeout - no follow detected');
-            this.cleanup(actionId);
-          }
-        }, 120000);
-      }
-
-      private reportFollowResult(actionId: string, button: Element, oldState: any) {
-        const currentFollowing = this.isFollowing(button);
-        const currentText = button.textContent?.trim() || '';
-        
-        if (!currentFollowing) {
-          console.log('[TikTok Follow Tracker] ❌ Verification failed');
+        // Check if we're already tracking a follow action
+        if ((window as any).__activeFollowAction) {
+          console.log('[TikTok Follow Tracker] Already tracking a follow action, ignoring duplicate');
           return;
         }
         
-        const proof = {
-          actionType: 'follow',
-          platform: 'tiktok',
-          targetUrl: window.location.href,
-          timestamp: Date.now(),
-          verification: {
-            textChange: {
-              before: oldState.buttonText,
-              after: currentText
-            },
-            ariaLabel: {
-              before: oldState.ariaLabel,
-              after: button.getAttribute('aria-label') || ''
-            },
-            hasCheckIcon: !!button.querySelector('svg path[d*="M19 2.5a10"]'),
-            buttonClass: {
-              before: oldState.classes.join(' '),
-              after: Array.from(button.classList).join(' ')
-            }
-          }
+        // Store the action globally for the network interceptor
+        (window as any).__activeFollowAction = {
+          actionId: actionId,
+          startTime: Date.now()
         };
         
-        this.reportActionResult(actionId, true, proof);
-        this.cleanup(actionId);
+        console.log('[TikTok Follow Tracker] Waiting for user to follow the account...');
+        console.log('[TikTok Follow Tracker] Network interceptor will catch the /api/commit/follow/user/ call');
+        
+        // Set timeout (30 seconds)
+        setTimeout(() => {
+          if ((window as any).__activeFollowAction?.actionId === actionId) {
+            console.log('[TikTok Follow Tracker] Timeout - no follow detected');
+            
+            sendToBackground({
+              type: 'ACTION_COMPLETED',
+              payload: {
+                actionId: actionId,
+                success: false,
+                details: {
+                  error: 'Timeout: User did not follow the account within 30 seconds',
+                  timestamp: Date.now()
+                }
+              }
+            });
+            
+            delete (window as any).__activeFollowAction;
+          }
+        }, 30000);
       }
+
 
       // ============ COMMON METHODS ============
       private reportActionResult(actionId: string, success: boolean, details: any) {
