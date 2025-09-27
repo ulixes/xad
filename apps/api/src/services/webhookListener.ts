@@ -512,7 +512,7 @@ export class WebhookListenerService {
           campaignId: campaign.id,
           actionType: 'comment',
           target: commentUrl,
-          pricePerAction: 15, // $0.15 in cents
+          pricePerAction: 31, // $0.315 in cents (3x previous price)
           maxVolume: Number(actions.commentCount),
           currentVolume: 0,
           isActive: false,

@@ -161,7 +161,7 @@ export function SimplifiedAdTargetingForm({
   const [contractData, setContractData] = useState({
     baseLikePrice: 300000, // $0.30 in USDC (6 decimals) - increased from $0.20
     baseFollowPrice: 600000, // $0.60 in USDC (6 decimals) - increased from $0.40
-    baseCommentPrice: 150000, // $0.15 in USDC (6 decimals)
+    baseCommentPrice: 315000, // $0.315 in USDC (6 decimals) - 3x previous price
     loading: true
   });
   
@@ -190,7 +190,7 @@ export function SimplifiedAdTargetingForm({
         setContractData({
           baseLikePrice: 300000,  // $0.30
           baseFollowPrice: 600000, // $0.60
-          baseCommentPrice: 150000, // $0.15
+          baseCommentPrice: 315000, // $0.315
           loading: false
         });
         return;
@@ -204,7 +204,7 @@ export function SimplifiedAdTargetingForm({
         setContractData({
           baseLikePrice: 300000, // 0.3 USDC per like (6 decimals)
           baseFollowPrice: 600000, // 0.6 USDC per follow (6 decimals)
-          baseCommentPrice: 150000, // 0.15 USDC per comment (6 decimals)
+          baseCommentPrice: 315000, // 0.315 USDC per comment (6 decimals) - 3x previous price
           loading: false
         });
       } catch (error) {

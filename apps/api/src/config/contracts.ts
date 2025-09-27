@@ -12,7 +12,7 @@ export function getContractConfig(): ContractConfig {
   
   if (environment === 'production') {
     return {
-      address: process.env.CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS || '',
+      address: process.env.CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS || '0x7ADb15928831C4591e2B629CBd87aa1EC09fc38C',
       network: 'base',
       chainId: 8453,
       usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
@@ -21,7 +21,7 @@ export function getContractConfig(): ContractConfig {
     };
   } else {
     return {
-      address: process.env.CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS || '',
+      address: process.env.CAMPAIGN_PAYMENTS_CONTRACT_ADDRESS || '0x7ADb15928831C4591e2B629CBd87aa1EC09fc38C',
       network: 'base-sepolia',
       chainId: 84532,
       usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',

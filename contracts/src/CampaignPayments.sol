@@ -26,7 +26,7 @@ contract CampaignPayments {
     // Base prices in USDC (6 decimals) - 30% reduction for affordability
     uint256 public baseLikePrice = 210000;    // $0.21 per like (reduced 30% from $0.30)
     uint256 public baseFollowPrice = 420000;  // $0.42 per follow (reduced 30% from $0.60)
-    uint256 public baseCommentPrice = 105000;  // $0.105 per comment (50% of like price)
+    uint256 public baseCommentPrice = 315000;  // $0.315 per comment (3x previous price, 1.5x like price)
     uint256 public constant BASE_PRECISION = 1000;       // For multiplier calculations
     
     // Account quality multipliers (1000 = 1.0x) - configurable by owner

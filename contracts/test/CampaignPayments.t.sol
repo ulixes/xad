@@ -125,7 +125,10 @@ contract CampaignPaymentsTest is Test {
             followTarget: "@account",
             followCount: 10,
             likeTargets: likeTargets,
-            likeCountPerPost: 20
+            likeCountPerPost: 20,
+            commentTarget: "",
+            commentContent: "",
+            commentCount: 0
         });
         
         // Test base price (no multipliers)
@@ -162,7 +165,7 @@ contract CampaignPaymentsTest is Test {
     
     function testUpdateBasePrices() public {
         // Update base prices
-        campaignPayments.updateBasePrices(300000, 500000); // $0.30 and $0.50
+        campaignPayments.updateBasePrices(300000, 500000, 150000); // $0.30, $0.50, $0.15
         assertEq(campaignPayments.baseLikePrice(), 300000);
         assertEq(campaignPayments.baseFollowPrice(), 500000);
         
@@ -183,7 +186,10 @@ contract CampaignPaymentsTest is Test {
             followTarget: "@account",
             followCount: 10,
             likeTargets: likeTargets,
-            likeCountPerPost: 20
+            likeCountPerPost: 20,
+            commentTarget: "",
+            commentContent: "",
+            commentCount: 0
         });
         
         uint256 newPrice = campaignPayments.calculatePrice(reqs, actions);
@@ -279,7 +285,7 @@ contract CampaignPaymentsTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
-        campaignPayments.updateBasePrices(250000, 450000);
+        campaignPayments.updateBasePrices(250000, 450000, 125000);
         
         vm.expectRevert(CampaignPayments.OnlyOwner.selector);
         campaignPayments.updateVerifiedMultiplier(1600);

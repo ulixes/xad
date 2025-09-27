@@ -16,7 +16,7 @@ export const getNetworkConfig = () => {
     
     // Smart Contract (CampaignPayments) - v3 with comments support
     campaignPaymentsContract: import.meta.env.VITE_CONTRACT_ADDRESS || 
-      '0x2ab9a8239F409ee1B7330F8cf01f34a425856B6E', // Base Sepolia deployment with comments support
+      '0x7ADb15928831C4591e2B629CBd87aa1EC09fc38C', // Base Sepolia deployment with 3x comment price ($0.315)
     
     // USDC Token Address (payment currency)
     usdcAddress: isProduction
