@@ -55,7 +55,7 @@ const tiktokActions: Action[] = [
   { id: '1', type: 'like', status: 'completed', platform: 'tiktok', url: 'https://www.tiktok.com/@user/video/7234567890', payment: 0.25 },
   { id: '2', type: 'like', status: 'loading', platform: 'tiktok', url: 'https://www.tiktok.com/@creator/video/7234567891', payment: 0.25 },
   { id: '3', type: 'like', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@trending/video/7234567892', payment: 0.25 },
-  { id: '4', type: 'comment', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@viral/video/7234567893', payment: 0.50 },
+  { id: '4', type: 'comment', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@viral/video/7234567893', payment: 0.315, commentContent: '🔥🔥🔥' }, // One random emoji repeated randomly
   { id: '5', type: 'share', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@dance/video/7234567894', payment: 0.35 },
   { id: '6', type: 'follow', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@newuser', payment: 0.40 },
 ]
@@ -141,7 +141,7 @@ export const MixedStates: Story = {
       { id: '1', type: 'like', status: 'completed', platform: 'tiktok', url: 'https://www.tiktok.com/@user/video/7234567890', payment: 0.25 },
       { id: '2', type: 'like', status: 'loading', platform: 'tiktok', url: 'https://www.tiktok.com/@creator/video/7234567891', payment: 0.25 },
       { id: '3', type: 'like', status: 'error', platform: 'tiktok', url: 'https://www.tiktok.com/@trending/video/7234567892', payment: 0.25, errorMessage: 'Failed to like post. Please try again.' },
-      { id: '4', type: 'comment', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@viral/video/7234567893', payment: 0.50 },
+      { id: '4', type: 'comment', status: 'pending', platform: 'tiktok', url: 'https://www.tiktok.com/@viral/video/7234567893', payment: 0.315, commentContent: '😍😍😍😍' }, // Same emoji repeated 4 times
     ],
     availableActionsCount: 4,
     onStartActions: () => {},

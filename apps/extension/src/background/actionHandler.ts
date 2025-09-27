@@ -5,6 +5,7 @@ export interface ActionPayload {
   actionType: string;
   platform: string;
   accountHandle: string;
+  commentContent?: string;  // For comment actions with emoji content
 }
 
 // Track active actions
@@ -17,7 +18,7 @@ const activeActions = new Map<string, {
 }>();
 
 export async function handleExecuteAction(payload: ActionPayload): Promise<{ success: boolean; error?: string }> {
-  const { actionId, actionRunId, url, actionType, platform, accountHandle } = payload;
+  const { actionId, actionRunId, url, actionType, platform, accountHandle, commentContent } = payload;
   
   console.log('Executing action:', {
     actionId,
@@ -87,7 +88,9 @@ export async function handleExecuteAction(payload: ActionPayload): Promise<{ suc
           type: 'TRACK_ACTION',
           actionId,
           actionType,
-          targetUrl: url
+          targetUrl: url,
+          accountHandle, // Pass the account handle for comment verification
+          commentContent // Pass the comment content (emojis) if it's a comment action
         });
         
         console.log('Tracking request sent successfully to Instagram content script');
@@ -152,7 +155,9 @@ export async function handleExecuteAction(payload: ActionPayload): Promise<{ suc
           type: 'TRACK_ACTION',
           actionId,
           actionType,
-          targetUrl: url
+          targetUrl: url,
+          accountHandle, // Pass the account handle for comment verification
+          commentContent // Pass the comment content (emojis) if it's a comment action
         });
         
         console.log('Tracking request sent successfully to TikTok content script');

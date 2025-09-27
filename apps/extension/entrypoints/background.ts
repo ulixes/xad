@@ -8,6 +8,11 @@ export default defineBackground(() => {
 
   // Message listener for handling various extension actions
   browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    // Log TikTok tracker messages to background console
+    if (message.type === 'TIKTOK_LOG') {
+      console.log(message.message, message.data || '');
+      return true;
+    }
     // Handle action execution
     if (message.type === 'executeAction') {
       const result = await handleExecuteAction(message.payload);

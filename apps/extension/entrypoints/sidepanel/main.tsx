@@ -546,17 +546,46 @@ const AppContent = () => {
 
   // Transform eligible actions to ActionListPage format
   const transformActionsForUI = (actions: EligibleAction[]) => {
-    return actions.map(action => ({
-      id: action.id,
-      type: action.actionType as any,
-      status: (actionStatuses[action.id] || 'pending') as ActionStatus,
-      url: action.target,
-      payment: action.price / 100, // Convert cents to dollars
-      platform: (action.platform || selectedAccount?.platform || 'instagram').toLowerCase() as any,
-      errorMessage: actionErrors[action.id],
-      actionRunId: action.userActionRun?.id,
-      isResumable: ['pending_verification', 'dom_verified', 'cdp_verified'].includes(action.userActionRun?.status || '')
-    }));
+    return actions.map(action => {
+      // For comment actions, extract and randomize emoji content
+      let commentContent = undefined;
+      const actionType = action.type || action.actionType;
+      
+      if (actionType === 'comment') {
+        // Check if metadata has comment content (emojis)
+        if (action.metadata?.commentContent) {
+          const selectedEmojis = action.metadata.commentContent.split(',');
+          // Randomly pick ONE emoji from the selection
+          const randomEmoji = selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)];
+          // Randomly repeat it 1-5 times
+          const repeatCount = Math.floor(Math.random() * 5) + 1;
+          commentContent = randomEmoji.repeat(repeatCount);
+        } else if (action.target && action.target.includes('|')) {
+          // Fallback: parse from target field
+          const parts = action.target.split('|');
+          if (parts[1]) {
+            const selectedEmojis = parts[1].split(',');
+            const randomEmoji = selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)];
+            const repeatCount = Math.floor(Math.random() * 5) + 1;
+            commentContent = randomEmoji.repeat(repeatCount);
+          }
+        }
+      }
+      
+      return {
+        id: action.id,
+        type: actionType as any,
+        status: (actionStatuses[action.id] || 'pending') as ActionStatus,
+        url: action.targetUrl || action.metadata?.url || action.target,
+        target: action.target,
+        payment: action.price / 100, // Convert cents to dollars
+        platform: (action.platform || selectedAccount?.platform || 'instagram').toLowerCase() as any,
+        errorMessage: actionErrors[action.id],
+        actionRunId: action.userActionRun?.id,
+        isResumable: ['pending_verification', 'dom_verified', 'cdp_verified'].includes(action.userActionRun?.status || ''),
+        commentContent // Add the randomized comment content
+      };
+    });
   };
 
   // Render different views based on navigation state
@@ -624,15 +653,29 @@ const AppContent = () => {
             }
             
             // Resume/retry the action by opening the tab again
+            // Extract comment content if this is a comment action
+            let commentContent = null;
+            if ((selectedAction.type || selectedAction.actionType).toLowerCase() === 'comment') {
+              if (selectedAction.commentContent) {
+                commentContent = selectedAction.commentContent;
+              } else if (selectedAction.metadata?.commentContent) {
+                const selectedEmojis = selectedAction.metadata.commentContent.split(',');
+                const randomEmoji = selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)];
+                const repeatCount = Math.floor(Math.random() * 5) + 1;
+                commentContent = randomEmoji.repeat(repeatCount);
+              }
+            }
+            
             await chrome.runtime.sendMessage({
               type: 'executeAction',
               payload: {
                 actionId: selectedAction.id,
                 actionRunId: selectedAction.userActionRun.id,
-                url: selectedAction.target,
-                actionType: selectedAction.actionType.toLowerCase(),
+                url: selectedAction.targetUrl || selectedAction.url || selectedAction.target,
+                actionType: (selectedAction.type || selectedAction.actionType).toLowerCase(),
                 platform: (selectedAction.platform || selectedAccount.platform).toLowerCase(),
                 accountHandle: selectedAccount.handle,
+                commentContent,
                 isResume: status === 'loading',
                 isRetry: status === 'error'
               }
@@ -680,15 +723,29 @@ const AppContent = () => {
             });
             
             // Send message to background script to open tab and start tracking
+            // Extract comment content if this is a comment action
+            let commentContent = null;
+            if ((selectedAction.type || selectedAction.actionType).toLowerCase() === 'comment') {
+              if (selectedAction.commentContent) {
+                commentContent = selectedAction.commentContent;
+              } else if (selectedAction.metadata?.commentContent) {
+                const selectedEmojis = selectedAction.metadata.commentContent.split(',');
+                const randomEmoji = selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)];
+                const repeatCount = Math.floor(Math.random() * 5) + 1;
+                commentContent = randomEmoji.repeat(repeatCount);
+              }
+            }
+            
             await chrome.runtime.sendMessage({
               type: 'executeAction',
               payload: {
                 actionId: selectedAction.id,
                 actionRunId: actionRun.id,
-                url: selectedAction.target,
-                actionType: selectedAction.actionType.toLowerCase(),
+                url: selectedAction.targetUrl || selectedAction.url || selectedAction.target,
+                actionType: (selectedAction.type || selectedAction.actionType).toLowerCase(),
                 platform: (selectedAction.platform || selectedAccount.platform).toLowerCase(),
-                accountHandle: selectedAccount.handle
+                accountHandle: selectedAccount.handle,
+                commentContent
               }
             });
           } catch (error) {

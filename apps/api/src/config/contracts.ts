@@ -36,16 +36,29 @@ export const CAMPAIGN_PAYMENTS_ABI = [
     "inputs": [
       { "name": "campaignId", "type": "string" },
       { 
-        "name": "params", 
+        "name": "requirements", 
         "type": "tuple",
         "components": [
-          { "name": "country", "type": "string" },
-          { "name": "targetGender", "type": "bool" },
-          { "name": "targetAge", "type": "bool" },
-          { "name": "verifiedOnly", "type": "bool" }
+          { "name": "verifiedOnly", "type": "bool" },
+          { "name": "minFollowers", "type": "uint256" },
+          { "name": "minUniqueViews28Days", "type": "uint256" },
+          { "name": "accountLocation", "type": "string" },
+          { "name": "accountLanguage", "type": "string" }
         ]
       },
-      { "name": "targets", "type": "string" },
+      {
+        "name": "actions",
+        "type": "tuple",
+        "components": [
+          { "name": "followTarget", "type": "string" },
+          { "name": "followCount", "type": "uint256" },
+          { "name": "likeTargets", "type": "string[]" },
+          { "name": "likeCountPerPost", "type": "uint256" },
+          { "name": "commentTarget", "type": "string" },
+          { "name": "commentContent", "type": "string" },
+          { "name": "commentCount", "type": "uint256" }
+        ]
+      },
       { "name": "deadline", "type": "uint256" },
       { "name": "v", "type": "uint8" },
       { "name": "r", "type": "bytes32" },
@@ -63,17 +76,52 @@ export const CAMPAIGN_PAYMENTS_ABI = [
       { "indexed": true, "name": "sender", "type": "address" },
       { "indexed": false, "name": "amount", "type": "uint256" },
       { "indexed": false, "name": "timestamp", "type": "uint256" },
-      { "indexed": false, "name": "targets", "type": "string" }
+      { "indexed": false, "name": "accountRequirements", "type": "tuple", "components": [
+        { "name": "verifiedOnly", "type": "bool" },
+        { "name": "minFollowers", "type": "uint256" },
+        { "name": "minUniqueViews28Days", "type": "uint256" },
+        { "name": "accountLocation", "type": "string" },
+        { "name": "accountLanguage", "type": "string" }
+      ]},
+      { "indexed": false, "name": "campaignActions", "type": "tuple", "components": [
+        { "name": "followTarget", "type": "string" },
+        { "name": "followCount", "type": "uint256" },
+        { "name": "likeTargets", "type": "string[]" },
+        { "name": "likeCountPerPost", "type": "uint256" },
+        { "name": "commentTarget", "type": "string" },
+        { "name": "commentContent", "type": "string" },
+        { "name": "commentCount", "type": "uint256" }
+      ]}
     ],
     "name": "CampaignPaymentReceived",
     "type": "event"
   },
   {
     "inputs": [
-      { "name": "country", "type": "string" },
-      { "name": "targetGender", "type": "bool" },
-      { "name": "targetAge", "type": "bool" },
-      { "name": "verifiedOnly", "type": "bool" }
+      { 
+        "name": "requirements", 
+        "type": "tuple",
+        "components": [
+          { "name": "verifiedOnly", "type": "bool" },
+          { "name": "minFollowers", "type": "uint256" },
+          { "name": "minUniqueViews28Days", "type": "uint256" },
+          { "name": "accountLocation", "type": "string" },
+          { "name": "accountLanguage", "type": "string" }
+        ]
+      },
+      {
+        "name": "actions",
+        "type": "tuple",
+        "components": [
+          { "name": "followTarget", "type": "string" },
+          { "name": "followCount", "type": "uint256" },
+          { "name": "likeTargets", "type": "string[]" },
+          { "name": "likeCountPerPost", "type": "uint256" },
+          { "name": "commentTarget", "type": "string" },
+          { "name": "commentContent", "type": "string" },
+          { "name": "commentCount", "type": "uint256" }
+        ]
+      }
     ],
     "name": "calculatePrice",
     "outputs": [{ "name": "", "type": "uint256" }],

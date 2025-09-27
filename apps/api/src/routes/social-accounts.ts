@@ -954,6 +954,7 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
         maxVolume: campaignActions.maxVolume,
         currentVolume: campaignActions.currentVolume,
         isActive: campaignActions.isActive,
+        metadata: campaignActions.metadata,
         // Campaign fields for eligibility
         campaignId: campaigns.id,
         campaignPlatform: campaigns.platform,
@@ -1114,25 +1115,52 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
     });
 
     // Transform campaign actions with user run data
-    const transformedActions = eligibleActions.map(action => ({
-      id: action.actionId,
-      platform: action.campaignPlatform, // From campaign
-      actionType: action.actionType,
-      target: action.target,
-      title: `${action.campaignPlatform} ${action.actionType}`,
-      description: `${action.actionType} on ${action.campaignPlatform}`,
-      price: action.price,
-      availableVolume: action.maxVolume - action.currentVolume,
-      percentageComplete: Math.round((action.currentVolume / action.maxVolume) * 100),
-      // Include user's action run data if exists
-      userActionRun: action.actionRunId ? {
-        id: action.actionRunId,
-        status: action.actionRunStatus,
-        startedAt: action.actionRunStartedAt,
-        completedAt: action.actionRunCompletedAt,
-        rewardAmount: action.actionRunRewardAmount
-      } : null
-    }));
+    const transformedActions = eligibleActions.map(action => {
+      // Parse target URL and comment content for comment actions
+      let targetUrl = action.target;
+      let commentContent = null;
+      
+      if (action.actionType === 'comment') {
+        // For comments, target contains "url|emojis"
+        const parts = action.target.split('|');
+        targetUrl = parts[0];
+        commentContent = parts[1] || null;
+        
+        // Also check metadata for comment content
+        if (!commentContent && action.metadata && typeof action.metadata === 'object') {
+          const metadata = action.metadata as any;
+          commentContent = metadata.commentContent || null;
+        }
+      }
+      
+      return {
+        id: action.actionId,
+        campaignId: action.campaignId,
+        platform: action.campaignPlatform, // From campaign
+        type: action.actionType,  // Use 'type' to match UI expectations
+        actionType: action.actionType,  // Keep for backward compatibility
+        target: action.target,
+        targetUrl,  // Clean URL without comment content
+        title: `${action.campaignPlatform} ${action.actionType}`,
+        description: `${action.actionType} on ${action.campaignPlatform}`,
+        price: action.price,
+        availableVolume: action.maxVolume - action.currentVolume,
+        percentageComplete: Math.round((action.currentVolume / action.maxVolume) * 100),
+        metadata: {
+          ...(action.metadata && typeof action.metadata === 'object' ? action.metadata : {}),
+          commentContent,  // Add comment content to metadata
+          url: targetUrl
+        },
+        // Include user's action run data if exists
+        userActionRun: action.actionRunId ? {
+          id: action.actionRunId,
+          status: action.actionRunStatus,
+          startedAt: action.actionRunStartedAt,
+          completedAt: action.actionRunCompletedAt,
+          rewardAmount: action.actionRunRewardAmount
+        } : null
+      };
+    });
 
     // Calculate summary statistics
     const summary = {
@@ -1160,7 +1188,22 @@ socialAccountsRouter.get("/:id/eligible-actions", async (c) => {
       accountId,
       platform,
       accountMetadata,
-      actions: transformedActions,
+      actions: transformedActions.map(action => ({
+        id: action.id,
+        campaignId: action.campaignId,
+        platform: action.platform,
+        type: action.type,
+        actionType: action.actionType,
+        target: action.target,
+        targetUrl: action.targetUrl,
+        title: action.title,
+        description: action.description,
+        price: action.price,
+        availableVolume: action.availableVolume,
+        percentageComplete: action.percentageComplete,
+        metadata: action.metadata,
+        userActionRun: action.userActionRun
+      })),
       summary,
       totalEligibleActions: transformedActions.length,
     });

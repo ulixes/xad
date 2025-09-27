@@ -149,9 +149,12 @@ export interface SocialAccount {
 
 export interface EligibleAction {
   id: string;
+  campaignId?: string;
   platform: Platform;
+  type?: ActionType;  // For consistency with UI expectations
   actionType: ActionType;
   target: string;
+  targetUrl?: string;  // Clean URL without comment content
   title: string;
   description: string | null;
   price: number;
@@ -162,6 +165,8 @@ export interface EligibleAction {
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Metadata including comment content for comment actions
+  metadata?: Record<string, any>;
   // Added by the API endpoint
   availableVolume?: number;
   percentageComplete?: number;

@@ -54,6 +54,7 @@ export const campaignActions = pgTable("campaign_actions", {
 	maxVolume: integer("max_volume").notNull(),
 	currentVolume: integer("current_volume").default(0).notNull(),
 	isActive: boolean("is_active").default(true).notNull(),
+	metadata: jsonb().default('{}'),  // Store additional data like comment content
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [

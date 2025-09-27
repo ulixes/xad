@@ -11,6 +11,7 @@ export interface Action {
   payment: number
   errorMessage?: string
   platform: 'tiktok' | 'instagram' | 'x' | 'reddit'
+  commentContent?: string // For comment actions, the emojis or text to post
 }
 
 interface ActionListPageProps {
@@ -164,6 +165,11 @@ export function ActionListPage({
                         >
                           {truncateUrl(action.url, platform)}
                         </a>
+                        {action.type === 'comment' && action.commentContent && (
+                          <span className="text-sm text-muted-foreground">
+                            Comment: {action.commentContent}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex-shrink-0 ml-3">

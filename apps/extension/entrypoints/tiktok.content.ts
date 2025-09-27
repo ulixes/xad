@@ -77,6 +77,15 @@ export default defineContentScript({
     
     // Set up the global interceptor immediately
     setupGlobalNetworkInterceptor();
+    
+    // Helper function to send messages to background via bridge
+    function sendToBackground(message: any) {
+      window.postMessage({
+        source: 'TIKTOK_MAIN_WORLD',
+        type: 'SEND_TO_BACKGROUND',
+        payload: message
+      }, '*');
+    }
 
     class TikTokAccountTracker {
       private accountId: string | null = null;
@@ -109,7 +118,12 @@ export default defineContentScript({
       }
 
       private setupMessageListener() {
-        browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        // Listen for messages from the bridge script
+        window.addEventListener('message', (event) => {
+          if (event.source !== window) return;
+          
+          if (event.data && event.data.source === 'TIKTOK_BRIDGE' && event.data.type === 'FROM_BACKGROUND') {
+            const message = event.data.message;
           if (message.type === 'COLLECT_TIKTOK_DATA') {
             this.accountId = message.accountId;
             this.handle = message.handle;
@@ -119,8 +133,7 @@ export default defineContentScript({
             
             this.processCapturedApiCalls();
             this.collectTikTokData();
-            sendResponse({ acknowledged: true });
-          }
+            }
           
           if (message.type === 'START_DEMOGRAPHICS_COLLECTION') {
             this.accountId = message.accountId;
@@ -139,8 +152,7 @@ export default defineContentScript({
               }
             }, 2000);
             
-            sendResponse({ acknowledged: true });
-          }
+            }
           
           if (message.type === 'START_FOLLOWER_DEMOGRAPHICS_COLLECTION') {
             this.accountId = message.accountId;
@@ -159,18 +171,21 @@ export default defineContentScript({
               }
             }, 2000);
             
-            sendResponse({ acknowledged: true });
-          }
+            }
           
-          if (message.type === 'CHECK_STATUS') {
-            sendResponse({ 
-              isActive: true, 
-              isCollecting: this.isCollecting,
-              collectedData: this.collectedData
-            });
+            if (message.type === 'CHECK_STATUS') {
+              // Send status back via postMessage
+              window.postMessage({
+                source: 'TIKTOK_MAIN_WORLD',
+                type: 'STATUS_RESPONSE',
+                payload: { 
+                  isActive: true, 
+                  isCollecting: this.isCollecting,
+                  collectedData: this.collectedData
+                }
+              }, '*');
+            }
           }
-          
-          return true;
         });
       }
 
@@ -247,7 +262,7 @@ export default defineContentScript({
             };
             
             // Send to background console
-            browser.runtime.sendMessage({
+            sendToBackground({
               type: 'TIKTOK_DEBUG_LOG',
               message: '📊 Extracting viewer totals',
               data: viewerExtraction
@@ -298,7 +313,7 @@ export default defineContentScript({
             }
             
             // Send viewer demographics and metrics immediately
-            browser.runtime.sendMessage({
+            sendToBackground({
               type: 'TIKTOK_DEMOGRAPHICS_COLLECTED',
               accountId: this.accountId,
               handle: this.handle,
@@ -337,7 +352,7 @@ export default defineContentScript({
             };
             
             // Send follower demographics immediately
-            browser.runtime.sendMessage({
+            sendToBackground({
               type: 'TIKTOK_FOLLOWER_DEMOGRAPHICS_COLLECTED',
               accountId: this.accountId,
               handle: this.handle,
@@ -614,7 +629,7 @@ export default defineContentScript({
           console.error('[TikTok Tracker] Failed to fetch demographics:', error);
           
           // Send failure message
-          browser.runtime.sendMessage({
+          sendToBackground({
             type: 'TIKTOK_DEMOGRAPHICS_FAILED',
             accountId: this.accountId,
             handle: this.handle,
@@ -652,7 +667,7 @@ export default defineContentScript({
           console.error('[TikTok Tracker] Failed to fetch follower demographics:', error);
           
           // Send failure message
-          browser.runtime.sendMessage({
+          sendToBackground({
             type: 'TIKTOK_FOLLOWER_DEMOGRAPHICS_FAILED',
             accountId: this.accountId,
             handle: this.handle,
@@ -679,7 +694,7 @@ export default defineContentScript({
         };
         
         // Send profile data only (demographics are handled separately on analytics page)
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_DATA_COLLECTED',
           accountId: this.accountId,
           handle: this.handle,
@@ -710,37 +725,38 @@ export default defineContentScript({
         console.log('[TikTok Action Tracker] 🚀 Initialized');
         
         // Send initialization confirmation
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_TRACKER_READY',
           timestamp: Date.now()
-        }).catch(err => {
-          console.log('[TikTok Action Tracker] Could not send ready message (normal if no listener):', err);
         });
       }
 
       private setupMessageListener() {
-        browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        // Listen for messages from the bridge script
+        window.addEventListener('message', (event) => {
+          if (event.source !== window) return;
+          
+          if (event.data && event.data.source === 'TIKTOK_BRIDGE' && event.data.type === 'FROM_BACKGROUND') {
+            const message = event.data.message;
           console.log('[TikTok Action Tracker] 📨 Received message:', message);
 
           if (message.type === 'TRACK_ACTION') {
             console.log(`[TikTok Action Tracker] 🎬 Processing ${message.actionType} action with ID: ${message.actionId}`);
             
             // Send immediate acknowledgment to background
-            browser.runtime.sendMessage({
+            sendToBackground({
               type: 'TIKTOK_ACTION_RECEIVED',
               actionId: message.actionId,
               actionType: message.actionType,
               timestamp: Date.now()
-            }).catch(err => console.log('[TikTok] Could not send acknowledgment:', err));
+            });
             
             if (message.actionType === 'like') {
               this.trackLikeAction(message.actionId);
-              sendResponse({ acknowledged: true, tracking: 'started' });
             } else if (message.actionType === 'follow') {
               this.trackFollowAction(message.actionId);
-              sendResponse({ acknowledged: true, tracking: 'started' });
             } else if (message.actionType === 'comment') {
-              console.log('[TikTok Action Tracker] 📝 Comment action received:', {
+              console.log('[TikTok Action Tracker] Comment action received:', {
                 actionId: message.actionId,
                 accountHandle: message.accountHandle,
                 targetUrl: message.targetUrl
@@ -749,21 +765,23 @@ export default defineContentScript({
               // Pass account handle to the tracker
               const commentTracker = new TikTokCommentTracker(message.actionId, message.accountHandle);
               commentTracker.start();
-              sendResponse({ acknowledged: true, tracking: 'started' });
             } else {
-              console.log(`[TikTok Action Tracker] ⚠️ Unknown action type: ${message.actionType}`);
-              sendResponse({ acknowledged: false, error: `Unknown action type: ${message.actionType}` });
+              console.log(`[TikTok Action Tracker] Unknown action type: ${message.actionType}`);
             }
           }
 
-          if (message.type === 'CHECK_STATUS') {
-            sendResponse({ 
-              isActive: true, 
-              pendingActions: Array.from(this.pendingActions.keys()) 
-            });
+            if (message.type === 'CHECK_STATUS') {
+              // Send status back via postMessage
+              window.postMessage({
+                source: 'TIKTOK_MAIN_WORLD',
+                type: 'STATUS_RESPONSE',
+                payload: { 
+                  isActive: true, 
+                  pendingActions: Array.from(this.pendingActions.keys()) 
+                }
+              }, '*');
+            }
           }
-
-          return true;
         });
       }
 
@@ -772,7 +790,7 @@ export default defineContentScript({
         console.log('[TikTok Like Tracker] 🎯 Starting like tracking for:', actionId);
         
         // Send debug log to background
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_DEBUG',
           message: `Starting like tracking for action: ${actionId}`,
           url: window.location.href
@@ -788,7 +806,7 @@ export default defineContentScript({
         const likeButtons = this.findLikeButtons();
         
         // Send button count to background
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_DEBUG',
           message: `Found ${likeButtons.length} like buttons on page`,
           buttons: likeButtons.length,
@@ -859,7 +877,7 @@ export default defineContentScript({
         })));
         
         // Send detailed initial state to background for debugging
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_DEBUG',
           message: `Initial button states captured`,
           states: initialStates.map(s => ({
@@ -1034,7 +1052,7 @@ export default defineContentScript({
 
       private setupLikeMonitoring(actionId: string, initialStates: any[]) {
         // Send monitoring started message
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'TIKTOK_DEBUG',
           message: 'Like monitoring started - watching for changes'
         }).catch(() => {});
@@ -1115,7 +1133,7 @@ export default defineContentScript({
             const ariaPressedChanged = currentAriaPressed !== state.ariaPressed;
             if (ariaPressedChanged) {
               console.log(`[TikTok Like Tracker] aria-pressed CHANGED: ${state.ariaPressed} → ${currentAriaPressed}`);
-              browser.runtime.sendMessage({
+              sendToBackground({
                 type: 'TIKTOK_DEBUG',
                 message: `aria-pressed CHANGED at poll #${pollCount}!`,
                 before: state.ariaPressed,
@@ -1129,7 +1147,7 @@ export default defineContentScript({
             const currentHeartColor = animatedHeartPath?.getAttribute('fill') || '';
             if (currentHeartColor !== state.heartColor && currentHeartColor) {
               console.log(`[TikTok Like Tracker] Heart color CHANGED: ${state.heartColor} → ${currentHeartColor}`);
-              browser.runtime.sendMessage({
+              sendToBackground({
                 type: 'TIKTOK_DEBUG',
                 message: `Heart color CHANGED at poll #${pollCount}!`,
                 before: state.heartColor,
@@ -1143,7 +1161,7 @@ export default defineContentScript({
             // Log every 10th poll for debug
             if (pollCount % 10 === 0) {
               const pathFills = Array.from(svg?.querySelectorAll('path') || []).map(p => p.getAttribute('fill'));
-              browser.runtime.sendMessage({
+              sendToBackground({
                 type: 'TIKTOK_DEBUG',
                 message: `Polling #${pollCount}: aria-pressed=${currentAriaPressed}, isLiked=${currentLiked}, count=${currentCount}`,
                 ariaLabel: state.element.getAttribute('aria-label'),
@@ -1163,7 +1181,7 @@ export default defineContentScript({
               console.log(`  Count: ${state.likeCount} → ${currentCount}`);
               console.log(`  Button: ${state.element.getAttribute('aria-label')}`);
               
-              browser.runtime.sendMessage({
+              sendToBackground({
                 type: 'TIKTOK_DEBUG',
                 message: '✅ LIKE DETECTED! Sending verification...',
                 ariaPressedChange: `${state.ariaPressed} → ${currentAriaPressed}`,
@@ -1445,7 +1463,7 @@ export default defineContentScript({
           details
         });
         
-        browser.runtime.sendMessage({
+        sendToBackground({
           type: 'ACTION_COMPLETED',
           payload: {
             actionId,
@@ -1453,8 +1471,6 @@ export default defineContentScript({
             details,
             timestamp: Date.now()
           }
-        }).catch(err => {
-          console.error('[TikTok Action Tracker] Failed to send completion message:', err);
         });
       }
 
