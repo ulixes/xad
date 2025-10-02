@@ -14,7 +14,7 @@ export default defineConfig({
       '48': '/icon.svg',
       '128': '/icon.svg'
     },
-    permissions: ['sidePanel', 'tabs', 'activeTab', 'scripting', 'identity'],
+    permissions: ['sidePanel', 'activeTab', 'scripting'],
     host_permissions: [
       '*://*.tiktok.com/*',
       'https://www.tiktok.com/tiktokstudio/api/*',
